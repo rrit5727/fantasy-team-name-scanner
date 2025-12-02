@@ -16,7 +16,7 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>Team Name Scanner</h1>
-        <p className="subtitle">Upload team screenshots to extract player names & positions</p>
+        <p className="subtitle">Upload screenshots in any order - auto-detects correct sequence</p>
       </header>
       
       <main className="app-main">

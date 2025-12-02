@@ -10,15 +10,15 @@ function ImageUpload({ onPlayersExtracted }) {
   const [totalImages, setTotalImages] = useState(0);
   const [previewImages, setPreviewImages] = useState([]);
   const [extractedPlayers, setExtractedPlayers] = useState([]);
-  const [rawText, setRawText] = useState(''); // For debugging
+  const [rawText, setRawText] = useState('');
   const [error, setError] = useState(null);
+  const [screenshotData, setScreenshotData] = useState([]); // Store data per screenshot
   const fileInputRef = useRef(null);
 
   const extractPlayerNamesFromText = (text, lines) => {
     const players = [];
     
     // Multiple patterns to catch various OCR outputs
-    // OCR often misreads: J. → J). or J)   and   I. → |.
     const namePatterns = [
       // Standard: "E. Clark", "A. Fonua-Blake" 
       /([A-Z])\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
@@ -39,6 +39,9 @@ function ImageUpload({ onPlayersExtracted }) {
       // With special chars before: "@ E. Clark"
       /[^A-Za-z]([A-Z])\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
     ];
+
+    // Position pattern - looks for positions after team name like "Warriors | HOK, MID | $710k"
+    const positionPattern = /\|\s*(HOK|MID|EDG|HLF|CTR|WFB|FRF|2RF|CTW|FLB|INT|EMG)(?:[,\s]*(HOK|MID|EDG|HLF|CTR|WFB|FRF|2RF|CTW|FLB|INT|EMG))?\s*\|/gi;
     
     const extractFromText = (sourceText, yPosition) => {
       for (const pattern of namePatterns) {
@@ -47,24 +50,19 @@ function ImageUpload({ onPlayersExtracted }) {
         while ((match = pattern.exec(sourceText)) !== null) {
           let initial, surname;
           
-          // Handle patterns with different capture groups
           if (match[2]) {
-            // Pattern has initial in group 1, surname in group 2
             initial = (match[1] || '').toUpperCase();
             surname = match[2];
           } else if (match[1]) {
-            // Pattern only has surname (like |. or 1. patterns)
-            // Try to infer the initial from context
             const patternStr = pattern.toString();
             if (patternStr.includes('\\|')) {
-              initial = 'I'; // Pipe was meant to be I
+              initial = 'I';
             } else if (patternStr.includes('1\\.')) {
-              initial = 'I'; // 1 was meant to be I
+              initial = 'I';
             } else if (patternStr.includes('\\)\\.')) {
-              // ). pattern - initial might be missing, try to get from before
               const beforeMatch = sourceText.substring(Math.max(0, match.index - 3), match.index);
               const letterMatch = beforeMatch.match(/([A-Z])\s*$/);
-              initial = letterMatch ? letterMatch[1] : 'J'; // Default to J as common
+              initial = letterMatch ? letterMatch[1] : 'J';
             } else {
               initial = '?';
             }
@@ -75,7 +73,6 @@ function ImageUpload({ onPlayersExtracted }) {
           
           if (!surname || surname.length < 3) continue;
           
-          // Skip common false positives (team names, position codes)
           const lowerSurname = surname.toLowerCase();
           if (['warriors', 'broncos', 'eels', 'panthers', 'bulldogs', 'titans', 
                'cowboys', 'dragons', 'raiders', 'knights', 'roosters', 'sharks',
@@ -85,21 +82,31 @@ function ImageUpload({ onPlayersExtracted }) {
             continue;
           }
           
-          // Format properly
           const formattedSurname = surname.charAt(0).toUpperCase() + surname.slice(1).toLowerCase();
-          // Handle hyphenated names like "Fonua-Blake" or "King-Togia"
           const finalSurname = formattedSurname.replace(/-([a-z])/g, (m, c) => '-' + c.toUpperCase());
           const fullName = `${initial}. ${finalSurname}`;
           
+          // Try to find position for this player - look in text after the name
+          const afterName = sourceText.substring(match.index, match.index + 150);
+          positionPattern.lastIndex = 0;
+          const posMatch = positionPattern.exec(afterName);
+          let positions = [];
+          if (posMatch) {
+            if (posMatch[1]) positions.push(posMatch[1].toUpperCase());
+            if (posMatch[2]) positions.push(posMatch[2].toUpperCase());
+          }
+          
           players.push({
             name: fullName,
-            y: yPosition
+            positions: positions,
+            y: yPosition,
+            matchIndex: match.index
           });
         }
       }
     };
     
-    // First: process each line with its bounding box for ordering
+    // Process each line with bounding box for ordering
     if (lines && lines.length > 0) {
       for (const line of lines) {
         const lineText = line.text || '';
@@ -108,24 +115,26 @@ function ImageUpload({ onPlayersExtracted }) {
       }
     }
     
-    // Also search the full text to catch anything missed
-    const fullText = text || '';
-    extractFromText(fullText, 0); // Will be re-sorted anyway
+    // Also search the full text
+    extractFromText(text || '', 0);
     
     // Sort by Y position (top to bottom)
-    players.sort((a, b) => a.y - b.y);
+    players.sort((a, b) => a.y - b.y || a.matchIndex - b.matchIndex);
     
     // Deduplicate while preserving order
     const seen = new Set();
-    const orderedNames = [];
+    const orderedPlayers = [];
     for (const player of players) {
       if (!seen.has(player.name)) {
         seen.add(player.name);
-        orderedNames.push(player.name);
+        orderedPlayers.push({
+          name: player.name,
+          positions: player.positions
+        });
       }
     }
     
-    return orderedNames;
+    return orderedPlayers;
   };
 
   const processImage = async (file, imageIndex, total) => {
@@ -141,20 +150,65 @@ function ImageUpload({ onPlayersExtracted }) {
         },
       });
       
-      // Store raw text for debugging
       console.log('OCR Raw Text:', result.data.text);
-      console.log('OCR Lines:', result.data.lines);
       setRawText(prev => prev + '\n---IMAGE ' + (imageIndex + 1) + '---\n' + result.data.text);
       
-      // Extract player names
-      const names = extractPlayerNamesFromText(result.data.text, result.data.lines);
-      console.log('Extracted names:', names);
+      const players = extractPlayerNamesFromText(result.data.text, result.data.lines);
+      console.log('Extracted players:', players);
       
-      return names;
+      return {
+        players,
+        rawText: result.data.text
+      };
     } catch (err) {
       console.error('OCR Error:', err);
       throw err;
     }
+  };
+
+  const mergeAndOrderPlayers = (allScreenshotData) => {
+    if (allScreenshotData.length === 0) return [];
+    if (allScreenshotData.length === 1) {
+      return allScreenshotData[0].players;
+    }
+    
+    // Find which screenshot should be first (has HOK player at the top)
+    let firstScreenshotIndex = 0;
+    let earliestHokPosition = Infinity;
+    
+    for (let i = 0; i < allScreenshotData.length; i++) {
+      const players = allScreenshotData[i].players;
+      for (let j = 0; j < players.length; j++) {
+        const hasHok = players[j].positions.includes('HOK');
+        if (hasHok && j < earliestHokPosition) {
+          earliestHokPosition = j;
+          firstScreenshotIndex = i;
+        }
+      }
+    }
+    
+    console.log(`Screenshot ${firstScreenshotIndex + 1} has HOK player earliest (position ${earliestHokPosition})`);
+    
+    // Reorder screenshots: first screenshot with HOK player first, then others
+    const orderedScreenshots = [
+      allScreenshotData[firstScreenshotIndex],
+      ...allScreenshotData.filter((_, i) => i !== firstScreenshotIndex)
+    ];
+    
+    // Merge players, removing duplicates
+    const seen = new Set();
+    const mergedPlayers = [];
+    
+    for (const screenshot of orderedScreenshots) {
+      for (const player of screenshot.players) {
+        if (!seen.has(player.name)) {
+          seen.add(player.name);
+          mergedPlayers.push(player);
+        }
+      }
+    }
+    
+    return mergedPlayers;
   };
 
   const handleFiles = useCallback(async (files) => {
@@ -180,32 +234,26 @@ function ImageUpload({ onPlayersExtracted }) {
     setPreviewImages(prev => [...prev, ...previews]);
 
     try {
-      const allPlayers = [];
+      const newScreenshotData = [];
       
       for (let i = 0; i < imageFiles.length; i++) {
-        const players = await processImage(imageFiles[i], i, imageFiles.length);
-        allPlayers.push(...players);
+        const data = await processImage(imageFiles[i], i, imageFiles.length);
+        newScreenshotData.push(data);
       }
 
-      console.log('All players found:', allPlayers);
-
-      // Add to existing players, maintaining order and removing duplicates
-      setExtractedPlayers(prev => {
-        const combined = [...prev, ...allPlayers];
-        const seen = new Set();
-        const unique = [];
-        for (const name of combined) {
-          if (!seen.has(name)) {
-            seen.add(name);
-            unique.push(name);
-          }
-        }
+      // Merge with existing screenshot data
+      setScreenshotData(prev => {
+        const allData = [...prev, ...newScreenshotData];
+        const mergedPlayers = mergeAndOrderPlayers(allData);
+        
+        console.log('Final merged players:', mergedPlayers);
+        setExtractedPlayers(mergedPlayers);
         
         if (onPlayersExtracted) {
-          onPlayersExtracted(unique);
+          onPlayersExtracted(mergedPlayers);
         }
         
-        return unique;
+        return allData;
       });
       
     } catch (err) {
@@ -254,13 +302,19 @@ function ImageUpload({ onPlayersExtracted }) {
   const downloadPlayers = () => {
     if (extractedPlayers.length === 0) return;
 
-    const content = extractedPlayers.join('\n');
+    // CSV with position
+    const header = 'Position,Player Name';
+    const rows = extractedPlayers.map(p => {
+      const pos = p.positions && p.positions.length > 0 ? p.positions[0] : 'TBD';
+      return `${pos},${p.name}`;
+    });
+    const content = [header, ...rows].join('\n');
     
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([content], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'player-names.txt';
+    a.download = 'player-names.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -271,6 +325,7 @@ function ImageUpload({ onPlayersExtracted }) {
     previewImages.forEach(img => URL.revokeObjectURL(img.url));
     setPreviewImages([]);
     setExtractedPlayers([]);
+    setScreenshotData([]);
     setRawText('');
     setError(null);
   };
@@ -294,11 +349,11 @@ function ImageUpload({ onPlayersExtracted }) {
       <div className="upload-instructions">
         <div className="instruction-step">
           <span className="step-number">1</span>
-          <span>Upload your first team screenshot</span>
+          <span>Upload your team screenshots (any order)</span>
         </div>
         <div className="instruction-step">
           <span className="step-number">2</span>
-          <span>Upload second screenshot to get remaining players</span>
+          <span>App auto-detects correct order via HOK position</span>
         </div>
         <div className="instruction-step">
           <span className="step-number">3</span>
@@ -387,7 +442,7 @@ function ImageUpload({ onPlayersExtracted }) {
             <h3>Players ({extractedPlayers.length})</h3>
             <div className="results-actions">
               <button onClick={downloadPlayers} className="btn-download">
-                Download List
+                Download CSV
               </button>
               <button onClick={clearAll} className="btn-clear">
                 Clear All
@@ -399,7 +454,12 @@ function ImageUpload({ onPlayersExtracted }) {
             {extractedPlayers.map((player, index) => (
               <li key={index} className="player-item">
                 <span className="player-number">{index + 1}</span>
-                <span className="player-name">{player}</span>
+                <span className="player-position">
+                  {player.positions && player.positions.length > 0 
+                    ? player.positions.join(', ') 
+                    : '—'}
+                </span>
+                <span className="player-name">{player.name}</span>
                 <div className="player-actions">
                   <button 
                     className="btn-move"

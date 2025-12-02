@@ -308,7 +308,20 @@
   justify-content: center;
   font-weight: 700;
   font-size: 0.8rem;
-  margin-right: 1rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+.player-position {
+  background: rgba(0, 166, 125, 0.2);
+  color: #00d9a3;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  min-width: 50px;
+  text-align: center;
+  margin-right: 0.75rem;
   flex-shrink: 0;
 }
 
