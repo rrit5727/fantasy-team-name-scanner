@@ -17,59 +17,100 @@ function ImageUpload({ onPlayersExtracted }) {
   const extractPlayerNamesFromText = (text, lines) => {
     const players = [];
     
-    // More lenient pattern - matches "X. Name" or "X.Name" with various formats
-    // Allows for OCR quirks like extra spaces, periods, etc.
+    // Multiple patterns to catch various OCR outputs
+    // OCR often misreads: J. → J). or J)   and   I. → |.
     const namePatterns = [
-      // Standard format: "E. Clark" or "A. Fonua-Blake"
+      // Standard: "E. Clark", "A. Fonua-Blake" 
       /([A-Z])\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      // Format without space: "E.Clark"
+      // No space: "E.Clark"
       /([A-Z])\.([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      // OCR reads period as ): "J). Williams" or "J).Williams"
+      /([A-Z])\)\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      // OCR reads just ) instead of .: "J) Williams"
+      /([A-Z])\)\s+([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      // OCR misses the letter, just has ).: "). Ford" or ").Ford"
+      /\)\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      // OCR reads I as | (pipe): "|. Katoa"
+      /\|\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      // OCR reads I as 1: "1. Katoa"
+      /1\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      // Lowercase initial: "j. Williams"
+      /([a-z])\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      // With special chars before: "@ E. Clark"
+      /[^A-Za-z]([A-Z])\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
     ];
     
-    // First try to use lines with bounding boxes for ordering
-    if (lines && lines.length > 0) {
-      for (const line of lines) {
-        const lineText = line.text || '';
-        
-        for (const pattern of namePatterns) {
-          pattern.lastIndex = 0; // Reset regex
-          let match;
-          while ((match = pattern.exec(lineText)) !== null) {
-            const initial = match[1];
-            const surname = match[2];
-            // Capitalize first letter of surname properly
-            const formattedSurname = surname.charAt(0).toUpperCase() + surname.slice(1);
-            const fullName = `${initial}. ${formattedSurname}`;
-            
-            players.push({
-              name: fullName,
-              y: line.bbox ? line.bbox.y0 : 0
-            });
-          }
-        }
-      }
-    }
-    
-    // Fallback: search the full text if no lines or no matches found
-    if (players.length === 0) {
-      const fullText = text || '';
-      
+    const extractFromText = (sourceText, yPosition) => {
       for (const pattern of namePatterns) {
         pattern.lastIndex = 0;
         let match;
-        while ((match = pattern.exec(fullText)) !== null) {
-          const initial = match[1];
-          const surname = match[2];
-          const formattedSurname = surname.charAt(0).toUpperCase() + surname.slice(1);
-          const fullName = `${initial}. ${formattedSurname}`;
+        while ((match = pattern.exec(sourceText)) !== null) {
+          let initial, surname;
+          
+          // Handle patterns with different capture groups
+          if (match[2]) {
+            // Pattern has initial in group 1, surname in group 2
+            initial = (match[1] || '').toUpperCase();
+            surname = match[2];
+          } else if (match[1]) {
+            // Pattern only has surname (like |. or 1. patterns)
+            // Try to infer the initial from context
+            const patternStr = pattern.toString();
+            if (patternStr.includes('\\|')) {
+              initial = 'I'; // Pipe was meant to be I
+            } else if (patternStr.includes('1\\.')) {
+              initial = 'I'; // 1 was meant to be I
+            } else if (patternStr.includes('\\)\\.')) {
+              // ). pattern - initial might be missing, try to get from before
+              const beforeMatch = sourceText.substring(Math.max(0, match.index - 3), match.index);
+              const letterMatch = beforeMatch.match(/([A-Z])\s*$/);
+              initial = letterMatch ? letterMatch[1] : 'J'; // Default to J as common
+            } else {
+              initial = '?';
+            }
+            surname = match[1];
+          } else {
+            continue;
+          }
+          
+          if (!surname || surname.length < 3) continue;
+          
+          // Skip common false positives (team names, position codes)
+          const lowerSurname = surname.toLowerCase();
+          if (['warriors', 'broncos', 'eels', 'panthers', 'bulldogs', 'titans', 
+               'cowboys', 'dragons', 'raiders', 'knights', 'roosters', 'sharks',
+               'rabbitohs', 'dolphins', 'mid', 'edg', 'hlf', 'hok', 'wfb', 'ctr',
+               'int', 'emg', 'frf', 'score', 'rank', 'overall', 'round', 'team',
+               'bench', 'starting', 'side', 'saved', 'options', 'trades', 'rankings'].includes(lowerSurname)) {
+            continue;
+          }
+          
+          // Format properly
+          const formattedSurname = surname.charAt(0).toUpperCase() + surname.slice(1).toLowerCase();
+          // Handle hyphenated names like "Fonua-Blake" or "King-Togia"
+          const finalSurname = formattedSurname.replace(/-([a-z])/g, (m, c) => '-' + c.toUpperCase());
+          const fullName = `${initial}. ${finalSurname}`;
           
           players.push({
             name: fullName,
-            y: match.index // Use position in text for ordering
+            y: yPosition
           });
         }
       }
+    };
+    
+    // First: process each line with its bounding box for ordering
+    if (lines && lines.length > 0) {
+      for (const line of lines) {
+        const lineText = line.text || '';
+        const yPos = line.bbox ? line.bbox.y0 : 0;
+        extractFromText(lineText, yPos);
+      }
     }
+    
+    // Also search the full text to catch anything missed
+    const fullText = text || '';
+    extractFromText(fullText, 0); // Will be re-sorted anyway
     
     // Sort by Y position (top to bottom)
     players.sort((a, b) => a.y - b.y);
@@ -327,12 +368,16 @@ function ImageUpload({ onPlayersExtracted }) {
         </div>
       )}
 
-      {/* Debug: Show raw OCR text if no players found */}
-      {rawText && extractedPlayers.length === 0 && (
+      {/* Debug: Show raw OCR text */}
+      {rawText && (
         <div className="debug-section">
-          <h3>OCR Output (Debug)</h3>
-          <p className="debug-hint">No player names detected. Here's what OCR read:</p>
-          <pre className="debug-text">{rawText}</pre>
+          <details>
+            <summary className="debug-toggle">
+              🔍 Show OCR Output (Debug)
+            </summary>
+            <p className="debug-hint">Raw text from OCR - check console for detailed logs</p>
+            <pre className="debug-text">{rawText}</pre>
+          </details>
         </div>
       )}
 

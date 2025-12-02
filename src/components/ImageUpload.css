@@ -381,19 +381,39 @@
   background: rgba(255, 193, 7, 0.1);
   border: 1px solid rgba(255, 193, 7, 0.3);
   border-radius: 16px;
-  padding: 1.25rem;
+  padding: 1rem;
 }
 
-.debug-section h3 {
+.debug-section details {
+  margin: 0;
+}
+
+.debug-toggle {
   color: #ffc107;
-  margin: 0 0 0.5rem 0;
-  font-size: 1rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  list-style: none;
+  padding: 0.25rem 0;
+}
+
+.debug-toggle::-webkit-details-marker {
+  display: none;
+}
+
+.debug-toggle::before {
+  content: '▶ ';
+  font-size: 0.7rem;
+}
+
+details[open] .debug-toggle::before {
+  content: '▼ ';
 }
 
 .debug-hint {
   color: #c0a030;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  margin: 0.75rem 0;
 }
 
 .debug-text {
@@ -401,11 +421,11 @@
   border-radius: 8px;
   padding: 1rem;
   font-family: monospace;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #e0e0e0;
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 300px;
+  max-height: 250px;
   overflow-y: auto;
   margin: 0;
 }
