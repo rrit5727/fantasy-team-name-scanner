@@ -1,0 +1,290 @@
+/* Main Team View Layout */
+.team-view {
+  display: flex;
+  gap: 1.5rem;
+  min-height: calc(100vh - 200px);
+  width: 100%;
+}
+
+.team-view-main {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+}
+
+.team-view-sidebar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  border-radius: 20px;
+  padding: 1.25rem;
+  border: 1px solid rgba(0, 166, 125, 0.3);
+}
+
+/* Section Headers */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-header h2 {
+  color: #00d9a3;
+  font-size: 1.5rem;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-back {
+  background: transparent;
+  border: 2px solid rgba(0, 166, 125, 0.5);
+  color: #00d9a3;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  background: rgba(0, 166, 125, 0.1);
+  border-color: #00d9a3;
+}
+
+.sidebar-title {
+  color: #00d9a3;
+  font-size: 1.1rem;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(0, 166, 125, 0.2);
+}
+
+/* Team Display Field */
+.team-display {
+  flex: 1;
+  background: linear-gradient(180deg, #1a3d35 0%, #0d2e26 50%, #0a1f1a 100%);
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 1px solid rgba(0, 166, 125, 0.3);
+  overflow-y: auto;
+}
+
+.team-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* Position Rows */
+.position-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* Player Cards */
+.player-card {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  padding: 0.5rem;
+  min-width: 100px;
+  max-width: 130px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.player-card:hover {
+  background: rgba(0, 166, 125, 0.15);
+  border-color: rgba(0, 166, 125, 0.4);
+  transform: translateY(-2px);
+}
+
+.player-card.selected {
+  background: rgba(0, 166, 125, 0.25);
+  border-color: #00d9a3;
+  box-shadow: 0 0 15px rgba(0, 217, 163, 0.3);
+}
+
+.player-card.empty {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.player-card.empty:hover {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: transparent;
+  transform: none;
+}
+
+.position-badge {
+  display: inline-block;
+  padding: 0.25rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #0a1f1a;
+  margin-bottom: 0.4rem;
+}
+
+.player-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.player-card .player-name {
+  color: #e0e0e0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.empty-slot {
+  color: #6a7a76;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+/* Trade Panels */
+.trade-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.trade-panel:last-child {
+  margin-bottom: 0;
+}
+
+.trade-subtitle {
+  color: #8a9a96;
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.trade-player-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.trade-player-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(0, 166, 125, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.trade-player-item:hover {
+  background: rgba(0, 166, 125, 0.18);
+}
+
+.trade-player-item.selected {
+  background: rgba(0, 166, 125, 0.25);
+  border: 1px solid rgba(0, 166, 125, 0.5);
+}
+
+.trade-player-pos {
+  background: rgba(0, 166, 125, 0.3);
+  color: #00d9a3;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 32px;
+  text-align: center;
+}
+
+.trade-player-name {
+  color: #e0e0e0;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.empty-message {
+  color: #6a7a76;
+  font-size: 0.8rem;
+  text-align: center;
+  margin: auto;
+  font-style: italic;
+}
+
+/* Scrollbar for trade panels */
+.trade-player-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.trade-player-list::-webkit-scrollbar-track {
+  background: rgba(0, 166, 125, 0.1);
+  border-radius: 2px;
+}
+
+.trade-player-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 166, 125, 0.3);
+  border-radius: 2px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .team-view {
+    flex-direction: column;
+  }
+  
+  .team-view-main {
+    flex: none;
+  }
+  
+  .team-view-sidebar {
+    flex: none;
+    min-height: 400px;
+  }
+}
+
+@media (max-width: 600px) {
+  .player-card {
+    min-width: 80px;
+    max-width: 100px;
+    padding: 0.4rem;
+  }
+  
+  .player-card .player-name {
+    font-size: 0.7rem;
+  }
+  
+  .position-badge {
+    font-size: 0.6rem;
+    padding: 0.2rem 0.4rem;
+  }
+  
+  .position-row {
+    gap: 0.5rem;
+  }
+  
+  .team-display {
+    padding: 1rem;
+  }
+}
+

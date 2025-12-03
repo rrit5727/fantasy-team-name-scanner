@@ -388,6 +388,31 @@
   margin-bottom: 0;
 }
 
+.btn-confirm-team {
+  width: 100%;
+  padding: 1rem;
+  margin-top: 1.5rem;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #00a67d, #00d9a3);
+  color: #0a1f1a;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-confirm-team:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(0, 166, 125, 0.4);
+}
+
+.btn-confirm-team:active {
+  transform: translateY(0);
+}
+
 /* Debug section */
 .debug-section {
   margin-top: 2rem;

@@ -1,16 +1,33 @@
 import { useState } from 'react'
 import ImageUpload from './components/ImageUpload'
+import TeamView from './components/TeamDisplay'
 import './App.css'
 
 function App() {
-  const [allPlayers, setAllPlayers] = useState([]);
+  const [confirmedTeam, setConfirmedTeam] = useState(null);
+  const [view, setView] = useState('scanner'); // 'scanner' or 'team'
 
-  const handlePlayersExtracted = (players) => {
-    setAllPlayers(prev => {
-      const combined = [...prev, ...players];
-      return [...new Set(combined)]; // Remove duplicates
-    });
+  const handlePlayersExtracted = (players, confirmed = false) => {
+    if (confirmed && players.length > 0) {
+      setConfirmedTeam(players);
+      setView('team');
+    }
   };
+
+  const handleBackToScanner = () => {
+    setView('scanner');
+  };
+
+  if (view === 'team' && confirmedTeam) {
+    return (
+      <div className="app app-team-view">
+        <TeamView 
+          players={confirmedTeam} 
+          onBack={handleBackToScanner}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="app">

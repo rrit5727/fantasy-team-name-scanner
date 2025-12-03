@@ -490,6 +490,13 @@ function ImageUpload({ onPlayersExtracted }) {
           </ul>
           
           <p className="edit-hint">💡 Use arrows to reorder, ✕ to remove incorrect entries</p>
+          
+          <button 
+            className="btn-confirm-team"
+            onClick={() => onPlayersExtracted?.(extractedPlayers, true)}
+          >
+            ✓ Confirm Team
+          </button>
         </div>
       )}
     </div>
