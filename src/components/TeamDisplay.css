@@ -150,6 +150,13 @@
   line-height: 1.2;
 }
 
+.player-card .player-price {
+  color: #00d9a3;
+  font-size: 0.7rem;
+  font-weight: 500;
+  margin-top: 0.2rem;
+}
+
 .empty-slot {
   color: #6a7a76;
   font-size: 0.75rem;
@@ -222,6 +229,31 @@
   color: #e0e0e0;
   font-size: 0.85rem;
   font-weight: 500;
+  flex: 1;
+}
+
+.trade-player-price {
+  color: #00d9a3;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.trade-player-reason {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+}
+
+.trade-player-reason.injured {
+  background: rgba(255, 100, 100, 0.2);
+  color: #ff6464;
+}
+
+.trade-player-reason:not(.injured) {
+  background: rgba(255, 165, 0, 0.2);
+  color: #ffa500;
 }
 
 .empty-message {
@@ -230,6 +262,140 @@
   text-align: center;
   margin: auto;
   font-style: italic;
+}
+
+/* Cash in Bank and other form sections */
+.cash-in-bank-section,
+.strategy-section,
+.trade-type-section,
+.num-trades-section {
+  margin-bottom: 1rem;
+}
+
+.cash-in-bank-section label,
+.strategy-section label,
+.trade-type-section label,
+.num-trades-section label {
+  display: block;
+  color: #8a9a96;
+  font-size: 0.8rem;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.cash-in-bank-section input,
+.num-trades-section input,
+.strategy-section select,
+.trade-type-section select {
+  width: 100%;
+  padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 166, 125, 0.3);
+  border-radius: 8px;
+  color: #e0e0e0;
+  font-size: 0.9rem;
+}
+
+.cash-in-bank-section input:focus,
+.num-trades-section input:focus,
+.strategy-section select:focus,
+.trade-type-section select:focus {
+  outline: none;
+  border-color: #00d9a3;
+  background: rgba(0, 166, 125, 0.05);
+}
+
+.btn-calculate-trades {
+  width: 100%;
+  padding: 0.8rem;
+  background: linear-gradient(135deg, #00a67d 0%, #00d9a3 100%);
+  border: none;
+  border-radius: 10px;
+  color: #0a1f1a;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.btn-calculate-trades:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 217, 163, 0.4);
+}
+
+.btn-calculate-trades:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error-message {
+  background: rgba(255, 100, 100, 0.2);
+  border: 1px solid rgba(255, 100, 100, 0.4);
+  color: #ff6464;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+/* Trade option styling for trade-in recommendations */
+.trade-option {
+  background: rgba(0, 166, 125, 0.08);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.trade-option:hover {
+  background: rgba(0, 166, 125, 0.15);
+  border-color: rgba(0, 166, 125, 0.3);
+}
+
+.trade-option-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 166, 125, 0.2);
+}
+
+.option-number {
+  color: #00d9a3;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.option-diff,
+.option-projection {
+  color: #ffa500;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.trade-option-player {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  font-size: 0.8rem;
+}
+
+.trade-option-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(0, 166, 125, 0.2);
+  color: #8a9a96;
+  font-size: 0.75rem;
 }
 
 /* Scrollbar for trade panels */

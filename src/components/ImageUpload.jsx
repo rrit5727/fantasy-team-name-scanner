@@ -43,6 +43,9 @@ function ImageUpload({ onPlayersExtracted }) {
     // Position pattern - looks for positions after team name like "Warriors | HOK, MID | $710k"
     const positionPattern = /\|\s*(HOK|MID|EDG|HLF|CTR|WFB|FRF|2RF|CTW|FLB|INT|EMG)(?:[,\s]*(HOK|MID|EDG|HLF|CTR|WFB|FRF|2RF|CTW|FLB|INT|EMG))?\s*\|/gi;
     
+    // Price pattern - looks for prices like "$710k", "$609k", handles OCR errors like "$7|0k", "$71Ok"
+    const pricePattern = /\$\s*(\d{2,3})[|lIO0o]?(\d{1,2})k/gi;
+    
     const extractFromText = (sourceText, yPosition) => {
       for (const pattern of namePatterns) {
         pattern.lastIndex = 0;
@@ -96,9 +99,22 @@ function ImageUpload({ onPlayersExtracted }) {
             if (posMatch[2]) positions.push(posMatch[2].toUpperCase());
           }
           
+          // Try to find price for this player - look in text after the name
+          pricePattern.lastIndex = 0;
+          const priceMatch = pricePattern.exec(afterName);
+          let price = null;
+          if (priceMatch) {
+            // Extract price components and handle OCR errors
+            const hundreds = priceMatch[1]; // e.g., "71", "60", "85"
+            const tens = priceMatch[2]; // e.g., "0", "9", "0"
+            // Convert "$710k" to 710000
+            price = parseInt(hundreds + tens) * 1000;
+          }
+          
           players.push({
             name: fullName,
             positions: positions,
+            price: price,
             y: yPosition,
             matchIndex: match.index
           });
@@ -121,18 +137,25 @@ function ImageUpload({ onPlayersExtracted }) {
     // Sort by Y position (top to bottom)
     players.sort((a, b) => a.y - b.y || a.matchIndex - b.matchIndex);
     
-    // Deduplicate while preserving order
-    const seen = new Set();
-    const orderedPlayers = [];
+    // Deduplicate while preserving order and preferring entries with price data
+    const seen = new Map();
     for (const player of players) {
       if (!seen.has(player.name)) {
-        seen.add(player.name);
-        orderedPlayers.push({
-          name: player.name,
-          positions: player.positions
-        });
+        seen.set(player.name, player);
+      } else {
+        // If we already have this player but the new one has a price, update it
+        const existing = seen.get(player.name);
+        if (!existing.price && player.price) {
+          seen.set(player.name, player);
+        }
       }
     }
+    
+    const orderedPlayers = Array.from(seen.values()).map(player => ({
+          name: player.name,
+      positions: player.positions,
+      price: player.price
+    }));
     
     return orderedPlayers;
   };
