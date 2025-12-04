@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup": "chmod +x setup-backend.sh start-backend.sh verify-setup.sh && echo '✓ Scripts are now executable. Run ./setup-backend.sh to set up the backend.'",
+    "verify": "chmod +x verify-setup.sh && ./verify-setup.sh"
   },
   "dependencies": {
     "react": "^19.2.0",
