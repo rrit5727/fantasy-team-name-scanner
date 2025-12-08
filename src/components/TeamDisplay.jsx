@@ -1,6 +1,11 @@
 import React from 'react';
 import './TeamDisplay.css';
 
+// Helper function to format numbers with comma separators
+const formatNumberWithCommas = (num) => {
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+};
+
 // Position order for NRL Fantasy team display
 const POSITION_CONFIG = {
   HOK: { label: 'HOK', count: 1, color: '#00d9a3' },
@@ -73,7 +78,7 @@ function TeamDisplay({ players, onTradeOut, selectedTradeOut }) {
         <div className="player-info">
           <span className="player-name">{player.name}</span>
         {player.price && (
-          <span className="player-price">${Math.round(player.price / 1000)}k</span>
+          <span className="player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
         )}
         </div>
       </div>
@@ -125,7 +130,7 @@ function TradePanel({ title, subtitle, players, onSelect, selectedPlayer, emptyM
                 </span>
                 <span className="trade-player-name">{player.name}</span>
                 {player.price && (
-                  <span className="trade-player-price">${Math.round(player.price / 1000)}k</span>
+                  <span className="trade-player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
                 )}
                 {player.reason && (
                   <span className={`trade-player-reason ${player.reason}`}>
@@ -155,12 +160,12 @@ function TradePanel({ title, subtitle, players, onSelect, selectedPlayer, emptyM
                   <div key={pIndex} className="trade-option-player">
                     <span className="trade-player-pos">{player.position}</span>
                     <span className="trade-player-name">{player.name}</span>
-                    <span className="trade-player-price">${Math.round(player.price / 1000)}k</span>
+                    <span className="trade-player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
                   </div>
                 ))}
                 <div className="trade-option-footer">
-                  <span>Total: ${Math.round(option.totalPrice / 1000)}k</span>
-                  <span>Remaining: ${Math.round(option.salaryRemaining / 1000)}k</span>
+                  <span>Total: ${formatNumberWithCommas(Math.round(option.totalPrice / 1000))}k</span>
+                  <span>Remaining: ${formatNumberWithCommas(Math.round(option.salaryRemaining / 1000))}k</span>
                 </div>
               </div>
             ))
@@ -189,6 +194,7 @@ function TradePanel({ title, subtitle, players, onSelect, selectedPlayer, emptyM
 
 function TeamView({ players, onBack }) {
   const [cashInBank, setCashInBank] = React.useState(0);
+  const [cashInBankDisplay, setCashInBankDisplay] = React.useState('');
   const [tradeOutRecommendations, setTradeOutRecommendations] = React.useState([]);
   const [tradeInRecommendations, setTradeInRecommendations] = React.useState([]);
   const [isCalculating, setIsCalculating] = React.useState(false);
@@ -200,6 +206,24 @@ function TeamView({ players, onBack }) {
   const [showTradeModal, setShowTradeModal] = React.useState(false);
   const [showTradeRecommendations, setShowTradeRecommendations] = React.useState(false);
   const [isCalculatingTradeOut, setIsCalculatingTradeOut] = React.useState(false);
+
+  // Handle cash in bank input with formatting
+  const handleCashChange = (e) => {
+    const value = e.target.value;
+    // Extract numeric value only
+    const numericValue = value.replace(/[^0-9]/g, '');
+    const parsedValue = parseInt(numericValue) || 0;
+    
+    // Update numeric state
+    setCashInBank(parsedValue);
+    
+    // Update display value with formatting
+    if (numericValue === '' || parsedValue === 0) {
+      setCashInBankDisplay('');
+    } else {
+      setCashInBankDisplay(`$ ${formatNumberWithCommas(parsedValue)} k`);
+    }
+  };
 
   // Calculate trade-out recommendations when component mounts or relevant settings change
   React.useEffect(() => {
@@ -248,7 +272,7 @@ function TeamView({ players, onBack }) {
       
       const result = await calculateTeamTrades(
         players,
-        cashInBank,
+        cashInBank * 1000, // Convert from thousands to actual amount
         selectedStrategy,
         selectedTradeType,
         numTrades,
@@ -316,12 +340,10 @@ function TeamView({ players, onBack }) {
             <label htmlFor="cashInBank">Cash in Bank ($)</label>
             <input
               id="cashInBank"
-              type="number"
-              value={cashInBank}
-              onChange={(e) => setCashInBank(parseInt(e.target.value) || 0)}
-              placeholder="0"
-              min="0"
-              step="1000"
+              type="text"
+              value={cashInBankDisplay}
+              onChange={handleCashChange}
+              placeholder="$ 000 k"
             />
           </div>
 
@@ -478,12 +500,10 @@ function TeamView({ players, onBack }) {
             <label htmlFor="cashInBank">Cash in Bank ($)</label>
             <input
               id="cashInBank"
-              type="number"
-              value={cashInBank}
-              onChange={(e) => setCashInBank(parseInt(e.target.value) || 0)}
-              placeholder="0"
-              min="0"
-              step="1000"
+              type="text"
+              value={cashInBankDisplay}
+              onChange={handleCashChange}
+              placeholder="$ 000 k"
             />
           </div>
 
