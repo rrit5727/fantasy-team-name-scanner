@@ -12,14 +12,16 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002';
  * @param {string} strategy - '1' = value, '2' = base, '3' = hybrid
  * @param {string} tradeType - 'likeForLike' or 'positionalSwap'
  * @param {number} numTrades - Number of trades to make
+ * @param {Array} allowedPositions - Array of position strings for positional swap (e.g., ['HOK', 'MID'])
  * @returns {Promise<Object>} Trade recommendations with trade_out and trade_in arrays
  */
 export async function calculateTeamTrades(
   teamPlayers,
   cashInBank = 0,
-  strategy = '3',
-  tradeType = 'positionalSwap',
-  numTrades = 2
+  strategy = '1',
+  tradeType = 'likeForLike',
+  numTrades = 2,
+  allowedPositions = null
 ) {
   try {
     // Validate inputs
@@ -45,7 +47,7 @@ export async function calculateTeamTrades(
       strategy: strategy,
       trade_type: tradeType,
       num_trades: numTrades,
-      allowed_positions: null, // Can be extended later
+      allowed_positions: allowedPositions && allowedPositions.length > 0 ? allowedPositions : null,
       simulate_datetime: null,
       apply_lockout: false,
       excluded_players: null

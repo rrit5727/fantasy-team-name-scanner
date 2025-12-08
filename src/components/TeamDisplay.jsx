@@ -192,9 +192,10 @@ function TeamView({ players, onBack }) {
   const [tradeOutRecommendations, setTradeOutRecommendations] = React.useState([]);
   const [tradeInRecommendations, setTradeInRecommendations] = React.useState([]);
   const [isCalculating, setIsCalculating] = React.useState(false);
-  const [selectedStrategy, setSelectedStrategy] = React.useState('3'); // Default to hybrid
-  const [selectedTradeType, setSelectedTradeType] = React.useState('positionalSwap');
+  const [selectedStrategy, setSelectedStrategy] = React.useState('1'); // Default to Maximize Value
+  const [selectedTradeType, setSelectedTradeType] = React.useState('likeForLike'); // Default to Like for Like
   const [numTrades, setNumTrades] = React.useState(2);
+  const [selectedPositions, setSelectedPositions] = React.useState([]); // For positional swap
   const [error, setError] = React.useState(null);
 
   const handleCalculateTrades = async () => {
@@ -210,7 +211,8 @@ function TeamView({ players, onBack }) {
         cashInBank,
         selectedStrategy,
         selectedTradeType,
-        numTrades
+        numTrades,
+        selectedTradeType === 'positionalSwap' ? selectedPositions : null
       );
       
       setTradeOutRecommendations(result.trade_out);
@@ -221,6 +223,16 @@ function TeamView({ players, onBack }) {
     } finally {
       setIsCalculating(false);
     }
+  };
+
+  const togglePosition = (position) => {
+    setSelectedPositions(prev => {
+      if (prev.includes(position)) {
+        return prev.filter(p => p !== position);
+      } else {
+        return [...prev, position];
+      }
+    });
   };
 
   const handleTradeOut = (player) => {
@@ -285,10 +297,34 @@ function TeamView({ players, onBack }) {
             value={selectedTradeType} 
             onChange={(e) => setSelectedTradeType(e.target.value)}
           >
-            <option value="positionalSwap">Positional Swap</option>
             <option value="likeForLike">Like for Like</option>
+            <option value="positionalSwap">Positional Swap</option>
           </select>
         </div>
+
+        {/* Position Selection (only shown for Positional Swap) */}
+        {selectedTradeType === 'positionalSwap' && (
+          <div className="position-selection-section">
+            <label>Select Positions for Swap</label>
+            <div className="position-checkboxes">
+              {['HOK', 'HLF', 'CTR', 'WFB', 'EDG', 'MID'].map(position => (
+                <label key={position} className="position-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={selectedPositions.includes(position)}
+                    onChange={() => togglePosition(position)}
+                  />
+                  <span>{position}</span>
+                </label>
+              ))}
+            </div>
+            <p className="position-hint">
+              {selectedPositions.length === 0 
+                ? 'Select positions to filter trade recommendations' 
+                : `${selectedPositions.length} position${selectedPositions.length > 1 ? 's' : ''} selected`}
+            </p>
+          </div>
+        )}
 
         {/* Number of Trades */}
         <div className="num-trades-section">
