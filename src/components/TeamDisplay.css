@@ -4,6 +4,7 @@
   gap: 1.5rem;
   min-height: calc(100vh - 200px);
   width: 100%;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 .team-view-main {
@@ -74,6 +75,7 @@
   padding: 1.5rem;
   border: 1px solid rgba(0, 166, 125, 0.3);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .team-field {
@@ -460,6 +462,169 @@
   border-radius: 2px;
 }
 
+/* Desktop/Mobile Visibility Classes */
+.desktop-only {
+  display: flex;
+}
+
+.mobile-only {
+  display: none;
+}
+
+.hidden-mobile {
+  display: flex;
+}
+
+/* Header Buttons Container */
+.header-buttons {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn-make-trade {
+  background: linear-gradient(135deg, #00a67d 0%, #00d9a3 100%);
+  border: none;
+  color: #0a1f1a;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-make-trade:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 217, 163, 0.4);
+}
+
+/* Trade Options Modal */
+.trade-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 1000;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.trade-modal-content {
+  background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  border-radius: 20px;
+  padding: 1.5rem;
+  border: 2px solid rgba(0, 166, 125, 0.3);
+  width: 100%;
+  max-width: 500px;
+  margin-top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.trade-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.trade-modal-header .sidebar-title {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  color: #00d9a3;
+  font-size: 2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-close-modal:hover {
+  color: #fff;
+  transform: rotate(90deg);
+}
+
+/* Trade Recommendations Full Page */
+.trade-recommendations-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.trade-recommendations-header {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  padding: 1rem;
+  border-bottom: 2px solid rgba(0, 166, 125, 0.3);
+  display: flex;
+  gap: 0.75rem;
+  z-index: 10;
+}
+
+.btn-header-action {
+  background: transparent;
+  border: 2px solid rgba(0, 166, 125, 0.5);
+  color: #00d9a3;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.btn-header-action:hover {
+  background: rgba(0, 166, 125, 0.1);
+  border-color: #00d9a3;
+}
+
+.trade-recommendations-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.trade-recommendations-content .trade-panel {
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  height: 100%;
+}
+
+.trade-recommendations-content .trade-player-list {
+  max-height: none;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .team-view {
@@ -473,6 +638,60 @@
   .team-view-sidebar {
     flex: none;
     min-height: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  /* Hide desktop sidebar on mobile */
+  .desktop-only {
+    display: none !important;
+  }
+  
+  /* Show mobile-only elements */
+  .mobile-only {
+    display: block;
+  }
+  
+  /* Hide team view when showing recommendations on mobile */
+  .hidden-mobile {
+    display: none !important;
+  }
+  
+  /* Full width team view on mobile */
+  .team-view {
+    flex-direction: column;
+  }
+  
+  .team-view-main {
+    width: 100%;
+  }
+  
+  /* Adjust header for mobile */
+  .section-header {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  
+  .section-header h2 {
+    text-align: center;
+  }
+  
+  .header-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .btn-back,
+  .btn-make-trade {
+    width: 100%;
+  }
+  
+  /* Make team display scrollable on mobile */
+  .team-display {
+    min-height: auto;
+    max-height: calc(100vh - 200px);
+    overflow-y: auto;
   }
 }
 
@@ -498,6 +717,16 @@
   
   .team-display {
     padding: 1rem;
+  }
+  
+  /* Adjust modal for small screens */
+  .trade-modal-overlay {
+    padding: 0.5rem;
+  }
+  
+  .trade-modal-content {
+    padding: 1rem;
+    margin-top: 0.5rem;
   }
 }
 
