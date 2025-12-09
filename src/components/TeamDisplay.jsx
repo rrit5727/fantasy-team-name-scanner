@@ -206,6 +206,9 @@ function TeamView({ players, onBack }) {
   const [showTradeModal, setShowTradeModal] = React.useState(false);
   const [showTradeRecommendations, setShowTradeRecommendations] = React.useState(false);
   const [isCalculatingTradeOut, setIsCalculatingTradeOut] = React.useState(false);
+  const [isTradeOptionsCollapsed, setIsTradeOptionsCollapsed] = React.useState(false);
+  const recommendationsContentRef = React.useRef(null);
+  const tradeOptionsRef = React.useRef(null);
 
   // Handle cash in bank input with formatting
   const handleCashChange = (e) => {
@@ -225,44 +228,87 @@ function TeamView({ players, onBack }) {
     }
   };
 
-  // Calculate trade-out recommendations when component mounts or relevant settings change
+  // Handle scroll for snap collapse - using transform (no layout shifts = no scroll jank)
   React.useEffect(() => {
-    const calculateTradeOut = async () => {
-      if (players && players.length > 0) {
-        setIsCalculatingTradeOut(true);
-        setError(null);
-        
-        try {
-          const { calculateTeamTrades } = await import('../services/tradeApi.js');
-          
-          const result = await calculateTeamTrades(
-            players,
-            0, // No cash needed for trade-out calculation
-            selectedStrategy,
-            selectedTradeType,
-            numTrades,
-            selectedTradeType === 'positionalSwap' ? selectedPositions : null
-          );
-          
-          setTradeOutRecommendations(result.trade_out);
-        } catch (err) {
-          console.error('Error calculating trade-out recommendations:', err);
-          setError(err.message || 'Failed to calculate trade-out recommendations');
-        } finally {
-          setIsCalculatingTradeOut(false);
+    if (!showTradeRecommendations) return;
+
+    const contentEl = recommendationsContentRef.current;
+    if (!contentEl) return;
+
+    let ticking = false;
+
+    const handleScroll = () => {
+      if (ticking) return;
+      ticking = true;
+
+      requestAnimationFrame(() => {
+        const scrollTop = contentEl.scrollTop;
+
+        // Simple: collapse when scrolled past 80px, expand when near top
+        if (scrollTop > 80 && !isTradeOptionsCollapsed) {
+          setIsTradeOptionsCollapsed(true);
+        } else if (scrollTop <= 30 && isTradeOptionsCollapsed) {
+          setIsTradeOptionsCollapsed(false);
         }
-      }
+
+        ticking = false;
+      });
     };
 
-    calculateTradeOut();
-  }, [players, selectedStrategy, selectedTradeType, numTrades, selectedPositions]);
+    contentEl.addEventListener('scroll', handleScroll, { passive: true });
 
-  // Open modal when "Make a Trade" is clicked (trade-out already calculated by useEffect)
-  const handleMakeATrade = () => {
-    setShowTradeModal(true);
+    return () => {
+      contentEl.removeEventListener('scroll', handleScroll);
+    };
+  }, [showTradeRecommendations, isTradeOptionsCollapsed]);
+
+  // Expand trade options when clicking the collapsed header
+  const handleExpandTradeOptions = () => {
+    if (isTradeOptionsCollapsed) {
+      setIsTradeOptionsCollapsed(false);
+      recommendationsContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
-  // Calculate trade-in recommendations when "Calculate Trade Recommendations" is clicked
+  // Reset state when closing recommendations page
+  React.useEffect(() => {
+    if (!showTradeRecommendations) {
+      setIsTradeOptionsCollapsed(false);
+    }
+  }, [showTradeRecommendations]);
+
+  // Open modal and calculate trade-out when "Make a Trade" is clicked (mobile only)
+  const handleMakeATrade = async () => {
+    setShowTradeModal(true);
+    
+    // Calculate trade-out recommendations for mobile
+    if (players && players.length > 0) {
+      setIsCalculatingTradeOut(true);
+      setError(null);
+      
+      try {
+        const { calculateTeamTrades } = await import('../services/tradeApi.js');
+        
+        const result = await calculateTeamTrades(
+          players,
+          0, // No cash needed for trade-out calculation
+          selectedStrategy,
+          selectedTradeType,
+          numTrades,
+          selectedTradeType === 'positionalSwap' ? selectedPositions : null
+        );
+        
+        setTradeOutRecommendations(result.trade_out);
+      } catch (err) {
+        console.error('Error calculating trade-out recommendations:', err);
+        setError(err.message || 'Failed to calculate trade-out recommendations');
+      } finally {
+        setIsCalculatingTradeOut(false);
+      }
+    }
+  };
+
+  // Calculate trade recommendations when "Calculate Trade Recommendations" is clicked
   const handleCalculateTrades = async () => {
     setIsCalculating(true);
     setError(null);
@@ -279,14 +325,17 @@ function TeamView({ players, onBack }) {
         selectedTradeType === 'positionalSwap' ? selectedPositions : null
       );
       
-      // Update trade-out recommendations in case settings changed
+      // Set both trade-out and trade-in recommendations
       setTradeOutRecommendations(result.trade_out);
-      // Set trade-in recommendations
       setTradeInRecommendations(result.trade_in);
       
-      // On mobile, close modal and show recommendations page
-      setShowTradeModal(false);
-      setShowTradeRecommendations(true);
+      // On mobile, close modal and show recommendations page with both trade-out and trade-in
+      // On desktop, just stay on the same page (no action needed, state is updated)
+      if (showTradeModal) {
+        setShowTradeModal(false);
+        setShowTradeRecommendations(true);
+        // Scroll state will reset automatically via useEffect when showTradeRecommendations changes
+      }
     } catch (err) {
       console.error('Error calculating trades:', err);
       setError(err.message || 'Failed to calculate trades');
@@ -439,30 +488,146 @@ function TeamView({ players, onBack }) {
         <div className="trade-recommendations-header">
           <button 
             className="btn-header-action" 
-            onClick={() => {
-              setShowTradeRecommendations(false);
-              setShowTradeModal(true);
-            }}
-          >
-            ← Trade Options
-          </button>
-          <button 
-            className="btn-header-action" 
             onClick={() => setShowTradeRecommendations(false)}
           >
             ← My Team
           </button>
         </div>
         
-        <div className="trade-recommendations-content">
-          <TradePanel 
-            title="Trade In"
-            subtitle="Trade-in Recommendations"
-            players={tradeInRecommendations}
-            onSelect={handleTradeIn}
-            emptyMessage="Trade-out players will generate trade-in options"
-            isTradeIn={true}
-          />
+        <div 
+          className="trade-recommendations-content"
+          ref={recommendationsContentRef}
+        >
+          {/* Collapsible Trade Options Section - transform-based for smooth animations */}
+          <div 
+            className={`trade-options-collapsible ${isTradeOptionsCollapsed ? 'fully-collapsed' : ''}`}
+            ref={tradeOptionsRef}
+            onClick={isTradeOptionsCollapsed ? handleExpandTradeOptions : undefined}
+          >
+            {/* Header - tappable when collapsed */}
+            <div className="trade-options-header">
+              <h3 className="sidebar-title">Trade Options</h3>
+              {isTradeOptionsCollapsed && (
+                <span className="expand-icon">▼</span>
+              )}
+            </div>
+            
+            {/* Content that progressively hides as user scrolls */}
+            <div className="trade-options-body">
+              {/* Trade-out Recommendations */}
+              <TradePanel 
+                title="Trade Out"
+                subtitle="Trade-out Recommendations"
+                players={tradeOutRecommendations}
+                onSelect={handleTradeOut}
+                emptyMessage="Trade-out recommendations will appear here"
+                isTradeOut={true}
+              />
+
+              {/* Cash in Bank Input */}
+              <div className="cash-in-bank-section">
+                <label htmlFor="cashInBankMobile">Cash in Bank ($)</label>
+                <input
+                  id="cashInBankMobile"
+                  type="text"
+                  value={cashInBankDisplay}
+                  onChange={handleCashChange}
+                  placeholder="$ 000 k"
+                />
+              </div>
+
+              {/* Strategy Selection */}
+              <div className="strategy-section">
+                <label htmlFor="strategyMobile">Strategy</label>
+                <select 
+                  id="strategyMobile" 
+                  value={selectedStrategy} 
+                  onChange={(e) => setSelectedStrategy(e.target.value)}
+                >
+                  <option value="1">Maximize Value (Diff)</option>
+                  <option value="2">Maximize Base (Projection)</option>
+                  <option value="3">Hybrid Approach</option>
+                </select>
+              </div>
+
+              {/* Trade Type Selection */}
+              <div className="trade-type-section">
+                <label htmlFor="tradeTypeMobile">Trade Type</label>
+                <select 
+                  id="tradeTypeMobile" 
+                  value={selectedTradeType} 
+                  onChange={(e) => setSelectedTradeType(e.target.value)}
+                >
+                  <option value="likeForLike">Like for Like</option>
+                  <option value="positionalSwap">Positional Swap</option>
+                </select>
+              </div>
+
+              {/* Position Selection (only shown for Positional Swap) */}
+              {selectedTradeType === 'positionalSwap' && (
+                <div className="position-selection-section">
+                  <label>Select Positions for Swap</label>
+                  <div className="position-checkboxes">
+                    {['HOK', 'HLF', 'CTR', 'WFB', 'EDG', 'MID'].map(position => (
+                      <label key={position} className="position-checkbox">
+                        <input
+                          type="checkbox"
+                          checked={selectedPositions.includes(position)}
+                          onChange={() => togglePosition(position)}
+                        />
+                        <span>{position}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="position-hint">
+                    {selectedPositions.length === 0 
+                      ? 'Select positions to filter trade recommendations' 
+                      : `${selectedPositions.length} position${selectedPositions.length > 1 ? 's' : ''} selected`}
+                  </p>
+                </div>
+              )}
+
+              {/* Number of Trades */}
+              <div className="num-trades-section">
+                <label htmlFor="numTradesMobile">Number of Trades</label>
+                <input
+                  id="numTradesMobile"
+                  type="number"
+                  value={numTrades}
+                  onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+                  min="1"
+                  max="3"
+                />
+              </div>
+
+              {/* Recalculate Button */}
+              <button 
+                className="btn-calculate-trades"
+                onClick={handleCalculateTrades}
+                disabled={isCalculating}
+              >
+                {isCalculating ? 'Calculating...' : 'Recalculate'}
+              </button>
+
+              {error && (
+                <div className="error-message">
+                  {error}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Trade-in Recommendations */}
+          <div className="trade-in-section">
+            <TradePanel 
+              title="Trade In"
+              subtitle="Trade-in Recommendations"
+              players={tradeInRecommendations}
+              onSelect={handleTradeIn}
+              emptyMessage="Trade-in recommendations will appear here"
+              isTradeIn={true}
+            />
+          </div>
         </div>
       </div>
     );
