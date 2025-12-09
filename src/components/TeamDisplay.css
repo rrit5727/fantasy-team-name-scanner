@@ -93,6 +93,24 @@
   flex-wrap: wrap;
 }
 
+/* Keep INT and EMG rows on a single line */
+.position-row.position-int,
+.position-row.position-emg {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(90px, 1fr));
+  gap: 0.65rem;
+  width: 100%;
+  max-width: 540px;
+  justify-items: center;
+}
+
+.position-row.position-int .player-card,
+.position-row.position-emg .player-card {
+  width: 100%;
+  max-width: 140px;
+  min-width: auto;
+}
+
 /* Player Cards */
 .player-card {
   background: rgba(0, 0, 0, 0.4);
@@ -732,6 +750,12 @@
   
   .team-display {
     padding: 1rem;
+  }
+
+  .position-row.position-int,
+  .position-row.position-emg {
+    grid-template-columns: repeat(4, minmax(75px, 1fr));
+    gap: 0.5rem;
   }
   
   /* Adjust modal for small screens */
