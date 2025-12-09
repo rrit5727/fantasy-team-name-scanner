@@ -403,7 +403,7 @@ function TeamView({ players, onBack }) {
               value={numTrades}
               onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
               min="1"
-              max="3"
+            max="2"
             />
           </div>
 
@@ -576,7 +576,7 @@ function TeamView({ players, onBack }) {
               value={numTrades}
               onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
               min="1"
-              max="3"
+            max="2"
             />
           </div>
 

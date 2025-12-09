@@ -93,7 +93,7 @@
   flex-wrap: wrap;
 }
 
-/* Keep INT and EMG rows on a single line */
+/* Keep INT and EMG rows on a single line (desktop & mobile) */
 .position-row.position-int,
 .position-row.position-emg {
   display: grid;
@@ -107,8 +107,9 @@
 .position-row.position-int .player-card,
 .position-row.position-emg .player-card {
   width: 100%;
-  max-width: 140px;
-  min-width: auto;
+  max-width: 130px;
+  min-width: 90px;
+  padding: 0.45rem;
 }
 
 /* Player Cards */
@@ -754,8 +755,16 @@
 
   .position-row.position-int,
   .position-row.position-emg {
-    grid-template-columns: repeat(4, minmax(75px, 1fr));
-    gap: 0.5rem;
+    grid-template-columns: repeat(4, minmax(70px, 1fr));
+    gap: 0.45rem;
+    max-width: 460px;
+  }
+
+  .position-row.position-int .player-card,
+  .position-row.position-emg .player-card {
+    min-width: 70px;
+    max-width: 110px;
+    padding: 0.4rem;
   }
   
   /* Adjust modal for small screens */
