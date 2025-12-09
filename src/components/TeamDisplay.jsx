@@ -204,11 +204,8 @@ function TeamView({ players, onBack }) {
   const [selectedPositions, setSelectedPositions] = React.useState([]); // For positional swap
   const [error, setError] = React.useState(null);
   const [showTradeModal, setShowTradeModal] = React.useState(false);
-  const [showTradeRecommendations, setShowTradeRecommendations] = React.useState(false);
+  const [showTradeInPage, setShowTradeInPage] = React.useState(false); // Trade-in recommendations page
   const [isCalculatingTradeOut, setIsCalculatingTradeOut] = React.useState(false);
-  const [isTradeOptionsCollapsed, setIsTradeOptionsCollapsed] = React.useState(false);
-  const recommendationsContentRef = React.useRef(null);
-  const tradeOptionsRef = React.useRef(null);
 
   // Handle cash in bank input with formatting
   const handleCashChange = (e) => {
@@ -227,55 +224,6 @@ function TeamView({ players, onBack }) {
       setCashInBankDisplay(`$ ${formatNumberWithCommas(parsedValue)} k`);
     }
   };
-
-  // Handle scroll for snap collapse - using transform (no layout shifts = no scroll jank)
-  React.useEffect(() => {
-    if (!showTradeRecommendations) return;
-
-    const contentEl = recommendationsContentRef.current;
-    if (!contentEl) return;
-
-    let ticking = false;
-
-    const handleScroll = () => {
-      if (ticking) return;
-      ticking = true;
-
-      requestAnimationFrame(() => {
-        const scrollTop = contentEl.scrollTop;
-
-        // Simple: collapse when scrolled past 80px, expand when near top
-        if (scrollTop > 80 && !isTradeOptionsCollapsed) {
-          setIsTradeOptionsCollapsed(true);
-        } else if (scrollTop <= 30 && isTradeOptionsCollapsed) {
-          setIsTradeOptionsCollapsed(false);
-        }
-
-        ticking = false;
-      });
-    };
-
-    contentEl.addEventListener('scroll', handleScroll, { passive: true });
-
-    return () => {
-      contentEl.removeEventListener('scroll', handleScroll);
-    };
-  }, [showTradeRecommendations, isTradeOptionsCollapsed]);
-
-  // Expand trade options when clicking the collapsed header
-  const handleExpandTradeOptions = () => {
-    if (isTradeOptionsCollapsed) {
-      setIsTradeOptionsCollapsed(false);
-      recommendationsContentRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  };
-
-  // Reset state when closing recommendations page
-  React.useEffect(() => {
-    if (!showTradeRecommendations) {
-      setIsTradeOptionsCollapsed(false);
-    }
-  }, [showTradeRecommendations]);
 
   // Open modal and calculate trade-out when "Make a Trade" is clicked (mobile only)
   const handleMakeATrade = async () => {
@@ -329,12 +277,11 @@ function TeamView({ players, onBack }) {
       setTradeOutRecommendations(result.trade_out);
       setTradeInRecommendations(result.trade_in);
       
-      // On mobile, close modal and show recommendations page with both trade-out and trade-in
+      // On mobile, close modal and show trade-in recommendations page
       // On desktop, just stay on the same page (no action needed, state is updated)
       if (showTradeModal) {
         setShowTradeModal(false);
-        setShowTradeRecommendations(true);
-        // Scroll state will reset automatically via useEffect when showTradeRecommendations changes
+        setShowTradeInPage(true);
       }
     } catch (err) {
       console.error('Error calculating trades:', err);
@@ -479,155 +426,52 @@ function TeamView({ players, onBack }) {
     );
   };
 
-  // Render Trade Recommendations Full Page for Mobile
-  const renderTradeRecommendationsPage = () => {
-    if (!showTradeRecommendations) return null;
+  // Render Trade-In Recommendations Page for Mobile (separate page from Trade Options)
+  const renderTradeInPage = () => {
+    if (!showTradeInPage) return null;
 
     return (
-      <div className="trade-recommendations-page">
-        <div className="trade-recommendations-header">
+      <div className="trade-in-page">
+        <div className="trade-in-page-header">
           <button 
             className="btn-header-action" 
-            onClick={() => setShowTradeRecommendations(false)}
+            onClick={() => setShowTradeInPage(false)}
           >
             ← My Team
           </button>
+          <button 
+            className="btn-header-action" 
+            onClick={() => {
+              setShowTradeInPage(false);
+              setShowTradeModal(true);
+            }}
+          >
+            ← Trade Options
+          </button>
         </div>
         
-        <div 
-          className="trade-recommendations-content"
-          ref={recommendationsContentRef}
-        >
-          {/* Collapsible Trade Options Section - transform-based for smooth animations */}
-          <div 
-            className={`trade-options-collapsible ${isTradeOptionsCollapsed ? 'fully-collapsed' : ''}`}
-            ref={tradeOptionsRef}
-            onClick={isTradeOptionsCollapsed ? handleExpandTradeOptions : undefined}
-          >
-            {/* Header - tappable when collapsed */}
-            <div className="trade-options-header">
-              <h3 className="sidebar-title">Trade Options</h3>
-              {isTradeOptionsCollapsed && (
-                <span className="expand-icon">▼</span>
-              )}
-            </div>
-            
-            {/* Content that progressively hides as user scrolls */}
-            <div className="trade-options-body">
-              {/* Trade-out Recommendations */}
-              <TradePanel 
-                title="Trade Out"
-                subtitle="Trade-out Recommendations"
-                players={tradeOutRecommendations}
-                onSelect={handleTradeOut}
-                emptyMessage="Trade-out recommendations will appear here"
-                isTradeOut={true}
-              />
-
-              {/* Cash in Bank Input */}
-              <div className="cash-in-bank-section">
-                <label htmlFor="cashInBankMobile">Cash in Bank ($)</label>
-                <input
-                  id="cashInBankMobile"
-                  type="text"
-                  value={cashInBankDisplay}
-                  onChange={handleCashChange}
-                  placeholder="$ 000 k"
-                />
-              </div>
-
-              {/* Strategy Selection */}
-              <div className="strategy-section">
-                <label htmlFor="strategyMobile">Strategy</label>
-                <select 
-                  id="strategyMobile" 
-                  value={selectedStrategy} 
-                  onChange={(e) => setSelectedStrategy(e.target.value)}
-                >
-                  <option value="1">Maximize Value (Diff)</option>
-                  <option value="2">Maximize Base (Projection)</option>
-                  <option value="3">Hybrid Approach</option>
-                </select>
-              </div>
-
-              {/* Trade Type Selection */}
-              <div className="trade-type-section">
-                <label htmlFor="tradeTypeMobile">Trade Type</label>
-                <select 
-                  id="tradeTypeMobile" 
-                  value={selectedTradeType} 
-                  onChange={(e) => setSelectedTradeType(e.target.value)}
-                >
-                  <option value="likeForLike">Like for Like</option>
-                  <option value="positionalSwap">Positional Swap</option>
-                </select>
-              </div>
-
-              {/* Position Selection (only shown for Positional Swap) */}
-              {selectedTradeType === 'positionalSwap' && (
-                <div className="position-selection-section">
-                  <label>Select Positions for Swap</label>
-                  <div className="position-checkboxes">
-                    {['HOK', 'HLF', 'CTR', 'WFB', 'EDG', 'MID'].map(position => (
-                      <label key={position} className="position-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={selectedPositions.includes(position)}
-                          onChange={() => togglePosition(position)}
-                        />
-                        <span>{position}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <p className="position-hint">
-                    {selectedPositions.length === 0 
-                      ? 'Select positions to filter trade recommendations' 
-                      : `${selectedPositions.length} position${selectedPositions.length > 1 ? 's' : ''} selected`}
-                  </p>
-                </div>
-              )}
-
-              {/* Number of Trades */}
-              <div className="num-trades-section">
-                <label htmlFor="numTradesMobile">Number of Trades</label>
-                <input
-                  id="numTradesMobile"
-                  type="number"
-                  value={numTrades}
-                  onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
-                  min="1"
-                  max="3"
-                />
-              </div>
-
-              {/* Recalculate Button */}
-              <button 
-                className="btn-calculate-trades"
-                onClick={handleCalculateTrades}
-                disabled={isCalculating}
-              >
-                {isCalculating ? 'Calculating...' : 'Recalculate'}
-              </button>
-
-              {error && (
-                <div className="error-message">
-                  {error}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Trade-in Recommendations */}
-          <div className="trade-in-section">
-            <TradePanel 
-              title="Trade In"
-              subtitle="Trade-in Recommendations"
-              players={tradeInRecommendations}
-              onSelect={handleTradeIn}
-              emptyMessage="Trade-in recommendations will appear here"
-              isTradeIn={true}
-            />
-          </div>
+        {/* Trade-out Recommendations - Pinned at top */}
+        <div className="trade-out-pinned">
+          <TradePanel 
+            title="Trade Out"
+            subtitle="Trade-out Recommendations"
+            players={tradeOutRecommendations}
+            onSelect={handleTradeOut}
+            emptyMessage="Trade-out recommendations will appear here"
+            isTradeOut={true}
+          />
+        </div>
+        
+        {/* Trade-in Recommendations - Scrollable */}
+        <div className="trade-in-page-content">
+          <TradePanel 
+            title="Trade In"
+            subtitle="Trade-in Recommendations"
+            players={tradeInRecommendations}
+            onSelect={handleTradeIn}
+            emptyMessage="Trade-in recommendations will appear here"
+            isTradeIn={true}
+          />
         </div>
       </div>
     );
@@ -636,9 +480,9 @@ function TeamView({ players, onBack }) {
   return (
     <>
       {renderTradeOptionsModal()}
-      {renderTradeRecommendationsPage()}
+      {renderTradeInPage()}
       
-      <div className={`team-view ${showTradeRecommendations ? 'hidden-mobile' : ''}`}>
+      <div className={`team-view ${showTradeInPage ? 'hidden-mobile' : ''}`}>
         <div className="team-view-main">
           <div className="section-header">
             <h2>My Team</h2>
