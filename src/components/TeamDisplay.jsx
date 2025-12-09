@@ -111,7 +111,20 @@ function TeamDisplay({ players, onTradeOut, selectedTradeOut }) {
   );
 }
 
-function TradePanel({ title, subtitle, players, onSelect, selectedPlayer, emptyMessage, isTradeOut, isTradeIn }) {
+function TradePanel({ 
+  title, 
+  subtitle, 
+  players, 
+  onSelect, 
+  selectedPlayer, 
+  selectedPlayers,
+  selectedOptionIndex,
+  onConfirmOption,
+  emptyMessage, 
+  isTradeOut, 
+  isTradeIn,
+  showConfirmButton
+}) {
   return (
     <div className="trade-panel">
       <h4 className="trade-subtitle">{subtitle}</h4>
@@ -122,7 +135,11 @@ function TradePanel({ title, subtitle, players, onSelect, selectedPlayer, emptyM
             players.map((player, index) => (
               <div 
                 key={player.name || index}
-                className={`trade-player-item ${selectedPlayer?.name === player.name ? 'selected' : ''}`}
+                className={`trade-player-item ${
+                  selectedPlayer?.name === player.name || selectedPlayers?.some(p => p.name === player.name)
+                    ? 'selected'
+                    : ''
+                }`}
                 onClick={() => onSelect?.(player)}
               >
                 <span className="trade-player-pos">
@@ -144,8 +161,8 @@ function TradePanel({ title, subtitle, players, onSelect, selectedPlayer, emptyM
             players.map((option, index) => (
               <div 
                 key={index}
-                className="trade-option"
-                onClick={() => onSelect?.(option)}
+                className={`trade-option ${selectedOptionIndex === index ? 'selected' : ''}`}
+                onClick={() => onSelect?.(option, index)}
               >
                 <div className="trade-option-header">
                   <span className="option-number">Option {index + 1}</span>
@@ -167,6 +184,17 @@ function TradePanel({ title, subtitle, players, onSelect, selectedPlayer, emptyM
                   <span>Total: ${formatNumberWithCommas(Math.round(option.totalPrice / 1000))}k</span>
                   <span>Remaining: ${formatNumberWithCommas(Math.round(option.salaryRemaining / 1000))}k</span>
                 </div>
+                {showConfirmButton && selectedOptionIndex === index && (
+                  <button
+                    className="btn-confirm-trade-option"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onConfirmOption?.();
+                    }}
+                  >
+                    Confirm Trade
+                  </button>
+                )}
               </div>
             ))
           ) : (
@@ -193,6 +221,7 @@ function TradePanel({ title, subtitle, players, onSelect, selectedPlayer, emptyM
 }
 
 function TeamView({ players, onBack }) {
+  const [teamPlayers, setTeamPlayers] = React.useState(players || []);
   const [cashInBank, setCashInBank] = React.useState(0);
   const [cashInBankDisplay, setCashInBankDisplay] = React.useState('');
   const [tradeOutRecommendations, setTradeOutRecommendations] = React.useState([]);
@@ -206,6 +235,13 @@ function TeamView({ players, onBack }) {
   const [showTradeModal, setShowTradeModal] = React.useState(false);
   const [showTradeInPage, setShowTradeInPage] = React.useState(false); // Trade-in recommendations page
   const [isCalculatingTradeOut, setIsCalculatingTradeOut] = React.useState(false);
+  const [selectedTradeOutPlayers, setSelectedTradeOutPlayers] = React.useState([]);
+  const [selectedTradeInIndex, setSelectedTradeInIndex] = React.useState(null);
+  const [salaryCapRemaining, setSalaryCapRemaining] = React.useState(null);
+
+  React.useEffect(() => {
+    setTeamPlayers(players || []);
+  }, [players]);
 
   // Handle cash in bank input with formatting
   const handleCashChange = (e) => {
@@ -230,7 +266,7 @@ function TeamView({ players, onBack }) {
     setShowTradeModal(true);
     
     // Calculate trade-out recommendations for mobile
-    if (players && players.length > 0) {
+    if (teamPlayers && teamPlayers.length > 0) {
       setIsCalculatingTradeOut(true);
       setError(null);
       
@@ -238,7 +274,7 @@ function TeamView({ players, onBack }) {
         const { calculateTeamTrades } = await import('../services/tradeApi.js');
         
         const result = await calculateTeamTrades(
-          players,
+          teamPlayers,
           0, // No cash needed for trade-out calculation
           selectedStrategy,
           selectedTradeType,
@@ -265,7 +301,7 @@ function TeamView({ players, onBack }) {
       const { calculateTeamTrades } = await import('../services/tradeApi.js');
       
       const result = await calculateTeamTrades(
-        players,
+        teamPlayers,
         cashInBank * 1000, // Convert from thousands to actual amount
         selectedStrategy,
         selectedTradeType,
@@ -302,11 +338,87 @@ function TeamView({ players, onBack }) {
   };
 
   const handleTradeOut = (player) => {
-    console.log('Trade out selected:', player);
+    if (!player) return;
+    setSelectedTradeOutPlayers(prev => {
+      const exists = prev.some(p => p.name === player.name);
+      if (exists) {
+        return prev.filter(p => p.name !== player.name);
+      }
+      const updated = [...prev, player];
+      if (updated.length > numTrades) {
+        // Keep most recent selections up to the number of trades requested
+        return updated.slice(updated.length - numTrades);
+      }
+      return updated;
+    });
   };
 
-  const handleTradeIn = (option) => {
-    console.log('Trade in selected:', option);
+  const handleTradeIn = (option, index) => {
+    setSelectedTradeInIndex(index);
+  };
+
+  const handleConfirmTrade = () => {
+    const selectedOption = selectedTradeInIndex !== null
+      ? tradeInRecommendations[selectedTradeInIndex]
+      : null;
+
+    if (!selectedOption) return;
+
+    const tradeInPlayers = (selectedOption.players || []).map(player => ({
+      name: player.name,
+      positions: player.positions || (player.position ? [player.position] : []),
+      price: player.price
+    }));
+
+    const expectedTradeCount = tradeInPlayers.length || numTrades;
+    const tradeOutList = selectedTradeOutPlayers.length > 0
+      ? selectedTradeOutPlayers.slice(0, expectedTradeCount)
+      : tradeOutRecommendations.slice(0, expectedTradeCount);
+
+    // Swap trade-outs with trade-ins in-place where possible
+    const updatedTeam = [...teamPlayers];
+    const minLength = Math.min(tradeOutList.length, tradeInPlayers.length);
+
+    for (let i = 0; i < minLength; i++) {
+      const outPlayer = tradeOutList[i];
+      const inPlayer = tradeInPlayers[i];
+      const idx = updatedTeam.findIndex(p => p.name === outPlayer.name);
+      if (idx !== -1) {
+        updatedTeam[idx] = inPlayer;
+      } else {
+        // If not found (defensive), append the new player
+        updatedTeam.push(inPlayer);
+      }
+    }
+
+    // If there are extra trade-ins, append them; if extra trade-outs, remove them
+    if (tradeInPlayers.length > minLength) {
+      for (let i = minLength; i < tradeInPlayers.length; i++) {
+        updatedTeam.push(tradeInPlayers[i]);
+      }
+    } else if (tradeOutList.length > minLength) {
+      const extraOutNames = new Set(tradeOutList.slice(minLength).map(p => p.name));
+      for (let i = updatedTeam.length - 1; i >= 0; i--) {
+        if (extraOutNames.has(updatedTeam[i].name)) {
+          updatedTeam.splice(i, 1);
+        }
+      }
+    }
+
+    setTeamPlayers(updatedTeam);
+
+    const tradeOutValue = tradeOutList.reduce((sum, p) => sum + (p.price || 0), 0);
+    const tradeInCost = tradeInPlayers.reduce((sum, p) => sum + (p.price || 0), 0);
+    const calculatedRemaining = (cashInBank * 1000) + tradeOutValue - tradeInCost;
+    const remainingCap = typeof selectedOption.salaryRemaining === 'number'
+      ? selectedOption.salaryRemaining
+      : calculatedRemaining;
+
+    setSalaryCapRemaining(remainingCap);
+    setSelectedTradeOutPlayers([]);
+    setSelectedTradeInIndex(null);
+    setShowTradeInPage(false);
+    setShowTradeModal(false);
   };
 
   // Render Trade Options Modal for Mobile
@@ -327,6 +439,7 @@ function TeamView({ players, onBack }) {
             subtitle="Trade-out Recommendations"
             players={tradeOutRecommendations}
             onSelect={handleTradeOut}
+            selectedPlayers={selectedTradeOutPlayers}
             emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
             isTradeOut={true}
           />
@@ -457,6 +570,7 @@ function TeamView({ players, onBack }) {
             subtitle="Trade-out Recommendations"
             players={tradeOutRecommendations}
             onSelect={handleTradeOut}
+            selectedPlayers={selectedTradeOutPlayers}
             emptyMessage="Trade-out recommendations will appear here"
             isTradeOut={true}
           />
@@ -469,6 +583,9 @@ function TeamView({ players, onBack }) {
             subtitle="Trade-in Recommendations"
             players={tradeInRecommendations}
             onSelect={handleTradeIn}
+            selectedOptionIndex={selectedTradeInIndex}
+            onConfirmOption={handleConfirmTrade}
+            showConfirmButton={true}
             emptyMessage="Trade-in recommendations will appear here"
             isTradeIn={true}
           />
@@ -486,6 +603,11 @@ function TeamView({ players, onBack }) {
         <div className="team-view-main">
           <div className="section-header">
             <h2>My Team</h2>
+            {salaryCapRemaining !== null && (
+              <div className="salary-cap-display">
+                Salary Cap: ${formatNumberWithCommas(Math.round(salaryCapRemaining / 1000))}k
+              </div>
+            )}
             <div className="header-buttons">
               <button className="btn-back" onClick={onBack}>
                 ← Back to Scanner
@@ -496,7 +618,7 @@ function TeamView({ players, onBack }) {
             </div>
           </div>
           <TeamDisplay 
-            players={players} 
+            players={teamPlayers} 
             onTradeOut={handleTradeOut}
           />
         </div>
@@ -600,6 +722,7 @@ function TeamView({ players, onBack }) {
             subtitle="Trade-out Recommendations"
             players={tradeOutRecommendations}
             onSelect={handleTradeOut}
+            selectedPlayers={selectedTradeOutPlayers}
             emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
             isTradeOut={true}
           />
@@ -609,6 +732,9 @@ function TeamView({ players, onBack }) {
             subtitle="Trade-in Recommendations"
             players={tradeInRecommendations}
             onSelect={handleTradeIn}
+            selectedOptionIndex={selectedTradeInIndex}
+            onConfirmOption={handleConfirmTrade}
+            showConfirmButton={true}
             emptyMessage="Trade-out players will generate trade-in options"
             isTradeIn={true}
           />
