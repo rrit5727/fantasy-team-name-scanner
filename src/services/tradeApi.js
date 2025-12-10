@@ -21,7 +21,8 @@ export async function calculateTeamTrades(
   strategy = '1',
   tradeType = 'likeForLike',
   numTrades = 2,
-  allowedPositions = null
+  allowedPositions = null,
+  targetByeRound = false
 ) {
   try {
     // Validate inputs
@@ -50,7 +51,8 @@ export async function calculateTeamTrades(
       allowed_positions: allowedPositions && allowedPositions.length > 0 ? allowedPositions : null,
       simulate_datetime: null,
       apply_lockout: false,
-      excluded_players: null
+      excluded_players: null,
+      target_bye_round: targetByeRound
     };
 
     console.log('Sending trade calculation request:', payload);
@@ -92,6 +94,39 @@ export async function checkBackendHealth() {
   } catch (error) {
     console.error('Backend health check failed:', error);
     return false;
+  }
+}
+
+/**
+ * Analyse loop opportunities without performing trades.
+ * @param {Array} teamPlayers - Array of player objects (expects play_status/kickoff_rank if available)
+ * @param {Object} fixtureMap - Optional mapping of team -> kickoff_rank
+ * @returns {Promise<Object>} Loop advisory structure
+ */
+export async function analyseLoopOptions(teamPlayers, fixtureMap = {}) {
+  try {
+    const payload = {
+      team: teamPlayers,
+      fixture_map: fixtureMap
+    };
+
+    const response = await fetch(`${API_BASE_URL}/analyse_loops`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Error analysing loop options:', error);
+    throw error;
   }
 }
 

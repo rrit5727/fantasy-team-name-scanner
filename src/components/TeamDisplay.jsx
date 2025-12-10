@@ -33,7 +33,7 @@ function TeamDisplay({ players, onTradeOut, selectedTradeOut }) {
   // First, try to place players by their detected position
   const unassigned = [];
   players.forEach(player => {
-    const primaryPos = player.positions?.[0];
+    const primaryPos = player.displaySlot || player.positions?.[0];
     if (primaryPos && groupedPlayers[primaryPos] && 
         groupedPlayers[primaryPos].length < POSITION_CONFIG[primaryPos]?.count) {
       groupedPlayers[primaryPos].push(player);
@@ -65,11 +65,12 @@ function TeamDisplay({ players, onTradeOut, selectedTradeOut }) {
     }
 
     const isSelected = selectedTradeOut?.name === player.name;
+    const moved = player?.loopMoved;
 
     return (
       <div 
         key={player.name} 
-        className={`player-card ${isSelected ? 'selected' : ''}`}
+        className={`player-card ${isSelected ? 'selected' : ''} ${moved ? 'moved' : ''}`}
         onClick={() => onTradeOut?.(player)}
       >
         <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
@@ -231,6 +232,10 @@ function TeamView({ players, onBack }) {
   const [selectedTradeType, setSelectedTradeType] = React.useState('likeForLike'); // Default to Like for Like
   const [numTrades, setNumTrades] = React.useState(2);
   const [selectedPositions, setSelectedPositions] = React.useState([]); // For positional swap
+  const [targetByeRound, setTargetByeRound] = React.useState(false);
+  const [loopAnalysis, setLoopAnalysis] = React.useState(null);
+  const [loopViewPlayers, setLoopViewPlayers] = React.useState(players || []);
+  const [loopError, setLoopError] = React.useState(null);
   const [error, setError] = React.useState(null);
   const [showTradeModal, setShowTradeModal] = React.useState(false);
   const [showTradeInPage, setShowTradeInPage] = React.useState(false); // Trade-in recommendations page
@@ -241,6 +246,8 @@ function TeamView({ players, onBack }) {
 
   React.useEffect(() => {
     setTeamPlayers(players || []);
+    setLoopViewPlayers(players || []);
+    setLoopAnalysis(null);
   }, [players]);
 
   // Handle cash in bank input with formatting
@@ -279,7 +286,8 @@ function TeamView({ players, onBack }) {
           selectedStrategy,
           selectedTradeType,
           numTrades,
-          selectedTradeType === 'positionalSwap' ? selectedPositions : null
+          selectedTradeType === 'positionalSwap' ? selectedPositions : null,
+          targetByeRound
         );
         
         setTradeOutRecommendations(result.trade_out);
@@ -306,7 +314,8 @@ function TeamView({ players, onBack }) {
         selectedStrategy,
         selectedTradeType,
         numTrades,
-        selectedTradeType === 'positionalSwap' ? selectedPositions : null
+        selectedTradeType === 'positionalSwap' ? selectedPositions : null,
+        targetByeRound
       );
       
       // Set both trade-out and trade-in recommendations
@@ -324,6 +333,49 @@ function TeamView({ players, onBack }) {
       setError(err.message || 'Failed to calculate trades');
     } finally {
       setIsCalculating(false);
+    }
+  };
+
+  // Analyse loop opportunities without performing trades
+  const handleAnalyseLoop = async () => {
+    setLoopError(null);
+    try {
+      const { analyseLoopOptions } = await import('../services/tradeApi.js');
+      const result = await analyseLoopOptions(teamPlayers);
+      setLoopAnalysis(result);
+
+      if (result?.loop_available && Array.isArray(result.loops) && result.loops.length > 0) {
+        const suggestion = result.loops[0];
+        const anchorName = suggestion.anchor_player;
+        const candidateName = suggestion.candidate_player;
+
+        const updatedView = teamPlayers.map(player => {
+          let displaySlot = undefined;
+          let loopMoved = false;
+
+          if (player.name === candidateName) {
+            displaySlot = 'INT';
+            loopMoved = true;
+          } else if (player.name === anchorName) {
+            loopMoved = true;
+          }
+
+          return {
+            ...player,
+            displaySlot,
+            loopMoved
+          };
+        });
+
+        setLoopViewPlayers(updatedView);
+      } else {
+        setLoopViewPlayers(teamPlayers);
+      }
+    } catch (err) {
+      console.error('Error analysing loop options:', err);
+      setLoopError(err.message || 'Failed to analyse loop options');
+      setLoopAnalysis(null);
+      setLoopViewPlayers(teamPlayers);
     }
   };
 
@@ -483,6 +535,40 @@ function TeamView({ players, onBack }) {
             </select>
           </div>
 
+          {/* Bye round weighting toggle */}
+          <div className="toggle-section">
+            <div className="toggle-labels">
+              <label htmlFor="targetByeRoundDesktop">Target Bye Round Players</label>
+              <span className="toggle-caption">Prioritise bye coverage</span>
+            </div>
+            <label className="toggle-switch">
+              <input
+                id="targetByeRoundDesktop"
+                type="checkbox"
+                checked={targetByeRound}
+                onChange={(e) => setTargetByeRound(e.target.checked)}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
+          {/* Bye round weighting toggle */}
+          <div className="toggle-section">
+            <div className="toggle-labels">
+              <label htmlFor="targetByeRound">Target Bye Round Players</label>
+              <span className="toggle-caption">Prioritise bye coverage</span>
+            </div>
+            <label className="toggle-switch">
+              <input
+                id="targetByeRound"
+                type="checkbox"
+                checked={targetByeRound}
+                onChange={(e) => setTargetByeRound(e.target.checked)}
+              />
+              <span className="toggle-slider" />
+            </label>
+          </div>
+
           {/* Position Selection (only shown for Positional Swap) */}
           {selectedTradeType === 'positionalSwap' && (
             <div className="position-selection-section">
@@ -609,16 +695,53 @@ function TeamView({ players, onBack }) {
               </div>
             )}
             <div className="header-buttons">
-              <button className="btn-back" onClick={onBack}>
-                ← Back to Scanner
-              </button>
+              <div className="header-actions">
+                <button className="btn-back" onClick={onBack}>
+                  ← Back to Scanner
+                </button>
+                <button
+                  className="btn-loop desktop-only"
+                  onClick={() => handleAnalyseLoop()}
+                >
+                  Analyse Loop Options
+                </button>
+              </div>
               <button className="btn-make-trade mobile-only" onClick={handleMakeATrade}>
                 Make a Trade
               </button>
+              <button
+                className="btn-loop mobile-only"
+                onClick={() => handleAnalyseLoop()}
+              >
+                Analyse Loop Options
+              </button>
             </div>
           </div>
+
+          {(loopAnalysis || loopError) && (
+            <div className="loop-advisory">
+              {loopError && (
+                <p className="loop-error">{loopError}</p>
+              )}
+              {loopAnalysis && (
+                loopAnalysis.loop_available && loopAnalysis.loops?.length > 0 ? (
+                  <>
+                    <p className="loop-title">Loop found: {loopAnalysis.loops[0].anchor_player} with {loopAnalysis.loops[0].candidate_player}</p>
+                    <ul className="loop-actions">
+                      {loopAnalysis.loops[0].recommended_actions?.map((action, idx) => (
+                        <li key={idx}>{action}</li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="loop-none">No loop opportunities detected.</p>
+                )
+              )}
+            </div>
+          )}
+
           <TeamDisplay 
-            players={teamPlayers} 
+            players={loopViewPlayers} 
             onTradeOut={handleTradeOut}
           />
         </div>
