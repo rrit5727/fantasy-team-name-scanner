@@ -97,36 +97,3 @@ export async function checkBackendHealth() {
   }
 }
 
-/**
- * Analyse loop opportunities without performing trades.
- * @param {Array} teamPlayers - Array of player objects (expects play_status/kickoff_rank if available)
- * @param {Object} fixtureMap - Optional mapping of team -> kickoff_rank
- * @returns {Promise<Object>} Loop advisory structure
- */
-export async function analyseLoopOptions(teamPlayers, fixtureMap = {}) {
-  try {
-    const payload = {
-      team: teamPlayers,
-      fixture_map: fixtureMap
-    };
-
-    const response = await fetch(`${API_BASE_URL}/analyse_loops`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `Server error: ${response.status}`);
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error('Error analysing loop options:', error);
-    throw error;
-  }
-}
-
