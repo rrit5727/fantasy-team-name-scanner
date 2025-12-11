@@ -82,6 +82,75 @@ export async function calculateTeamTrades(
 }
 
 /**
+ * Calculate preseason trade-in recommendations (individual players, not pairs)
+ * @param {Array} teamPlayers - Array of player objects in the user's team
+ * @param {Array} tradeOutPlayers - Array of players selected for trade-out
+ * @param {number} salaryCap - Available salary cap for trade-ins
+ * @param {string} strategy - '1' = value, '2' = base, '3' = hybrid
+ * @param {Array} positions - Positions to filter trade-ins by (from trade-outs)
+ * @param {boolean} targetByeRound - Whether to prioritize bye round coverage
+ * @returns {Promise<Object>} Object with trade_ins array of individual player recommendations
+ */
+export async function calculatePreseasonTradeIns(
+  teamPlayers,
+  tradeOutPlayers,
+  salaryCap,
+  strategy = '1',
+  positions = [],
+  targetByeRound = false
+) {
+  try {
+    // Validate inputs
+    if (!tradeOutPlayers || tradeOutPlayers.length === 0) {
+      throw new Error('No trade-out players provided');
+    }
+
+    // Prepare request payload
+    const payload = {
+      team_players: teamPlayers.map(player => ({
+        name: player.name,
+        positions: player.positions || [],
+        price: player.price || 0
+      })),
+      trade_out_players: tradeOutPlayers.map(player => ({
+        name: player.name,
+        positions: player.positions || [],
+        price: player.price || 0,
+        position: player.originalPosition || player.positions?.[0]
+      })),
+      salary_cap: salaryCap,
+      strategy: strategy,
+      positions: positions.filter(Boolean),
+      target_bye_round: targetByeRound
+    };
+
+    console.log('Sending preseason trade-in request:', payload);
+
+    // Make API request
+    const response = await fetch(`${API_BASE_URL}/calculate_preseason_trade_ins`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Server error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log('Preseason trade-in recommendations received:', data);
+
+    return data;
+  } catch (error) {
+    console.error('Error calculating preseason trade-ins:', error);
+    throw error;
+  }
+}
+
+/**
  * Check if the Flask backend is running
  * @returns {Promise<boolean>} True if backend is accessible
  */

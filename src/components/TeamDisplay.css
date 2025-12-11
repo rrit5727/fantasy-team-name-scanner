@@ -156,6 +156,41 @@
   background: rgba(255, 165, 0, 0.12);
 }
 
+/* Pre-season Mode Player Card States */
+.player-card.preseason-highlight {
+  background: rgba(255, 165, 0, 0.15);
+  border-color: rgba(255, 165, 0, 0.5);
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.2);
+}
+
+.player-card.preseason-highlight:hover {
+  background: rgba(255, 165, 0, 0.25);
+  border-color: rgba(255, 165, 0, 0.7);
+  box-shadow: 0 0 15px rgba(255, 165, 0, 0.35);
+}
+
+.player-card.preseason-selected-out {
+  background: rgba(255, 100, 100, 0.25);
+  border-color: #ff6464;
+  box-shadow: 0 0 15px rgba(255, 100, 100, 0.35);
+}
+
+.player-card.preseason-selected-out:hover {
+  background: rgba(255, 100, 100, 0.35);
+  border-color: #ff7878;
+}
+
+.player-card.preseason-traded-in {
+  background: rgba(0, 200, 100, 0.25);
+  border-color: #00c864;
+  box-shadow: 0 0 15px rgba(0, 200, 100, 0.35);
+}
+
+.player-card.preseason-traded-in:hover {
+  background: rgba(0, 200, 100, 0.35);
+  border-color: #00e070;
+}
+
 .player-card.empty {
   opacity: 0.5;
   cursor: default;
@@ -584,6 +619,175 @@
 .btn-confirm-trade-option:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0, 217, 163, 0.35);
+}
+
+/* Pre-season Mode Styles */
+.preseason-mode-section {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 165, 0, 0.08);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 10px;
+}
+
+.preseason-mode-section.active {
+  background: rgba(255, 165, 0, 0.15);
+  border-color: rgba(255, 165, 0, 0.5);
+}
+
+.preseason-mode-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.preseason-mode-header .toggle-labels label {
+  color: #ffa500;
+}
+
+.preseason-mode-header .toggle-switch input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #cc8400 0%, #ffa500 100%);
+  border-color: rgba(255, 165, 0, 0.8);
+}
+
+.btn-highlight-options {
+  width: 100%;
+  padding: 0.8rem;
+  background: linear-gradient(135deg, #cc8400 0%, #ffa500 100%);
+  border: none;
+  border-radius: 10px;
+  color: #0a1f1a;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.btn-highlight-options:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255, 165, 0, 0.4);
+}
+
+.btn-highlight-options:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-confirm-trade-outs {
+  width: 100%;
+  padding: 0.8rem;
+  background: linear-gradient(135deg, #cc4040 0%, #ff6464 100%);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.btn-confirm-trade-outs:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255, 100, 100, 0.4);
+}
+
+.btn-confirm-trade-outs:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Pre-season Salary Cap Display */
+.preseason-salary-cap {
+  text-align: center;
+  color: #ffa500;
+  font-weight: 700;
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.4);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.75rem;
+}
+
+.preseason-salary-cap.has-budget {
+  color: #00d9a3;
+  background: rgba(0, 166, 125, 0.1);
+  border-color: rgba(0, 166, 125, 0.4);
+}
+
+/* Pre-season Trade-In List (Individual Players) */
+.preseason-tradein-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.preseason-tradein-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.85rem;
+  background: rgba(0, 166, 125, 0.08);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.preseason-tradein-item:hover {
+  background: rgba(0, 166, 125, 0.18);
+  border-color: rgba(0, 166, 125, 0.3);
+}
+
+.preseason-tradein-item.selected {
+  background: rgba(0, 200, 100, 0.2);
+  border-color: #00c864;
+  box-shadow: 0 0 10px rgba(0, 200, 100, 0.2);
+}
+
+.preseason-tradein-item.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.preseason-tradein-item .trade-player-pos {
+  min-width: 36px;
+}
+
+.preseason-tradein-item .trade-player-diff {
+  color: #ffa500;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+/* Pre-season Trade Status Info */
+.preseason-status {
+  text-align: center;
+  padding: 0.6rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  color: #8a9a96;
+}
+
+.preseason-status.highlight {
+  background: rgba(255, 165, 0, 0.1);
+  color: #ffa500;
+}
+
+.preseason-status.selecting {
+  background: rgba(255, 100, 100, 0.1);
+  color: #ff6464;
 }
 
 /* Scrollbar for trade panels */

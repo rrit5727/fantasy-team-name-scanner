@@ -88,6 +88,7 @@ For detailed setup instructions, see [SETUP.md](SETUP.md).
 - [QUICKSTART.md](QUICKSTART.md) - Quick start guide
 - [DEPLOYMENT_CHECKLIST.md](DEPLOYMENT_CHECKLIST.md) - Deployment guide
 - [TRADE_RECOMMENDATIONS_GUIDE.md](TRADE_RECOMMENDATIONS_GUIDE.md) - Trade algorithm details
+- [NRL_FANTASY_CONTEXT.md](docs/NRL_FANTASY_CONTEXT.md) - Domain rules and strategy reference
 
 ## Contributing
 

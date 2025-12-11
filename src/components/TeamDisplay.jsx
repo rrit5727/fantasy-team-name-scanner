@@ -20,7 +20,17 @@ const POSITION_CONFIG = {
 
 const POSITION_ORDER = ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB', 'INT', 'EMG'];
 
-function TeamDisplay({ players, onTradeOut, selectedTradeOut }) {
+function TeamDisplay({ 
+  players, 
+  onTradeOut, 
+  selectedTradeOut,
+  // Pre-season mode props
+  isPreseasonMode = false,
+  preseasonHighlighted = [],
+  preseasonSelectedOut = [],
+  preseasonTradedIn = [],
+  onPreseasonClick
+}) {
   // Group players by their primary position
   const groupedPlayers = {};
   POSITION_ORDER.forEach(pos => {
@@ -50,6 +60,11 @@ function TeamDisplay({ players, onTradeOut, selectedTradeOut }) {
     }
   });
 
+  // Helper to check if player is in a list by name
+  const isPlayerInList = (player, list) => {
+    return list.some(p => p.name === player.name);
+  };
+
   const renderPlayerCard = (player, position, index) => {
     if (!player) {
       return (
@@ -64,13 +79,43 @@ function TeamDisplay({ players, onTradeOut, selectedTradeOut }) {
       );
     }
 
-    const isSelected = selectedTradeOut?.name === player.name;
+    // Determine CSS classes based on preseason mode state
+    let cardClasses = 'player-card';
+    
+    if (isPreseasonMode) {
+      // Check if this player was traded in (replaces a traded out player)
+      if (isPlayerInList(player, preseasonTradedIn)) {
+        cardClasses += ' preseason-traded-in';
+      }
+      // Check if player is selected for trade out
+      else if (isPlayerInList(player, preseasonSelectedOut)) {
+        cardClasses += ' preseason-selected-out';
+      }
+      // Check if player is highlighted as a trade-out recommendation
+      else if (isPlayerInList(player, preseasonHighlighted)) {
+        cardClasses += ' preseason-highlight';
+      }
+    } else {
+      // Normal mode - use existing selected state
+      const isSelected = selectedTradeOut?.name === player.name;
+      if (isSelected) {
+        cardClasses += ' selected';
+      }
+    }
+
+    const handleClick = () => {
+      if (isPreseasonMode && onPreseasonClick) {
+        onPreseasonClick(player, position);
+      } else if (onTradeOut) {
+        onTradeOut(player);
+      }
+    };
 
     return (
       <div 
         key={player.name} 
-        className={`player-card ${isSelected ? 'selected' : ''}`}
-        onClick={() => onTradeOut?.(player)}
+        className={cardClasses}
+        onClick={handleClick}
       >
         <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
           {position}
@@ -240,9 +285,32 @@ function TeamView({ players, onBack }) {
   const [selectedTradeInIndex, setSelectedTradeInIndex] = React.useState(null);
   const [salaryCapRemaining, setSalaryCapRemaining] = React.useState(null);
 
+  // Pre-season mode state
+  const [isPreseasonMode, setIsPreseasonMode] = React.useState(false);
+  const [preseasonHighlightedPlayers, setPreseasonHighlightedPlayers] = React.useState([]); // Up to 6 recommended trade-outs
+  const [preseasonSelectedTradeOuts, setPreseasonSelectedTradeOuts] = React.useState([]); // Players user clicked to trade out
+  const [preseasonAvailableTradeIns, setPreseasonAvailableTradeIns] = React.useState([]); // Flat list of trade-in candidates
+  const [preseasonSelectedTradeIns, setPreseasonSelectedTradeIns] = React.useState([]); // Players selected to trade in
+  const [preseasonSalaryCap, setPreseasonSalaryCap] = React.useState(0); // Dynamic salary cap
+  const [preseasonPhase, setPreseasonPhase] = React.useState('idle'); // 'idle' | 'highlighting' | 'selecting-out' | 'selecting-in'
+  const [showPreseasonTradeIns, setShowPreseasonTradeIns] = React.useState(false); // Show trade-in panel after confirming trade-outs
+
   React.useEffect(() => {
     setTeamPlayers(players || []);
   }, [players]);
+
+  // Reset preseason state when mode is toggled off
+  React.useEffect(() => {
+    if (!isPreseasonMode) {
+      setPreseasonHighlightedPlayers([]);
+      setPreseasonSelectedTradeOuts([]);
+      setPreseasonAvailableTradeIns([]);
+      setPreseasonSelectedTradeIns([]);
+      setPreseasonSalaryCap(0);
+      setPreseasonPhase('idle');
+      setShowPreseasonTradeIns(false);
+    }
+  }, [isPreseasonMode]);
 
   // Handle cash in bank input with formatting
   const handleCashChange = (e) => {
@@ -424,6 +492,217 @@ function TeamView({ players, onBack }) {
     setShowTradeModal(false);
   };
 
+  // ========== PRE-SEASON MODE HANDLERS ==========
+
+  // Handle "Highlight Options" button - calculates and highlights trade-out recommendations
+  const handleHighlightOptions = async () => {
+    if (!teamPlayers || teamPlayers.length === 0) return;
+    
+    setIsCalculating(true);
+    setError(null);
+    
+    try {
+      const { calculateTeamTrades } = await import('../services/tradeApi.js');
+      
+      // In preseason mode, use 6 trades
+      const preseasonNumTrades = 6;
+      
+      const result = await calculateTeamTrades(
+        teamPlayers,
+        cashInBank * 1000,
+        selectedStrategy,
+        'likeForLike', // Use like-for-like for preseason recommendations
+        preseasonNumTrades,
+        null,
+        targetByeRound
+      );
+      
+      // Set highlighted players (up to 6 trade-out recommendations)
+      setPreseasonHighlightedPlayers(result.trade_out || []);
+      setPreseasonPhase('selecting-out');
+      setPreseasonSalaryCap(cashInBank * 1000);
+      
+      // On mobile, close modal and go to team screen with highlights
+      if (showTradeModal) {
+        setShowTradeModal(false);
+      }
+    } catch (err) {
+      console.error('Error calculating preseason trade-out recommendations:', err);
+      setError(err.message || 'Failed to calculate trade-out recommendations');
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  // Handle clicking on a player in preseason mode (team display)
+  const handlePreseasonPlayerClick = (player, position) => {
+    if (!player) return;
+    
+    // During selecting-out phase - user is selecting which highlighted players to trade out
+    if (preseasonPhase === 'selecting-out') {
+      // Check if player is highlighted (recommended for trade-out)
+      const isHighlighted = preseasonHighlightedPlayers.some(p => p.name === player.name);
+      if (!isHighlighted) return; // Only allow clicking highlighted players
+      
+      setPreseasonSelectedTradeOuts(prev => {
+        const exists = prev.some(p => p.name === player.name);
+        if (exists) {
+          // Deselect - reduce salary cap
+          const newList = prev.filter(p => p.name !== player.name);
+          setPreseasonSalaryCap(current => current - (player.price || 0));
+          return newList;
+        } else {
+          // Select - increase salary cap
+          setPreseasonSalaryCap(current => current + (player.price || 0));
+          return [...prev, { ...player, originalPosition: position }];
+        }
+      });
+    }
+    // During selecting-in phase - user might click a traded-in player to reverse
+    else if (preseasonPhase === 'selecting-in') {
+      const tradedInPlayer = preseasonSelectedTradeIns.find(p => p.name === player.name);
+      if (tradedInPlayer) {
+        // Reverse the trade-in
+        handleReversePreseasonTradeIn(tradedInPlayer);
+      }
+    }
+  };
+
+  // Handle confirming trade-out selections and moving to trade-in phase
+  const handleConfirmPreseasonTradeOuts = async () => {
+    if (preseasonSelectedTradeOuts.length === 0) return;
+    
+    setIsCalculating(true);
+    setError(null);
+    
+    try {
+      const { calculatePreseasonTradeIns } = await import('../services/tradeApi.js');
+      
+      // Get positions from selected trade-outs
+      const tradeOutPositions = preseasonSelectedTradeOuts.map(p => 
+        p.originalPosition || p.positions?.[0]
+      ).filter(Boolean);
+      
+      // Calculate available trade-ins based on selected trade-outs
+      const result = await calculatePreseasonTradeIns(
+        teamPlayers,
+        preseasonSelectedTradeOuts,
+        preseasonSalaryCap,
+        selectedStrategy,
+        tradeOutPositions,
+        targetByeRound
+      );
+      
+      setPreseasonAvailableTradeIns(result.trade_ins || []);
+      setPreseasonPhase('selecting-in');
+      setShowPreseasonTradeIns(true);
+    } catch (err) {
+      console.error('Error calculating preseason trade-ins:', err);
+      setError(err.message || 'Failed to calculate trade-in options');
+    } finally {
+      setIsCalculating(false);
+    }
+  };
+
+  // Handle selecting a trade-in player
+  const handlePreseasonTradeInSelect = (player) => {
+    if (!player) return;
+    
+    // Check if player is already selected
+    const isAlreadySelected = preseasonSelectedTradeIns.some(p => p.name === player.name);
+    if (isAlreadySelected) return;
+    
+    // Check if we can afford this player
+    if (player.price > preseasonSalaryCap) return;
+    
+    // Find a matching trade-out position for this player
+    const playerPosition = player.position || player.positions?.[0];
+    const matchingTradeOut = preseasonSelectedTradeOuts.find(out => {
+      const outPos = out.originalPosition || out.positions?.[0];
+      // Check if this position still needs to be filled
+      const alreadyFilledForPosition = preseasonSelectedTradeIns.some(inPlayer => {
+        const inPos = inPlayer.swappedPosition;
+        return inPos === outPos;
+      });
+      return outPos === playerPosition && !alreadyFilledForPosition;
+    });
+    
+    if (!matchingTradeOut) return; // No matching position available
+    
+    // Add to selected trade-ins with position info
+    const tradeInWithPosition = {
+      ...player,
+      swappedPosition: matchingTradeOut.originalPosition || matchingTradeOut.positions?.[0],
+      swappedForPlayer: matchingTradeOut.name
+    };
+    
+    setPreseasonSelectedTradeIns(prev => [...prev, tradeInWithPosition]);
+    setPreseasonSalaryCap(current => current - player.price);
+    
+    // Update team display - swap the player in
+    setTeamPlayers(prev => {
+      return prev.map(p => {
+        if (p.name === matchingTradeOut.name) {
+          return {
+            ...player,
+            positions: [tradeInWithPosition.swappedPosition],
+            _preseasonSwap: true,
+            _originalPlayer: matchingTradeOut
+          };
+        }
+        return p;
+      });
+    });
+  };
+
+  // Handle reversing a trade-in (clicking on a swapped-in player)
+  const handleReversePreseasonTradeIn = (tradedInPlayer) => {
+    // Find the original player that was traded out
+    const originalPlayer = preseasonSelectedTradeOuts.find(
+      p => p.name === tradedInPlayer.swappedForPlayer
+    );
+    
+    if (!originalPlayer) return;
+    
+    // Remove from selected trade-ins
+    setPreseasonSelectedTradeIns(prev => 
+      prev.filter(p => p.name !== tradedInPlayer.name)
+    );
+    
+    // Restore salary cap
+    setPreseasonSalaryCap(current => current + tradedInPlayer.price);
+    
+    // Restore original player in team
+    setTeamPlayers(prev => {
+      return prev.map(p => {
+        if (p.name === tradedInPlayer.name && p._preseasonSwap) {
+          return originalPlayer;
+        }
+        return p;
+      });
+    });
+  };
+
+  // Get remaining positions that need trade-ins
+  const getRemainingPositionsForTradeIn = () => {
+    const filledPositions = preseasonSelectedTradeIns.map(p => p.swappedPosition);
+    return preseasonSelectedTradeOuts
+      .map(p => p.originalPosition || p.positions?.[0])
+      .filter(pos => !filledPositions.includes(pos));
+  };
+
+  // Filter available trade-ins based on remaining positions and salary
+  const getFilteredTradeIns = () => {
+    const remainingPositions = getRemainingPositionsForTradeIn();
+    return preseasonAvailableTradeIns.filter(player => {
+      const playerPos = player.position || player.positions?.[0];
+      const positionMatch = remainingPositions.includes(playerPos);
+      const canAfford = player.price <= preseasonSalaryCap;
+      const notAlreadySelected = !preseasonSelectedTradeIns.some(p => p.name === player.name);
+      return positionMatch && canAfford && notAlreadySelected;
+    });
+  };
+
   // Render Trade Options Modal for Mobile
   const renderTradeOptionsModal = () => {
     if (!showTradeModal) return null;
@@ -436,16 +715,25 @@ function TeamView({ players, onBack }) {
             <button className="btn-close-modal" onClick={() => setShowTradeModal(false)}>×</button>
           </div>
 
-          {/* Trade-out Recommendations (First) */}
-          <TradePanel 
-            title="Trade Out"
-            subtitle="Trade-out Recommendations"
-            players={tradeOutRecommendations}
-            onSelect={handleTradeOut}
-            selectedPlayers={selectedTradeOutPlayers}
-            emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
-            isTradeOut={true}
-          />
+          {/* Trade-out Recommendations (only in normal mode) */}
+          {!isPreseasonMode && (
+            <TradePanel 
+              title="Trade Out"
+              subtitle="Trade-out Recommendations"
+              players={tradeOutRecommendations}
+              onSelect={handleTradeOut}
+              selectedPlayers={selectedTradeOutPlayers}
+              emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
+              isTradeOut={true}
+            />
+          )}
+
+          {/* Preseason mode info */}
+          {isPreseasonMode && (
+            <div className="preseason-status highlight">
+              Trade-out recommendations will be highlighted on your team screen
+            </div>
+          )}
 
           {/* Cash in Bank Input */}
           <div className="cash-in-bank-section">
@@ -503,8 +791,27 @@ function TeamView({ players, onBack }) {
             </label>
           </div>
 
-          {/* Position Selection (only shown for Positional Swap) */}
-          {selectedTradeType === 'positionalSwap' && (
+          {/* Pre-season Mode Toggle (Mobile) */}
+          <div className={`preseason-mode-section ${isPreseasonMode ? 'active' : ''}`}>
+            <div className="preseason-mode-header toggle-section">
+              <div className="toggle-labels">
+                <label htmlFor="preseasonModeMobile">Pre-season Mode</label>
+                <span className="toggle-caption">Up to 6 trades</span>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  id="preseasonModeMobile"
+                  type="checkbox"
+                  checked={isPreseasonMode}
+                  onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                />
+                <span className="toggle-slider" />
+              </label>
+            </div>
+          </div>
+
+          {/* Position Selection (only shown for Positional Swap in normal mode) */}
+          {!isPreseasonMode && selectedTradeType === 'positionalSwap' && (
             <div className="position-selection-section">
               <label>Select Positions for Swap</label>
               <div className="position-checkboxes">
@@ -527,27 +834,42 @@ function TeamView({ players, onBack }) {
             </div>
           )}
 
-          {/* Number of Trades */}
-          <div className="num-trades-section">
-            <label htmlFor="numTrades">Number of Trades</label>
-            <input
-              id="numTrades"
-              type="number"
-              value={numTrades}
-              onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
-              min="1"
-            max="2"
-            />
-          </div>
+          {/* Number of Trades (hidden in preseason mode) */}
+          {!isPreseasonMode && (
+            <div className="num-trades-section">
+              <label htmlFor="numTrades">Number of Trades</label>
+              <input
+                id="numTrades"
+                type="number"
+                value={numTrades}
+                onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+                min="1"
+                max="2"
+              />
+            </div>
+          )}
 
-          {/* Calculate Button */}
-          <button 
-            className="btn-calculate-trades"
-            onClick={handleCalculateTrades}
-            disabled={isCalculating}
-          >
-            {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
-          </button>
+          {/* Button changes based on mode */}
+          {isPreseasonMode ? (
+            <button 
+              className="btn-highlight-options"
+              onClick={() => {
+                handleHighlightOptions();
+                // Modal will be closed in handleHighlightOptions
+              }}
+              disabled={isCalculating}
+            >
+              {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
+            </button>
+          ) : (
+            <button 
+              className="btn-calculate-trades"
+              onClick={handleCalculateTrades}
+              disabled={isCalculating}
+            >
+              {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
+            </button>
+          )}
 
           {error && (
             <div className="error-message">
@@ -561,7 +883,8 @@ function TeamView({ players, onBack }) {
 
   // Render Trade-In Recommendations Page for Mobile (separate page from Trade Options)
   const renderTradeInPage = () => {
-    if (!showTradeInPage) return null;
+    // Don't show normal trade-in page in preseason mode
+    if (!showTradeInPage || isPreseasonMode) return null;
 
     return (
       <div className="trade-in-page">
@@ -614,16 +937,119 @@ function TeamView({ players, onBack }) {
     );
   };
 
+  // Render Pre-season Trade-In Page for Mobile
+  const renderPreseasonTradeInPage = () => {
+    if (!showPreseasonTradeIns || !isPreseasonMode) return null;
+
+    return (
+      <div className="trade-in-page">
+        <div className="trade-in-page-header">
+          <button 
+            className="btn-header-action" 
+            onClick={() => {
+              setShowPreseasonTradeIns(false);
+              setPreseasonPhase('selecting-out');
+            }}
+          >
+            ← Back to Team
+          </button>
+        </div>
+        
+        {/* Preseason salary cap and status */}
+        <div className="trade-out-pinned">
+          <div className={`preseason-salary-cap ${preseasonSalaryCap > 0 ? 'has-budget' : ''}`}>
+            Remaining: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+          </div>
+          <div className="preseason-status">
+            {preseasonSelectedTradeIns.length} of {preseasonSelectedTradeOuts.length} trade-ins selected
+          </div>
+          
+          {/* Show selected trade-outs */}
+          <div className="trade-panel">
+            <h4 className="trade-subtitle">Trading Out</h4>
+            <div className="trade-player-list">
+              {preseasonSelectedTradeOuts.map((player, index) => {
+                const hasTradeIn = preseasonSelectedTradeIns.some(
+                  p => p.swappedForPlayer === player.name
+                );
+                return (
+                  <div 
+                    key={player.name || index}
+                    className={`trade-player-item ${hasTradeIn ? 'selected' : ''}`}
+                  >
+                    <span className="trade-player-pos">
+                      {player.originalPosition || player.positions?.[0] || '—'}
+                    </span>
+                    <span className="trade-player-name">{player.name}</span>
+                    <span className="trade-player-price">
+                      ${formatNumberWithCommas(Math.round(player.price / 1000))}k
+                    </span>
+                    {hasTradeIn && <span style={{color: '#00c864', marginLeft: '0.5rem'}}>✓</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        
+        {/* Trade-in options - Scrollable */}
+        <div className="trade-in-page-content">
+          <div className="trade-panel">
+            <h4 className="trade-subtitle">Trade-In Options</h4>
+            <div className="preseason-tradein-list">
+              {getFilteredTradeIns().length > 0 ? (
+                getFilteredTradeIns().map((player, index) => (
+                  <div 
+                    key={player.name || index}
+                    className={`preseason-tradein-item ${
+                      preseasonSelectedTradeIns.some(p => p.name === player.name) ? 'selected' : ''
+                    } ${player.price > preseasonSalaryCap ? 'disabled' : ''}`}
+                    onClick={() => handlePreseasonTradeInSelect(player)}
+                  >
+                    <span className="trade-player-pos">
+                      {player.position || player.positions?.[0] || '—'}
+                    </span>
+                    <span className="trade-player-name">{player.name}</span>
+                    <span className="trade-player-price">
+                      ${formatNumberWithCommas(Math.round(player.price / 1000))}k
+                    </span>
+                    {player.diff && (
+                      <span className="trade-player-diff">+{player.diff.toFixed(1)}</span>
+                    )}
+                  </div>
+                ))
+              ) : (
+                <p className="empty-message">
+                  {preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length
+                    ? 'All positions filled! Return to team to see your new squad.'
+                    : 'No trade-in options available for remaining positions'}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {renderTradeOptionsModal()}
       {renderTradeInPage()}
+      {renderPreseasonTradeInPage()}
       
-      <div className={`team-view ${showTradeInPage ? 'hidden-mobile' : ''}`}>
+      <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''}`}>
         <div className="team-view-main">
           <div className="section-header">
             <h2>My Team</h2>
-            {salaryCapRemaining !== null && (
+            {/* Show preseason salary cap when in preseason mode */}
+            {isPreseasonMode && preseasonPhase !== 'idle' && (
+              <div className={`salary-cap-display ${preseasonSalaryCap > 0 ? '' : 'warning'}`} style={preseasonSalaryCap > 0 ? {} : {borderColor: 'rgba(255,100,100,0.4)', color: '#ff6464'}}>
+                {preseasonPhase === 'selecting-out' ? 'Available' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+              </div>
+            )}
+            {/* Show normal salary cap when not in preseason mode */}
+            {!isPreseasonMode && salaryCapRemaining !== null && (
               <div className="salary-cap-display">
                 Salary Cap: ${formatNumberWithCommas(Math.round(salaryCapRemaining / 1000))}k
               </div>
@@ -635,12 +1061,27 @@ function TeamView({ players, onBack }) {
               <button className="btn-make-trade mobile-only" onClick={handleMakeATrade}>
                 Make a Trade
               </button>
+              {/* Mobile Confirm Trade-Outs button */}
+              {isPreseasonMode && preseasonPhase === 'selecting-out' && preseasonSelectedTradeOuts.length > 0 && (
+                <button 
+                  className="btn-confirm-trade-outs mobile-only"
+                  onClick={handleConfirmPreseasonTradeOuts}
+                  disabled={isCalculating}
+                >
+                  {isCalculating ? 'Loading...' : `Confirm ${preseasonSelectedTradeOuts.length} Trade-Out${preseasonSelectedTradeOuts.length !== 1 ? 's' : ''}`}
+                </button>
+              )}
             </div>
           </div>
 
           <TeamDisplay 
             players={teamPlayers} 
             onTradeOut={handleTradeOut}
+            isPreseasonMode={isPreseasonMode}
+            preseasonHighlighted={preseasonHighlightedPlayers}
+            preseasonSelectedOut={preseasonSelectedTradeOuts}
+            preseasonTradedIn={preseasonSelectedTradeIns}
+            onPreseasonClick={handlePreseasonPlayerClick}
           />
         </div>
         
@@ -703,8 +1144,27 @@ function TeamView({ players, onBack }) {
             </label>
           </div>
 
-          {/* Position Selection (only shown for Positional Swap) */}
-          {selectedTradeType === 'positionalSwap' && (
+          {/* Pre-season Mode Toggle */}
+          <div className={`preseason-mode-section ${isPreseasonMode ? 'active' : ''}`}>
+            <div className="preseason-mode-header toggle-section">
+              <div className="toggle-labels">
+                <label htmlFor="preseasonModeDesktop">Pre-season Mode</label>
+                <span className="toggle-caption">Up to 6 trades</span>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  id="preseasonModeDesktop"
+                  type="checkbox"
+                  checked={isPreseasonMode}
+                  onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                />
+                <span className="toggle-slider" />
+              </label>
+            </div>
+          </div>
+
+          {/* Position Selection (only shown for Positional Swap in normal mode) */}
+          {!isPreseasonMode && selectedTradeType === 'positionalSwap' && (
             <div className="position-selection-section">
               <label>Select Positions for Swap</label>
               <div className="position-checkboxes">
@@ -727,27 +1187,74 @@ function TeamView({ players, onBack }) {
             </div>
           )}
 
-          {/* Number of Trades */}
-          <div className="num-trades-section">
-            <label htmlFor="numTrades">Number of Trades</label>
-            <input
-              id="numTrades"
-              type="number"
-              value={numTrades}
-              onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
-              min="1"
-            max="2"
-            />
-          </div>
+          {/* Number of Trades (hidden in preseason mode) */}
+          {!isPreseasonMode && (
+            <div className="num-trades-section">
+              <label htmlFor="numTrades">Number of Trades</label>
+              <input
+                id="numTrades"
+                type="number"
+                value={numTrades}
+                onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+                min="1"
+                max="2"
+              />
+            </div>
+          )}
 
-          {/* Calculate Button */}
-          <button 
-            className="btn-calculate-trades"
-            onClick={handleCalculateTrades}
-            disabled={isCalculating}
-          >
-            {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
-          </button>
+          {/* Button changes based on mode */}
+          {isPreseasonMode ? (
+            <>
+              {/* Preseason Mode Buttons */}
+              {preseasonPhase === 'idle' && (
+                <button 
+                  className="btn-highlight-options"
+                  onClick={handleHighlightOptions}
+                  disabled={isCalculating}
+                >
+                  {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
+                </button>
+              )}
+              
+              {preseasonPhase === 'selecting-out' && (
+                <>
+                  <div className="preseason-salary-cap">
+                    Available: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                  </div>
+                  <div className="preseason-status selecting">
+                    {preseasonSelectedTradeOuts.length} player{preseasonSelectedTradeOuts.length !== 1 ? 's' : ''} selected for trade-out
+                  </div>
+                  <button 
+                    className="btn-confirm-trade-outs"
+                    onClick={handleConfirmPreseasonTradeOuts}
+                    disabled={isCalculating || preseasonSelectedTradeOuts.length === 0}
+                  >
+                    {isCalculating ? 'Loading Trade-Ins...' : 'Confirm Trade-Outs'}
+                  </button>
+                </>
+              )}
+              
+              {preseasonPhase === 'selecting-in' && (
+                <>
+                  <div className={`preseason-salary-cap ${preseasonSalaryCap > 0 ? 'has-budget' : ''}`}>
+                    Remaining: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                  </div>
+                  <div className="preseason-status">
+                    {preseasonSelectedTradeIns.length} of {preseasonSelectedTradeOuts.length} trade-ins selected
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            /* Normal Mode - Calculate Button */
+            <button 
+              className="btn-calculate-trades"
+              onClick={handleCalculateTrades}
+              disabled={isCalculating}
+            >
+              {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
+            </button>
+          )}
 
           {error && (
             <div className="error-message">
@@ -755,27 +1262,69 @@ function TeamView({ players, onBack }) {
             </div>
           )}
           
-          <TradePanel 
-            title="Trade Out"
-            subtitle="Trade-out Recommendations"
-            players={tradeOutRecommendations}
-            onSelect={handleTradeOut}
-            selectedPlayers={selectedTradeOutPlayers}
-            emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
-            isTradeOut={true}
-          />
+          {/* Trade Panels - Normal mode only */}
+          {!isPreseasonMode && (
+            <>
+              <TradePanel 
+                title="Trade Out"
+                subtitle="Trade-out Recommendations"
+                players={tradeOutRecommendations}
+                onSelect={handleTradeOut}
+                selectedPlayers={selectedTradeOutPlayers}
+                emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
+                isTradeOut={true}
+              />
+              
+              <TradePanel 
+                title="Trade In"
+                subtitle="Trade-in Recommendations"
+                players={tradeInRecommendations}
+                onSelect={handleTradeIn}
+                selectedOptionIndex={selectedTradeInIndex}
+                onConfirmOption={handleConfirmTrade}
+                showConfirmButton={true}
+                emptyMessage="Trade-out players will generate trade-in options"
+                isTradeIn={true}
+              />
+            </>
+          )}
           
-          <TradePanel 
-            title="Trade In"
-            subtitle="Trade-in Recommendations"
-            players={tradeInRecommendations}
-            onSelect={handleTradeIn}
-            selectedOptionIndex={selectedTradeInIndex}
-            onConfirmOption={handleConfirmTrade}
-            showConfirmButton={true}
-            emptyMessage="Trade-out players will generate trade-in options"
-            isTradeIn={true}
-          />
+          {/* Pre-season Trade-In List */}
+          {isPreseasonMode && preseasonPhase === 'selecting-in' && (
+            <div className="trade-panel">
+              <h4 className="trade-subtitle">Trade-In Options</h4>
+              <div className="preseason-tradein-list">
+                {getFilteredTradeIns().length > 0 ? (
+                  getFilteredTradeIns().map((player, index) => (
+                    <div 
+                      key={player.name || index}
+                      className={`preseason-tradein-item ${
+                        preseasonSelectedTradeIns.some(p => p.name === player.name) ? 'selected' : ''
+                      } ${player.price > preseasonSalaryCap ? 'disabled' : ''}`}
+                      onClick={() => handlePreseasonTradeInSelect(player)}
+                    >
+                      <span className="trade-player-pos">
+                        {player.position || player.positions?.[0] || '—'}
+                      </span>
+                      <span className="trade-player-name">{player.name}</span>
+                      <span className="trade-player-price">
+                        ${formatNumberWithCommas(Math.round(player.price / 1000))}k
+                      </span>
+                      {player.diff && (
+                        <span className="trade-player-diff">+{player.diff.toFixed(1)}</span>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-message">
+                    {preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length
+                      ? 'All positions filled!'
+                      : 'No trade-in options available for remaining positions'}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
