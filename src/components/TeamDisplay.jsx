@@ -97,7 +97,7 @@ function TeamDisplay({
       }
     } else {
       // Normal mode - use existing selected state
-      const isSelected = selectedTradeOut?.name === player.name;
+    const isSelected = selectedTradeOut?.name === player.name;
       if (isSelected) {
         cardClasses += ' selected';
       }
@@ -578,10 +578,24 @@ function TeamView({ players, onBack }) {
     try {
       const { calculatePreseasonTradeIns } = await import('../services/tradeApi.js');
       
-      // Get positions from selected trade-outs
-      const tradeOutPositions = preseasonSelectedTradeOuts.map(p => 
-        p.originalPosition || p.positions?.[0]
-      ).filter(Boolean);
+      // Check if any flexible slots (INT/EMG) are being traded out
+      const hasFlexibleSlots = preseasonSelectedTradeOuts.some(p => 
+        isFlexibleSlot(p.originalPosition)
+      );
+      
+      // Get positions from selected trade-outs (only non-flexible slots)
+      const nonFlexiblePositions = preseasonSelectedTradeOuts
+        .filter(p => !isFlexibleSlot(p.originalPosition))
+        .map(p => p.originalPosition)
+        .filter(Boolean);
+      
+      // If there are flexible slots, don't filter by position (get all positions)
+      // Otherwise, only get players matching the traded-out positions
+      const tradeOutPositions = hasFlexibleSlots ? [] : nonFlexiblePositions;
+      
+      console.log('Trade-out slots:', preseasonSelectedTradeOuts.map(p => p.originalPosition));
+      console.log('Has flexible slots:', hasFlexibleSlots);
+      console.log('Position filter for API:', tradeOutPositions.length ? tradeOutPositions : 'ALL POSITIONS');
       
       // Calculate available trade-ins based on selected trade-outs
       const result = await calculatePreseasonTradeIns(
@@ -615,26 +629,33 @@ function TeamView({ players, onBack }) {
     // Check if we can afford this player
     if (player.price > preseasonSalaryCap) return;
     
-    // Find a matching trade-out position for this player
+    // Get remaining slots that haven't been filled
+    const remainingSlots = getRemainingTradeOutSlots();
     const playerPosition = player.position || player.positions?.[0];
-    const matchingTradeOut = preseasonSelectedTradeOuts.find(out => {
-      const outPos = out.originalPosition || out.positions?.[0];
-      // Check if this position still needs to be filled
-      const alreadyFilledForPosition = preseasonSelectedTradeIns.some(inPlayer => {
-        const inPos = inPlayer.swappedPosition;
-        return inPos === outPos;
-      });
-      return outPos === playerPosition && !alreadyFilledForPosition;
+    
+    // Priority 1: Find a non-flexible slot with matching position
+    let matchingTradeOut = remainingSlots.find(out => {
+      return !isFlexibleSlot(out.originalPosition) && out.originalPosition === playerPosition;
     });
     
-    if (!matchingTradeOut) return; // No matching position available
+    // Priority 2: If no position match, use a flexible slot (INT/EMG)
+    if (!matchingTradeOut) {
+      matchingTradeOut = remainingSlots.find(out => isFlexibleSlot(out.originalPosition));
+    }
+    
+    if (!matchingTradeOut) {
+      console.log('No matching slot found for:', playerPosition);
+      return;
+    }
     
     // Add to selected trade-ins with position info
     const tradeInWithPosition = {
       ...player,
-      swappedPosition: matchingTradeOut.originalPosition || matchingTradeOut.positions?.[0],
+      swappedPosition: matchingTradeOut.originalPosition, // Keep original slot for display
       swappedForPlayer: matchingTradeOut.name
     };
+    
+    console.log('Trade-in selected:', player.name, '(', playerPosition, ') for slot:', matchingTradeOut.originalPosition);
     
     setPreseasonSelectedTradeIns(prev => [...prev, tradeInWithPosition]);
     setPreseasonSalaryCap(current => current - player.price);
@@ -645,7 +666,7 @@ function TeamView({ players, onBack }) {
         if (p.name === matchingTradeOut.name) {
           return {
             ...player,
-            positions: [tradeInWithPosition.swappedPosition],
+            positions: [matchingTradeOut.originalPosition], // Keep in same slot
             _preseasonSwap: true,
             _originalPlayer: matchingTradeOut
           };
@@ -683,20 +704,42 @@ function TeamView({ players, onBack }) {
     });
   };
 
-  // Get remaining positions that need trade-ins
-  const getRemainingPositionsForTradeIn = () => {
-    const filledPositions = preseasonSelectedTradeIns.map(p => p.swappedPosition);
-    return preseasonSelectedTradeOuts
-      .map(p => p.originalPosition || p.positions?.[0])
-      .filter(pos => !filledPositions.includes(pos));
+  // Check if a slot is flexible (INT/EMG can accept any position)
+  const isFlexibleSlot = (slotPosition) => {
+    return slotPosition === 'INT' || slotPosition === 'EMG';
+  };
+
+  // Get remaining slots that need trade-ins (returns objects with slot info)
+  const getRemainingTradeOutSlots = () => {
+    const filledSlotNames = preseasonSelectedTradeIns.map(p => p.swappedForPlayer);
+    return preseasonSelectedTradeOuts.filter(p => !filledSlotNames.includes(p.name));
   };
 
   // Filter available trade-ins based on remaining positions and salary
   const getFilteredTradeIns = () => {
-    const remainingPositions = getRemainingPositionsForTradeIn();
+    const remainingSlots = getRemainingTradeOutSlots();
+    
+    // Get unique positions needed (for non-flexible slots)
+    const positionsNeeded = new Set();
+    let hasFlexibleSlot = false;
+    
+    remainingSlots.forEach(slot => {
+      if (isFlexibleSlot(slot.originalPosition)) {
+        hasFlexibleSlot = true;
+      } else {
+        positionsNeeded.add(slot.originalPosition);
+      }
+    });
+    
+    console.log('Remaining slots:', remainingSlots.map(s => s.originalPosition));
+    console.log('Positions needed:', Array.from(positionsNeeded), 'Has flexible slot:', hasFlexibleSlot);
+    
     return preseasonAvailableTradeIns.filter(player => {
       const playerPos = player.position || player.positions?.[0];
-      const positionMatch = remainingPositions.includes(playerPos);
+      // Position matches if: 
+      // 1. There's a flexible slot (INT/EMG) available, OR
+      // 2. The player's position matches one of the needed positions
+      const positionMatch = hasFlexibleSlot || positionsNeeded.has(playerPos);
       const canAfford = player.price <= preseasonSalaryCap;
       const notAlreadySelected = !preseasonSelectedTradeIns.some(p => p.name === player.name);
       return positionMatch && canAfford && notAlreadySelected;
@@ -717,15 +760,15 @@ function TeamView({ players, onBack }) {
 
           {/* Trade-out Recommendations (only in normal mode) */}
           {!isPreseasonMode && (
-            <TradePanel 
-              title="Trade Out"
-              subtitle="Trade-out Recommendations"
-              players={tradeOutRecommendations}
-              onSelect={handleTradeOut}
-              selectedPlayers={selectedTradeOutPlayers}
-              emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
-              isTradeOut={true}
-            />
+          <TradePanel 
+            title="Trade Out"
+            subtitle="Trade-out Recommendations"
+            players={tradeOutRecommendations}
+            onSelect={handleTradeOut}
+            selectedPlayers={selectedTradeOutPlayers}
+            emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
+            isTradeOut={true}
+          />
           )}
 
           {/* Preseason mode info */}
@@ -836,17 +879,17 @@ function TeamView({ players, onBack }) {
 
           {/* Number of Trades (hidden in preseason mode) */}
           {!isPreseasonMode && (
-            <div className="num-trades-section">
-              <label htmlFor="numTrades">Number of Trades</label>
-              <input
-                id="numTrades"
-                type="number"
-                value={numTrades}
-                onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
-                min="1"
-                max="2"
-              />
-            </div>
+          <div className="num-trades-section">
+            <label htmlFor="numTrades">Number of Trades</label>
+            <input
+              id="numTrades"
+              type="number"
+              value={numTrades}
+              onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+              min="1"
+            max="2"
+            />
+          </div>
           )}
 
           {/* Button changes based on mode */}
@@ -862,13 +905,13 @@ function TeamView({ players, onBack }) {
               {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
             </button>
           ) : (
-            <button 
-              className="btn-calculate-trades"
-              onClick={handleCalculateTrades}
-              disabled={isCalculating}
-            >
-              {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
-            </button>
+          <button 
+            className="btn-calculate-trades"
+            onClick={handleCalculateTrades}
+            disabled={isCalculating}
+          >
+            {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
+          </button>
           )}
 
           {error && (
@@ -938,8 +981,24 @@ function TeamView({ players, onBack }) {
   };
 
   // Render Pre-season Trade-In Page for Mobile
+  // Handle confirming all preseason trades and returning to team view
+  const handleConfirmAllPreseasonTrades = () => {
+    // All swaps are already applied to teamPlayers state via handlePreseasonTradeInSelect
+    // Reset preseason mode state
+    setShowPreseasonTradeIns(false);
+    setPreseasonPhase('idle');
+    setPreseasonHighlightedPlayers([]);
+    setPreseasonSelectedTradeOuts([]);
+    setPreseasonSelectedTradeIns([]);
+    setPreseasonAvailableTradeIns([]);
+    setPreseasonSalaryCap(0);
+    // Stay in preseason mode so user can make more trades if needed
+  };
+
   const renderPreseasonTradeInPage = () => {
     if (!showPreseasonTradeIns || !isPreseasonMode) return null;
+
+    const allPositionsFilled = preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length;
 
     return (
       <div className="trade-in-page">
@@ -964,31 +1023,67 @@ function TeamView({ players, onBack }) {
             {preseasonSelectedTradeIns.length} of {preseasonSelectedTradeOuts.length} trade-ins selected
           </div>
           
-          {/* Show selected trade-outs */}
+          {/* Show trade swap rows - split bubble design */}
           <div className="trade-panel">
-            <h4 className="trade-subtitle">Trading Out</h4>
-            <div className="trade-player-list">
-              {preseasonSelectedTradeOuts.map((player, index) => {
-                const hasTradeIn = preseasonSelectedTradeIns.some(
-                  p => p.swappedForPlayer === player.name
+            <h4 className="trade-subtitle">Trade Swaps</h4>
+            <div className="trade-swap-list">
+              {preseasonSelectedTradeOuts.map((tradeOutPlayer, index) => {
+                const tradeInPlayer = preseasonSelectedTradeIns.find(
+                  p => p.swappedForPlayer === tradeOutPlayer.name
                 );
+                const hasTradeIn = !!tradeInPlayer;
+                
                 return (
                   <div 
-                    key={player.name || index}
-                    className={`trade-player-item ${hasTradeIn ? 'selected' : ''}`}
+                    key={tradeOutPlayer.name || index}
+                    className={`trade-swap-row ${hasTradeIn ? 'completed' : ''}`}
                   >
-                    <span className="trade-player-pos">
-                      {player.originalPosition || player.positions?.[0] || '—'}
-                    </span>
-                    <span className="trade-player-name">{player.name}</span>
-                    <span className="trade-player-price">
-                      ${formatNumberWithCommas(Math.round(player.price / 1000))}k
-                    </span>
-                    {hasTradeIn && <span style={{color: '#00c864', marginLeft: '0.5rem'}}>✓</span>}
+                    {/* Left bubble - Trade Out Player */}
+                    <div className={`trade-swap-bubble trade-out-bubble ${hasTradeIn ? 'active' : ''}`}>
+                      <span className="trade-player-pos">
+                        {tradeOutPlayer.originalPosition || tradeOutPlayer.positions?.[0] || '—'}
+                      </span>
+                      <span className="trade-player-name">{tradeOutPlayer.name}</span>
+                      <span className="trade-player-price">
+                        ${formatNumberWithCommas(Math.round(tradeOutPlayer.price / 1000))}k
+                      </span>
+                    </div>
+                    
+                    {/* Swap arrows in center */}
+                    <div className={`trade-swap-arrows ${hasTradeIn ? 'active' : ''}`}>
+                      <span className="arrow-up">⇄</span>
+                    </div>
+                    
+                    {/* Right bubble - Trade In Player */}
+                    <div className={`trade-swap-bubble trade-in-bubble ${hasTradeIn ? 'active' : ''}`}>
+                      {hasTradeIn ? (
+                        <>
+                          <span className="trade-player-pos">
+                            {tradeInPlayer.position || tradeInPlayer.positions?.[0] || '—'}
+                          </span>
+                          <span className="trade-player-name">{tradeInPlayer.name}</span>
+                          <span className="trade-player-price">
+                            ${formatNumberWithCommas(Math.round(tradeInPlayer.price / 1000))}k
+                          </span>
+                        </>
+                      ) : (
+                        <span className="trade-player-name empty">Select trade-in...</span>
+                      )}
+                    </div>
                   </div>
                 );
               })}
             </div>
+            
+            {/* Confirm Trades button - appears when all positions filled */}
+            {allPositionsFilled && (
+              <button 
+                className="btn-confirm-trades"
+                onClick={handleConfirmAllPreseasonTrades}
+              >
+                ✓ Confirm Trades
+              </button>
+            )}
           </div>
         </div>
         
@@ -1020,8 +1115,8 @@ function TeamView({ players, onBack }) {
                 ))
               ) : (
                 <p className="empty-message">
-                  {preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length
-                    ? 'All positions filled! Return to team to see your new squad.'
+                  {allPositionsFilled
+                    ? 'All positions filled! Click "Confirm Trades" above.'
                     : 'No trade-in options available for remaining positions'}
                 </p>
               )}
@@ -1189,17 +1284,17 @@ function TeamView({ players, onBack }) {
 
           {/* Number of Trades (hidden in preseason mode) */}
           {!isPreseasonMode && (
-            <div className="num-trades-section">
-              <label htmlFor="numTrades">Number of Trades</label>
-              <input
-                id="numTrades"
-                type="number"
-                value={numTrades}
-                onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
-                min="1"
-                max="2"
-              />
-            </div>
+          <div className="num-trades-section">
+            <label htmlFor="numTrades">Number of Trades</label>
+            <input
+              id="numTrades"
+              type="number"
+              value={numTrades}
+              onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+              min="1"
+            max="2"
+            />
+          </div>
           )}
 
           {/* Button changes based on mode */}
@@ -1247,13 +1342,13 @@ function TeamView({ players, onBack }) {
             </>
           ) : (
             /* Normal Mode - Calculate Button */
-            <button 
-              className="btn-calculate-trades"
-              onClick={handleCalculateTrades}
-              disabled={isCalculating}
-            >
-              {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
-            </button>
+          <button 
+            className="btn-calculate-trades"
+            onClick={handleCalculateTrades}
+            disabled={isCalculating}
+          >
+            {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
+          </button>
           )}
 
           {error && (
@@ -1265,27 +1360,27 @@ function TeamView({ players, onBack }) {
           {/* Trade Panels - Normal mode only */}
           {!isPreseasonMode && (
             <>
-              <TradePanel 
-                title="Trade Out"
-                subtitle="Trade-out Recommendations"
-                players={tradeOutRecommendations}
-                onSelect={handleTradeOut}
-                selectedPlayers={selectedTradeOutPlayers}
-                emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
-                isTradeOut={true}
-              />
-              
-              <TradePanel 
-                title="Trade In"
-                subtitle="Trade-in Recommendations"
-                players={tradeInRecommendations}
-                onSelect={handleTradeIn}
-                selectedOptionIndex={selectedTradeInIndex}
-                onConfirmOption={handleConfirmTrade}
-                showConfirmButton={true}
-                emptyMessage="Trade-out players will generate trade-in options"
-                isTradeIn={true}
-              />
+          <TradePanel 
+            title="Trade Out"
+            subtitle="Trade-out Recommendations"
+            players={tradeOutRecommendations}
+            onSelect={handleTradeOut}
+            selectedPlayers={selectedTradeOutPlayers}
+            emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
+            isTradeOut={true}
+          />
+          
+          <TradePanel 
+            title="Trade In"
+            subtitle="Trade-in Recommendations"
+            players={tradeInRecommendations}
+            onSelect={handleTradeIn}
+            selectedOptionIndex={selectedTradeInIndex}
+            onConfirmOption={handleConfirmTrade}
+            showConfirmButton={true}
+            emptyMessage="Trade-out players will generate trade-in options"
+            isTradeIn={true}
+          />
             </>
           )}
           

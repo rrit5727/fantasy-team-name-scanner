@@ -790,6 +790,185 @@
   color: #ff6464;
 }
 
+/* Trade Swap Split Bubble Design */
+.trade-swap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.trade-swap-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.trade-swap-bubble {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  background: rgba(30, 45, 40, 0.6);
+  border: 1px solid rgba(0, 166, 125, 0.2);
+  transition: all 0.3s ease;
+  min-height: 44px;
+}
+
+/* Left bubble - Trade Out */
+.trade-out-bubble {
+  border-radius: 8px 0 0 8px;
+  border-right: none;
+}
+
+.trade-out-bubble.active {
+  background: rgba(255, 80, 80, 0.2);
+  border-color: rgba(255, 80, 80, 0.5);
+  box-shadow: inset 0 0 15px rgba(255, 80, 80, 0.15);
+}
+
+/* Right bubble - Trade In */
+.trade-in-bubble {
+  border-radius: 0 8px 8px 0;
+  border-left: none;
+}
+
+.trade-in-bubble.active {
+  background: rgba(0, 200, 100, 0.2);
+  border-color: rgba(0, 200, 100, 0.5);
+  box-shadow: inset 0 0 15px rgba(0, 200, 100, 0.15);
+}
+
+.trade-in-bubble .trade-player-name.empty {
+  color: #5a6a66;
+  font-style: italic;
+  font-size: 0.75rem;
+}
+
+/* Swap arrows in center */
+.trade-swap-arrows {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.6rem;
+  background: rgba(30, 45, 40, 0.8);
+  border-top: 1px solid rgba(0, 166, 125, 0.2);
+  border-bottom: 1px solid rgba(0, 166, 125, 0.2);
+  color: #5a6a66;
+  font-size: 1.1rem;
+  transition: all 0.3s ease;
+}
+
+.trade-swap-arrows.active {
+  background: rgba(255, 165, 0, 0.3);
+  border-color: rgba(255, 165, 0, 0.5);
+  color: #ffa500;
+  text-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
+}
+
+/* Swap row text styles */
+.trade-swap-bubble .trade-player-pos {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  background: rgba(0, 166, 125, 0.3);
+  color: #00d9a3;
+  flex-shrink: 0;
+}
+
+.trade-out-bubble.active .trade-player-pos {
+  background: rgba(255, 80, 80, 0.4);
+  color: #ff8080;
+}
+
+.trade-in-bubble.active .trade-player-pos {
+  background: rgba(0, 200, 100, 0.4);
+  color: #00e070;
+}
+
+.trade-swap-bubble .trade-player-name {
+  flex: 1;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #c8d8d4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trade-out-bubble.active .trade-player-name {
+  color: #ff9090;
+}
+
+.trade-in-bubble.active .trade-player-name {
+  color: #60e090;
+}
+
+.trade-swap-bubble .trade-player-price {
+  font-size: 0.7rem;
+  color: #00d9a3;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.trade-out-bubble.active .trade-player-price {
+  color: #ff8080;
+}
+
+.trade-in-bubble.active .trade-player-price {
+  color: #60e090;
+}
+
+/* Confirm Trades Button */
+.btn-confirm-trades {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.85rem 1.2rem;
+  background: linear-gradient(135deg, rgba(0, 200, 100, 0.3), rgba(0, 166, 125, 0.3));
+  border: 1px solid rgba(0, 200, 100, 0.5);
+  border-radius: 8px;
+  color: #00e070;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-confirm-trades:hover {
+  background: linear-gradient(135deg, rgba(0, 200, 100, 0.45), rgba(0, 166, 125, 0.45));
+  border-color: rgba(0, 200, 100, 0.7);
+  box-shadow: 0 0 20px rgba(0, 200, 100, 0.3);
+  transform: translateY(-1px);
+}
+
+.btn-confirm-trades:active {
+  transform: translateY(0);
+}
+
+/* Mobile adjustments for swap rows */
+@media (max-width: 768px) {
+  .trade-swap-bubble {
+    padding: 0.5rem 0.5rem;
+    gap: 0.3rem;
+  }
+  
+  .trade-swap-bubble .trade-player-name {
+    font-size: 0.7rem;
+  }
+  
+  .trade-swap-bubble .trade-player-price {
+    font-size: 0.65rem;
+  }
+  
+  .trade-swap-arrows {
+    padding: 0.2rem 0.3rem;
+    font-size: 0.6rem;
+  }
+}
+
 /* Scrollbar for trade panels */
 .trade-player-list::-webkit-scrollbar {
   width: 4px;
