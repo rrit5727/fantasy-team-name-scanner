@@ -221,6 +221,14 @@
   font-size: 10px;
 }
 
+.position-row.position-int .injury-indicator .tooltip,
+.position-row.position-emg .injury-indicator .tooltip,
+.position-row.position-int .lowupside-indicator .tooltip,
+.position-row.position-emg .lowupside-indicator .tooltip {
+  font-size: 0.7rem;
+  padding: 4px 8px;
+}
+
 /* Smaller low-upside indicator for INT/EMG rows */
 .position-row.position-int .lowupside-indicator,
 .position-row.position-emg .lowupside-indicator {
@@ -272,6 +280,44 @@
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
+}
+
+/* Custom Tooltips for Indicators */
+.injury-indicator .tooltip,
+.lowupside-indicator .tooltip {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 31, 26, 0.95);
+  color: #e0e0e0;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+  pointer-events: none;
+  z-index: 100;
+  border: 1px solid rgba(0, 166, 125, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.injury-indicator .tooltip {
+  color: #ff6464;
+}
+
+.lowupside-indicator .tooltip {
+  color: #ffa500;
+}
+
+.injury-indicator:hover .tooltip,
+.lowupside-indicator:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  top: -40px;
 }
 
 /* Low Upside Indicator - Green banknote with red arrow */
@@ -1519,6 +1565,13 @@
   .position-row.position-int .injury-x,
   .position-row.position-emg .injury-x {
     font-size: 8px;
+  }
+
+  /* Mobile tooltip adjustments */
+  .injury-indicator .tooltip,
+  .lowupside-indicator .tooltip {
+    font-size: 0.7rem;
+    padding: 4px 8px;
   }
 
   .position-row.position-int .lowupside-indicator,

@@ -152,13 +152,14 @@ function TeamDisplay({
       >
         {/* Injury indicator - white X on red circle in top-right */}
         {isInjured && (
-          <div className="injury-indicator" title="Injured">
+          <div className="injury-indicator">
             <span className="injury-x">✕</span>
+            <div className="tooltip">player injured</div>
           </div>
         )}
         {/* Low upside indicator - green banknote with red arrow in top-right */}
         {isLowUpside && !isInjured && (
-          <div className="lowupside-indicator" title="Low Upside">
+          <div className="lowupside-indicator">
             <svg viewBox="0 0 24 24" className="lowupside-icon">
               {/* Banknote (green) */}
               <rect x="2" y="6" width="14" height="10" rx="1" fill="#4CAF50" stroke="#2E7D32" strokeWidth="0.5"/>
@@ -167,6 +168,7 @@ function TeamDisplay({
               {/* Downward arrow (red) */}
               <path d="M18 4 L18 16 L14 12 M18 16 L22 12" stroke="#e53935" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
+            <div className="tooltip">overvalued - will lose money</div>
           </div>
         )}
         <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
