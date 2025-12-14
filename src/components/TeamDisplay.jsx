@@ -29,7 +29,10 @@ function TeamDisplay({
   preseasonHighlighted = [],
   preseasonSelectedOut = [],
   preseasonTradedIn = [],
-  onPreseasonClick
+  onPreseasonClick,
+  // Player status indicator props
+  injuredPlayers = [],
+  lowUpsidePlayers = []
 }) {
   // Group players by their primary position
   const groupedPlayers = {};
@@ -65,6 +68,22 @@ function TeamDisplay({
     return list.some(p => p.name === player.name);
   };
 
+  // Helper to check if player is injured (by name string match)
+  const isPlayerInjured = (player) => {
+    if (!player || !injuredPlayers || injuredPlayers.length === 0) return false;
+    return injuredPlayers.some(injuredName => 
+      injuredName.toLowerCase() === player.name?.toLowerCase()
+    );
+  };
+
+  // Helper to check if player is low-upside/overvalued (by name string match)
+  const isPlayerLowUpside = (player) => {
+    if (!player || !lowUpsidePlayers || lowUpsidePlayers.length === 0) return false;
+    return lowUpsidePlayers.some(lowUpsideName => 
+      lowUpsideName.toLowerCase() === player.name?.toLowerCase()
+    );
+  };
+
   const renderPlayerCard = (player, position, index) => {
     if (!player) {
       return (
@@ -79,6 +98,10 @@ function TeamDisplay({
       );
     }
 
+    // Check player status
+    const isInjured = isPlayerInjured(player);
+    const isLowUpside = isPlayerLowUpside(player);
+
     // Determine CSS classes based on preseason mode state
     let cardClasses = 'player-card';
     
@@ -89,11 +112,21 @@ function TeamDisplay({
       }
       // Check if player is selected for trade out
       else if (isPlayerInList(player, preseasonSelectedOut)) {
-        cardClasses += ' preseason-selected-out';
+        // Use different selected styles based on whether injured or low-upside
+        if (isInjured) {
+          cardClasses += ' preseason-selected-out-injured';
+        } else {
+          cardClasses += ' preseason-selected-out-lowupside';
+        }
       }
       // Check if player is highlighted as a trade-out recommendation
       else if (isPlayerInList(player, preseasonHighlighted)) {
-        cardClasses += ' preseason-highlight';
+        // Use different highlight styles based on whether injured or low-upside
+        if (isInjured) {
+          cardClasses += ' preseason-highlight-injured';
+        } else {
+          cardClasses += ' preseason-highlight-lowupside';
+        }
       }
     } else {
       // Normal mode - use existing selected state
@@ -117,6 +150,25 @@ function TeamDisplay({
         className={cardClasses}
         onClick={handleClick}
       >
+        {/* Injury indicator - white X on red circle in top-right */}
+        {isInjured && (
+          <div className="injury-indicator" title="Injured">
+            <span className="injury-x">✕</span>
+          </div>
+        )}
+        {/* Low upside indicator - green banknote with red arrow in top-right */}
+        {isLowUpside && !isInjured && (
+          <div className="lowupside-indicator" title="Low Upside">
+            <svg viewBox="0 0 24 24" className="lowupside-icon">
+              {/* Banknote (green) */}
+              <rect x="2" y="6" width="14" height="10" rx="1" fill="#4CAF50" stroke="#2E7D32" strokeWidth="0.5"/>
+              <circle cx="9" cy="11" r="2.5" fill="#2E7D32"/>
+              <text x="9" y="12.5" textAnchor="middle" fontSize="4" fill="#fff" fontWeight="bold">$</text>
+              {/* Downward arrow (red) */}
+              <path d="M18 4 L18 16 L14 12 M18 16 L22 12" stroke="#e53935" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        )}
         <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
           {position}
         </div>
@@ -295,9 +347,51 @@ function TeamView({ players, onBack }) {
   const [preseasonPhase, setPreseasonPhase] = React.useState('idle'); // 'idle' | 'highlighting' | 'selecting-out' | 'selecting-in'
   const [showPreseasonTradeIns, setShowPreseasonTradeIns] = React.useState(false); // Show trade-in panel after confirming trade-outs
 
+  // Team status analysis state - front-loaded when team is displayed
+  const [injuredPlayers, setInjuredPlayers] = React.useState([]);
+  const [lowUpsidePlayers, setLowUpsidePlayers] = React.useState([]);
+  const [isAnalyzingTeam, setIsAnalyzingTeam] = React.useState(true);
+  const [teamAnalysisComplete, setTeamAnalysisComplete] = React.useState(false);
+
   React.useEffect(() => {
     setTeamPlayers(players || []);
+    // Reset analysis state when players change
+    if (players && players.length > 0) {
+      setTeamAnalysisComplete(false);
+      setIsAnalyzingTeam(true);
+    }
   }, [players]);
+
+  // Front-load team analysis (injured + low-upside) when team players are loaded
+  React.useEffect(() => {
+    const analyzeTeam = async () => {
+      if (!teamPlayers || teamPlayers.length === 0) {
+        setInjuredPlayers([]);
+        setLowUpsidePlayers([]);
+        setIsAnalyzingTeam(false);
+        setTeamAnalysisComplete(true);
+        return;
+      }
+
+      setIsAnalyzingTeam(true);
+      try {
+        const { analyzeTeamStatus } = await import('../services/tradeApi.js');
+        const result = await analyzeTeamStatus(teamPlayers, 2);
+        setInjuredPlayers(result.injured_players || []);
+        setLowUpsidePlayers(result.low_upside_players || []);
+        console.log('Team analysis complete:', result);
+      } catch (err) {
+        console.error('Error analyzing team:', err);
+        setInjuredPlayers([]);
+        setLowUpsidePlayers([]);
+      } finally {
+        setIsAnalyzingTeam(false);
+        setTeamAnalysisComplete(true);
+      }
+    };
+
+    analyzeTeam();
+  }, [teamPlayers]);
 
   // Reset preseason state when mode is toggled off
   React.useEffect(() => {
@@ -1169,6 +1263,39 @@ function TeamView({ players, onBack }) {
             </div>
           </div>
 
+          {/* Loading screen while analyzing team */}
+          {isAnalyzingTeam && !teamAnalysisComplete && (
+            <div className="team-loading-overlay">
+              <div className="team-loading-content">
+                <div className="interchange-loader">
+                  <svg viewBox="0 0 60 60" className="interchange-icon">
+                    {/* Arrow 1 - curving from top-right to bottom-left */}
+                    <path 
+                      className="arrow arrow-1" 
+                      d="M 45 15 Q 50 30, 35 40 L 38 35 M 35 40 L 40 43"
+                      fill="none" 
+                      strokeWidth="3" 
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {/* Arrow 2 - curving from bottom-left to top-right */}
+                    <path 
+                      className="arrow arrow-2" 
+                      d="M 15 45 Q 10 30, 25 20 L 22 25 M 25 20 L 20 17"
+                      fill="none" 
+                      strokeWidth="3" 
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                </div>
+                <p className="loading-text">Analyzing team...</p>
+              </div>
+            </div>
+          )}
+
+          {/* Only show team once analysis is complete */}
+          {teamAnalysisComplete && (
           <TeamDisplay 
             players={teamPlayers} 
             onTradeOut={handleTradeOut}
@@ -1177,7 +1304,10 @@ function TeamView({ players, onBack }) {
             preseasonSelectedOut={preseasonSelectedTradeOuts}
             preseasonTradedIn={preseasonSelectedTradeIns}
             onPreseasonClick={handlePreseasonPlayerClick}
+            injuredPlayers={injuredPlayers}
+            lowUpsidePlayers={lowUpsidePlayers}
           />
+          )}
         </div>
         
         <div className="team-view-sidebar desktop-only">

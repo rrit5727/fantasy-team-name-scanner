@@ -151,6 +151,101 @@ export async function calculatePreseasonTradeIns(
 }
 
 /**
+ * Check which players from the team are injured
+ * @param {Array} teamPlayers - Array of player objects with name, positions, price
+ * @returns {Promise<Array>} Array of injured player names
+ */
+export async function checkInjuredPlayers(teamPlayers) {
+  try {
+    if (!teamPlayers || teamPlayers.length === 0) {
+      return [];
+    }
+
+    const payload = {
+      team_players: teamPlayers.map(player => ({
+        name: player.name,
+        positions: player.positions || [],
+        price: player.price || 0
+      }))
+    };
+
+    const response = await fetch(`${API_BASE_URL}/check_injured_players`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.error('Error checking injured players:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    console.log('Injured players detected:', data.injured_players);
+    return data.injured_players || [];
+  } catch (error) {
+    console.error('Error checking injured players:', error);
+    return [];
+  }
+}
+
+/**
+ * Analyze team status - get both injured players and low-upside (overvalued) players
+ * @param {Array} teamPlayers - Array of player objects with name, positions, price
+ * @param {number} lowUpsideCount - Number of low-upside players to identify (default 2)
+ * @returns {Promise<Object>} Object with injured_players and low_upside_players arrays
+ */
+export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
+  try {
+    if (!teamPlayers || teamPlayers.length === 0) {
+      return { injured_players: [], low_upside_players: [] };
+    }
+
+    const payload = {
+      team_players: teamPlayers.map(player => ({
+        name: player.name,
+        positions: player.positions || [],
+        price: player.price || 0
+      })),
+      low_upside_count: lowUpsideCount
+    };
+
+    const response = await fetch(`${API_BASE_URL}/analyze_team_status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.error('Error analyzing team status:', response.status);
+      // Fallback to just checking injured players if endpoint doesn't exist
+      const injured = await checkInjuredPlayers(teamPlayers);
+      return { injured_players: injured, low_upside_players: [] };
+    }
+
+    const data = await response.json();
+    console.log('Team analysis complete:', data);
+    return {
+      injured_players: data.injured_players || [],
+      low_upside_players: data.low_upside_players || []
+    };
+  } catch (error) {
+    console.error('Error analyzing team status:', error);
+    // Fallback to just checking injured players
+    try {
+      const injured = await checkInjuredPlayers(teamPlayers);
+      return { injured_players: injured, low_upside_players: [] };
+    } catch {
+      return { injured_players: [], low_upside_players: [] };
+    }
+  }
+}
+
+/**
  * Check if the Flask backend is running
  * @returns {Promise<boolean>} True if backend is accessible
  */

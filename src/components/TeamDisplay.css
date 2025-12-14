@@ -80,6 +80,88 @@
   border-bottom: 1px solid rgba(0, 166, 125, 0.2);
 }
 
+/* Team Loading Overlay */
+.team-loading-overlay {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #1a3d35 0%, #0d2e26 50%, #0a1f1a 100%);
+  border-radius: 20px;
+  padding: 2rem;
+  border: 1px solid rgba(0, 166, 125, 0.3);
+  min-height: 400px;
+}
+
+.team-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.interchange-loader {
+  width: 80px;
+  height: 80px;
+}
+
+.interchange-icon {
+  width: 100%;
+  height: 100%;
+  animation: rotate-loader 1.5s linear infinite;
+}
+
+.interchange-icon .arrow {
+  stroke: #00d9a3;
+}
+
+.interchange-icon .arrow-1 {
+  animation: pulse-arrow 1.5s ease-in-out infinite;
+}
+
+.interchange-icon .arrow-2 {
+  animation: pulse-arrow 1.5s ease-in-out infinite 0.75s;
+}
+
+@keyframes rotate-loader {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-arrow {
+  0%, 100% {
+    opacity: 0.4;
+    stroke-width: 2.5;
+  }
+  50% {
+    opacity: 1;
+    stroke-width: 3.5;
+  }
+}
+
+.loading-text {
+  color: #00d9a3;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin: 0;
+  animation: fade-text 1.5s ease-in-out infinite;
+}
+
+@keyframes fade-text {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* Team Display Field */
 .team-display {
   flex: 1;
@@ -125,8 +207,39 @@
   padding: 0.45rem;
 }
 
+/* Smaller injury indicator for INT/EMG rows */
+.position-row.position-int .injury-indicator,
+.position-row.position-emg .injury-indicator {
+  width: 16px;
+  height: 16px;
+  top: -4px;
+  right: -4px;
+}
+
+.position-row.position-int .injury-x,
+.position-row.position-emg .injury-x {
+  font-size: 10px;
+}
+
+/* Smaller low-upside indicator for INT/EMG rows */
+.position-row.position-int .lowupside-indicator,
+.position-row.position-emg .lowupside-indicator {
+  width: 18px;
+  height: 18px;
+  top: -4px;
+  right: -4px;
+  padding: 1px;
+}
+
+.position-row.position-int .lowupside-icon,
+.position-row.position-emg .lowupside-icon {
+  width: 14px;
+  height: 14px;
+}
+
 /* Player Cards */
 .player-card {
+  position: relative;
   background: rgba(0, 0, 0, 0.4);
   border-radius: 12px;
   padding: 0.5rem;
@@ -136,6 +249,51 @@
   cursor: pointer;
   transition: all 0.2s ease;
   border: 2px solid transparent;
+}
+
+/* Injury Indicator - White X on Red Circle */
+.injury-indicator {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  background: #e53935;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.injury-x {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Low Upside Indicator - Green banknote with red arrow */
+.lowupside-indicator {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  padding: 2px;
+}
+
+.lowupside-icon {
+  width: 18px;
+  height: 18px;
 }
 
 .player-card:hover {
@@ -156,7 +314,55 @@
   background: rgba(255, 165, 0, 0.12);
 }
 
-/* Pre-season Mode Player Card States */
+/* Pre-season Mode Player Card States - INJURED (Red theme) */
+.player-card.preseason-highlight-injured {
+  background: rgba(255, 100, 100, 0.15);
+  border-color: rgba(255, 100, 100, 0.5);
+  box-shadow: 0 0 10px rgba(255, 100, 100, 0.2);
+}
+
+.player-card.preseason-highlight-injured:hover {
+  background: rgba(255, 100, 100, 0.25);
+  border-color: rgba(255, 100, 100, 0.7);
+  box-shadow: 0 0 15px rgba(255, 100, 100, 0.35);
+}
+
+.player-card.preseason-selected-out-injured {
+  background: rgba(200, 50, 50, 0.35);
+  border-color: #c83232;
+  box-shadow: 0 0 18px rgba(200, 50, 50, 0.45);
+}
+
+.player-card.preseason-selected-out-injured:hover {
+  background: rgba(200, 50, 50, 0.45);
+  border-color: #d64545;
+}
+
+/* Pre-season Mode Player Card States - LOW UPSIDE (Orange theme) */
+.player-card.preseason-highlight-lowupside {
+  background: rgba(255, 165, 0, 0.15);
+  border-color: rgba(255, 165, 0, 0.5);
+  box-shadow: 0 0 10px rgba(255, 165, 0, 0.2);
+}
+
+.player-card.preseason-highlight-lowupside:hover {
+  background: rgba(255, 165, 0, 0.25);
+  border-color: rgba(255, 165, 0, 0.7);
+  box-shadow: 0 0 15px rgba(255, 165, 0, 0.35);
+}
+
+.player-card.preseason-selected-out-lowupside {
+  background: rgba(204, 132, 0, 0.35);
+  border-color: #cc8400;
+  box-shadow: 0 0 18px rgba(204, 132, 0, 0.45);
+}
+
+.player-card.preseason-selected-out-lowupside:hover {
+  background: rgba(204, 132, 0, 0.45);
+  border-color: #e69500;
+}
+
+/* Legacy preseason classes (fallback) */
 .player-card.preseason-highlight {
   background: rgba(255, 165, 0, 0.15);
   border-color: rgba(255, 165, 0, 0.5);
@@ -1273,6 +1479,74 @@
     min-width: 70px;
     max-width: 110px;
     padding: 0.4rem;
+  }
+
+  /* Smaller injury indicator on mobile */
+  .injury-indicator {
+    width: 16px;
+    height: 16px;
+    top: -4px;
+    right: -4px;
+  }
+
+  .injury-x {
+    font-size: 10px;
+  }
+
+  /* Smaller low-upside indicator on mobile */
+  .lowupside-indicator {
+    width: 18px;
+    height: 18px;
+    top: -4px;
+    right: -4px;
+    padding: 1px;
+  }
+
+  .lowupside-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  /* Even smaller for INT/EMG on mobile */
+  .position-row.position-int .injury-indicator,
+  .position-row.position-emg .injury-indicator {
+    width: 14px;
+    height: 14px;
+    top: -3px;
+    right: -3px;
+  }
+
+  .position-row.position-int .injury-x,
+  .position-row.position-emg .injury-x {
+    font-size: 8px;
+  }
+
+  .position-row.position-int .lowupside-indicator,
+  .position-row.position-emg .lowupside-indicator {
+    width: 15px;
+    height: 15px;
+    top: -3px;
+    right: -3px;
+  }
+
+  .position-row.position-int .lowupside-icon,
+  .position-row.position-emg .lowupside-icon {
+    width: 11px;
+    height: 11px;
+  }
+  
+  /* Loading overlay mobile */
+  .team-loading-overlay {
+    min-height: 300px;
+  }
+
+  .interchange-loader {
+    width: 60px;
+    height: 60px;
+  }
+
+  .loading-text {
+    font-size: 0.85rem;
   }
   
   /* Adjust modal for small screens */
