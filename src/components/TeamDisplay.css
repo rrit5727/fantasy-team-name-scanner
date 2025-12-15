@@ -216,13 +216,31 @@
   right: -4px;
 }
 
-.position-row.position-int .injury-x,
-.position-row.position-emg .injury-x {
-  font-size: 10px;
+.position-row.position-int .warning-icon,
+.position-row.position-emg .warning-icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Smaller not selected indicator for INT/EMG rows */
+.position-row.position-int .not-selected-indicator,
+.position-row.position-emg .not-selected-indicator {
+  width: 16px;
+  height: 16px;
+  top: -4px;
+  right: -4px;
+}
+
+.position-row.position-int .prohibition-icon,
+.position-row.position-emg .prohibition-icon {
+  width: 16px;
+  height: 16px;
 }
 
 .position-row.position-int .injury-indicator .tooltip,
 .position-row.position-emg .injury-indicator .tooltip,
+.position-row.position-int .not-selected-indicator .tooltip,
+.position-row.position-emg .not-selected-indicator .tooltip,
 .position-row.position-int .lowupside-indicator .tooltip,
 .position-row.position-emg .lowupside-indicator .tooltip {
   font-size: 0.7rem;
@@ -259,15 +277,13 @@
   border: 2px solid transparent;
 }
 
-/* Injury Indicator - White X on Red Circle */
+/* Injury Indicator - Warning Triangle with Exclamation Mark */
 .injury-indicator {
   position: absolute;
   top: -6px;
   right: -6px;
   width: 20px;
   height: 20px;
-  background: #e53935;
-  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -275,15 +291,33 @@
   z-index: 10;
 }
 
-.injury-x {
-  color: #ffffff;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
+.warning-icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Not Selected Indicator - Prohibition Symbol */
+.not-selected-indicator {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.prohibition-icon {
+  width: 20px;
+  height: 20px;
 }
 
 /* Custom Tooltips for Indicators */
 .injury-indicator .tooltip,
+.not-selected-indicator .tooltip,
 .lowupside-indicator .tooltip {
   position: absolute;
   top: -35px;
@@ -306,7 +340,11 @@
 }
 
 .injury-indicator .tooltip {
-  color: #ff6464;
+  color: #ff9800;
+}
+
+.not-selected-indicator .tooltip {
+  color: #e53935;
 }
 
 .lowupside-indicator .tooltip {
@@ -314,6 +352,7 @@
 }
 
 .injury-indicator:hover .tooltip,
+.not-selected-indicator:hover .tooltip,
 .lowupside-indicator:hover .tooltip {
   opacity: 1;
   visibility: visible;
@@ -1535,8 +1574,22 @@
     right: -4px;
   }
 
-  .injury-x {
-    font-size: 10px;
+  .warning-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Smaller not selected indicator on mobile */
+  .not-selected-indicator {
+    width: 16px;
+    height: 16px;
+    top: -4px;
+    right: -4px;
+  }
+
+  .prohibition-icon {
+    width: 16px;
+    height: 16px;
   }
 
   /* Smaller low-upside indicator on mobile */
@@ -1562,9 +1615,24 @@
     right: -3px;
   }
 
-  .position-row.position-int .injury-x,
-  .position-row.position-emg .injury-x {
-    font-size: 8px;
+  .position-row.position-int .warning-icon,
+  .position-row.position-emg .warning-icon {
+    width: 14px;
+    height: 14px;
+  }
+
+  .position-row.position-int .not-selected-indicator,
+  .position-row.position-emg .not-selected-indicator {
+    width: 14px;
+    height: 14px;
+    top: -3px;
+    right: -3px;
+  }
+
+  .position-row.position-int .prohibition-icon,
+  .position-row.position-emg .prohibition-icon {
+    width: 14px;
+    height: 14px;
   }
 
   /* Mobile tooltip adjustments */

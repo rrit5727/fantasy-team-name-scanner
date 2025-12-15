@@ -32,7 +32,8 @@ function TeamDisplay({
   onPreseasonClick,
   // Player status indicator props
   injuredPlayers = [],
-  lowUpsidePlayers = []
+  lowUpsidePlayers = [],
+  notSelectedPlayers = []
 }) {
   // Group players by their primary position
   const groupedPlayers = {};
@@ -79,8 +80,16 @@ function TeamDisplay({
   // Helper to check if player is low-upside/overvalued (by name string match)
   const isPlayerLowUpside = (player) => {
     if (!player || !lowUpsidePlayers || lowUpsidePlayers.length === 0) return false;
-    return lowUpsidePlayers.some(lowUpsideName => 
+    return lowUpsidePlayers.some(lowUpsideName =>
       lowUpsideName.toLowerCase() === player.name?.toLowerCase()
+    );
+  };
+
+  // Helper to check if player is not selected (by name string match)
+  const isPlayerNotSelected = (player) => {
+    if (!player || !notSelectedPlayers || notSelectedPlayers.length === 0) return false;
+    return notSelectedPlayers.some(notSelectedName =>
+      notSelectedName.toLowerCase() === player.name?.toLowerCase()
     );
   };
 
@@ -101,6 +110,7 @@ function TeamDisplay({
     // Check player status
     const isInjured = isPlayerInjured(player);
     const isLowUpside = isPlayerLowUpside(player);
+    const isNotSelected = isPlayerNotSelected(player);
 
     // Determine CSS classes based on preseason mode state
     let cardClasses = 'player-card';
@@ -150,15 +160,33 @@ function TeamDisplay({
         className={cardClasses}
         onClick={handleClick}
       >
-        {/* Injury indicator - white X on red circle in top-right */}
+        {/* Injury indicator - warning triangle with exclamation mark */}
         {isInjured && (
           <div className="injury-indicator">
-            <span className="injury-x">✕</span>
+            <svg viewBox="0 0 24 24" className="warning-icon">
+              {/* Warning triangle */}
+              <path d="M12 2L22 20H2L12 2Z" fill="#ff9800"/>
+              {/* Exclamation mark */}
+              <path d="M12 8V14" stroke="#000000" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="17" r="1" fill="#000000"/>
+            </svg>
             <div className="tooltip">player injured</div>
           </div>
         )}
+        {/* Not selected indicator - prohibition symbol */}
+        {isNotSelected && !isInjured && (
+          <div className="not-selected-indicator">
+            <svg viewBox="0 0 24 24" className="prohibition-icon">
+              {/* Circle */}
+              <circle cx="12" cy="12" r="10" fill="none" stroke="#e53935" strokeWidth="2"/>
+              {/* Diagonal line */}
+              <path d="M7 7L17 17" stroke="#e53935" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <div className="tooltip">not selected</div>
+          </div>
+        )}
         {/* Low upside indicator - green banknote with red arrow in top-right */}
-        {isLowUpside && !isInjured && (
+        {isLowUpside && !isInjured && !isNotSelected && (
           <div className="lowupside-indicator">
             <svg viewBox="0 0 24 24" className="lowupside-icon">
               {/* Banknote (green) */}
@@ -352,6 +380,7 @@ function TeamView({ players, onBack }) {
   // Team status analysis state - front-loaded when team is displayed
   const [injuredPlayers, setInjuredPlayers] = React.useState([]);
   const [lowUpsidePlayers, setLowUpsidePlayers] = React.useState([]);
+  const [notSelectedPlayers, setNotSelectedPlayers] = React.useState([]);
   const [isAnalyzingTeam, setIsAnalyzingTeam] = React.useState(true);
   const [teamAnalysisComplete, setTeamAnalysisComplete] = React.useState(false);
 
@@ -370,6 +399,7 @@ function TeamView({ players, onBack }) {
       if (!teamPlayers || teamPlayers.length === 0) {
         setInjuredPlayers([]);
         setLowUpsidePlayers([]);
+        setNotSelectedPlayers([]);
         setIsAnalyzingTeam(false);
         setTeamAnalysisComplete(true);
         return;
@@ -381,11 +411,14 @@ function TeamView({ players, onBack }) {
         const result = await analyzeTeamStatus(teamPlayers, 2);
         setInjuredPlayers(result.injured_players || []);
         setLowUpsidePlayers(result.low_upside_players || []);
+        setNotSelectedPlayers(result.not_selected_players || []);
         console.log('Team analysis complete:', result);
+        console.log('Not selected players:', result.not_selected_players || []);
       } catch (err) {
         console.error('Error analyzing team:', err);
         setInjuredPlayers([]);
         setLowUpsidePlayers([]);
+        setNotSelectedPlayers([]);
       } finally {
         setIsAnalyzingTeam(false);
         setTeamAnalysisComplete(true);
@@ -1308,6 +1341,7 @@ function TeamView({ players, onBack }) {
             onPreseasonClick={handlePreseasonPlayerClick}
             injuredPlayers={injuredPlayers}
             lowUpsidePlayers={lowUpsidePlayers}
+            notSelectedPlayers={notSelectedPlayers}
           />
           )}
         </div>

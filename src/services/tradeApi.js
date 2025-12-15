@@ -200,7 +200,7 @@ export async function checkInjuredPlayers(teamPlayers) {
 export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
   try {
     if (!teamPlayers || teamPlayers.length === 0) {
-      return { injured_players: [], low_upside_players: [] };
+      return { injured_players: [], low_upside_players: [], not_selected_players: [] };
     }
 
     const payload = {
@@ -224,14 +224,15 @@ export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
       console.error('Error analyzing team status:', response.status);
       // Fallback to just checking injured players if endpoint doesn't exist
       const injured = await checkInjuredPlayers(teamPlayers);
-      return { injured_players: injured, low_upside_players: [] };
+      return { injured_players: injured, low_upside_players: [], not_selected_players: [] };
     }
 
     const data = await response.json();
     console.log('Team analysis complete:', data);
     return {
       injured_players: data.injured_players || [],
-      low_upside_players: data.low_upside_players || []
+      low_upside_players: data.low_upside_players || [],
+      not_selected_players: data.not_selected_players || []
     };
   } catch (error) {
     console.error('Error analyzing team status:', error);
@@ -240,7 +241,7 @@ export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
       const injured = await checkInjuredPlayers(teamPlayers);
       return { injured_players: injured, low_upside_players: [] };
     } catch {
-      return { injured_players: [], low_upside_players: [] };
+      return { injured_players: [], low_upside_players: [], not_selected_players: [] };
     }
   }
 }
