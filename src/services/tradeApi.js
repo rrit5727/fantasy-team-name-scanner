@@ -13,6 +13,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002';
  * @param {string} tradeType - 'likeForLike' or 'positionalSwap'
  * @param {number} numTrades - Number of trades to make
  * @param {Array} allowedPositions - Array of position strings for positional swap (e.g., ['HOK', 'MID'])
+ * @param {boolean} targetByeRound - Whether to prioritize bye round coverage
+ * @param {boolean} preseasonMode - If true, only include players that are injured, overvalued (diff < -2), or not selected
  * @returns {Promise<Object>} Trade recommendations with trade_out and trade_in arrays
  */
 export async function calculateTeamTrades(
@@ -22,7 +24,8 @@ export async function calculateTeamTrades(
   tradeType = 'likeForLike',
   numTrades = 2,
   allowedPositions = null,
-  targetByeRound = false
+  targetByeRound = false,
+  preseasonMode = false
 ) {
   try {
     // Validate inputs
@@ -52,7 +55,8 @@ export async function calculateTeamTrades(
       simulate_datetime: null,
       apply_lockout: false,
       excluded_players: null,
-      target_bye_round: targetByeRound
+      target_bye_round: targetByeRound,
+      preseason_mode: preseasonMode
     };
 
     console.log('Sending trade calculation request:', payload);

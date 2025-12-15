@@ -643,7 +643,8 @@ function TeamView({ players, onBack }) {
         'likeForLike', // Use like-for-like for preseason recommendations
         preseasonNumTrades,
         null,
-        targetByeRound
+        targetByeRound,
+        true // preseasonMode - only include injured, overvalued (diff < -2), or not selected players
       );
       
       // Set highlighted players (up to 6 trade-out recommendations)
