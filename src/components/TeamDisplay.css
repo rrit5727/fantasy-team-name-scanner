@@ -1138,6 +1138,23 @@
   gap: 0;
 }
 
+.trade-swap-row.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.trade-swap-row.clickable:hover {
+  background: rgba(0, 166, 125, 0.1);
+  border-radius: 8px;
+  padding: 4px;
+  margin: -4px;
+}
+
+.trade-swap-row.clickable:hover .trade-swap-bubble {
+  background: rgba(30, 45, 40, 0.8);
+  border-color: rgba(0, 166, 125, 0.4);
+}
+
 .trade-swap-bubble {
   flex: 1;
   display: flex;
@@ -1200,6 +1217,17 @@
   border-color: rgba(255, 165, 0, 0.5);
   color: #ffa500;
   text-shadow: 0 0 8px rgba(255, 165, 0, 0.5);
+}
+
+.reverse-hint {
+  margin-left: 0.3rem;
+  font-size: 0.8rem;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.trade-swap-row.clickable:hover .reverse-hint {
+  opacity: 1;
 }
 
 /* Swap row text styles */

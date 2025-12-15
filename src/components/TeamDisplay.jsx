@@ -907,7 +907,7 @@ function TeamView({ players, onBack }) {
     });
   };
 
-  // Handle reversing a trade-in (clicking on a swapped-in player)
+  // Handle reversing a trade-in (clicking on a swapped-in player or swap row)
   const handleReversePreseasonTradeIn = (tradedInPlayer) => {
     // Find the original player that was traded out
     const originalPlayer = preseasonSelectedTradeOuts.find(
@@ -921,9 +921,9 @@ function TeamView({ players, onBack }) {
       setPreseasonPriceBands(prev => {
         const updated = [...prev];
         if (updated[tradedInPlayer.matchedBandIndex]) {
-          updated[tradedInPlayer.matchedBandIndex] = { 
-            ...updated[tradedInPlayer.matchedBandIndex], 
-            filled: false 
+          updated[tradedInPlayer.matchedBandIndex] = {
+            ...updated[tradedInPlayer.matchedBandIndex],
+            filled: false
           };
         }
         return updated;
@@ -946,6 +946,19 @@ function TeamView({ players, onBack }) {
         return p;
       });
     });
+  };
+
+  // Handle reversing a swap by clicking on the swap row
+  const handleReversePreseasonSwap = (tradeOutPlayer) => {
+    // Find the corresponding trade-in player
+    const tradeInPlayer = preseasonSelectedTradeIns.find(
+      p => p.swappedForPlayer === tradeOutPlayer.name
+    );
+
+    if (!tradeInPlayer) return; // No swap to reverse
+
+    // Use the existing reverse function
+    handleReversePreseasonTradeIn(tradeInPlayer);
   };
 
   // Check if a slot is flexible (INT/EMG can accept any position)
@@ -1349,9 +1362,11 @@ function TeamView({ players, onBack }) {
                 const hasTradeIn = !!tradeInPlayer;
                 
                 return (
-                  <div 
+                  <div
                     key={tradeOutPlayer.name || index}
-                    className={`trade-swap-row ${hasTradeIn ? 'completed' : ''}`}
+                    className={`trade-swap-row ${hasTradeIn ? 'completed clickable' : ''}`}
+                    onClick={() => hasTradeIn && handleReversePreseasonSwap(tradeOutPlayer)}
+                    title={hasTradeIn ? 'Click to reverse this trade swap' : ''}
                   >
                     {/* Left bubble - Trade Out Player */}
                     <div className={`trade-swap-bubble trade-out-bubble ${hasTradeIn ? 'active' : ''}`}>
@@ -1367,6 +1382,7 @@ function TeamView({ players, onBack }) {
                     {/* Swap arrows in center */}
                     <div className={`trade-swap-arrows ${hasTradeIn ? 'active' : ''}`}>
                       <span className="arrow-up">⇄</span>
+                      {hasTradeIn && <span className="reverse-hint">↶</span>}
                     </div>
                     
                     {/* Right bubble - Trade In Player */}
