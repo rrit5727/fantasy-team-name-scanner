@@ -239,7 +239,8 @@ export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
     return {
       injured_players: data.injured_players || [],
       low_upside_players: data.low_upside_players || [],
-      not_selected_players: data.not_selected_players || []
+      not_selected_players: data.not_selected_players || [],
+      junk_cheapies: data.junk_cheapies || []
     };
   } catch (error) {
     console.error('Error analyzing team status:', error);

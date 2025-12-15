@@ -318,7 +318,8 @@
 /* Custom Tooltips for Indicators */
 .injury-indicator .tooltip,
 .not-selected-indicator .tooltip,
-.lowupside-indicator .tooltip {
+.lowupside-indicator .tooltip,
+.junk-cheap-indicator .tooltip {
   position: absolute;
   top: -35px;
   left: 50%;
@@ -351,9 +352,14 @@
   color: #ffa500;
 }
 
+.junk-cheap-indicator .tooltip {
+  color: #8B4513;
+}
+
 .injury-indicator:hover .tooltip,
 .not-selected-indicator:hover .tooltip,
-.lowupside-indicator:hover .tooltip {
+.lowupside-indicator:hover .tooltip,
+.junk-cheap-indicator:hover .tooltip {
   opacity: 1;
   visibility: visible;
   top: -40px;
@@ -379,6 +385,22 @@
 .lowupside-icon {
   width: 18px;
   height: 18px;
+}
+
+.junk-cheap-indicator {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  font-size: 14px;
 }
 
 .player-card:hover {
