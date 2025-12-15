@@ -376,6 +376,8 @@ function TeamView({ players, onBack }) {
   const [preseasonSalaryCap, setPreseasonSalaryCap] = React.useState(0); // Dynamic salary cap
   const [preseasonPhase, setPreseasonPhase] = React.useState('idle'); // 'idle' | 'highlighting' | 'selecting-out' | 'selecting-in'
   const [showPreseasonTradeIns, setShowPreseasonTradeIns] = React.useState(false); // Show trade-in panel after confirming trade-outs
+  const [preseasonTestApproach, setPreseasonTestApproach] = React.useState(false); // Test approach toggle - price band matching
+  const [preseasonPriceBands, setPreseasonPriceBands] = React.useState([]); // Track price bands for test approach
 
   // Team status analysis state - front-loaded when team is displayed
   const [injuredPlayers, setInjuredPlayers] = React.useState([]);
@@ -438,6 +440,8 @@ function TeamView({ players, onBack }) {
       setPreseasonSalaryCap(0);
       setPreseasonPhase('idle');
       setShowPreseasonTradeIns(false);
+      setPreseasonTestApproach(false);
+      setPreseasonPriceBands([]);
     }
   }, [isPreseasonMode]);
 
@@ -650,6 +654,7 @@ function TeamView({ players, onBack }) {
       // Set highlighted players (up to 6 trade-out recommendations)
       setPreseasonHighlightedPlayers(result.trade_out || []);
       setPreseasonPhase('selecting-out');
+      // Initialize salary cap to cash in bank only - traded-out salaries will be added as players are selected
       setPreseasonSalaryCap(cashInBank * 1000);
       
       // On mobile, close modal and go to team screen with highlights
@@ -667,23 +672,22 @@ function TeamView({ players, onBack }) {
   // Handle clicking on a player in preseason mode (team display)
   const handlePreseasonPlayerClick = (player, position) => {
     if (!player) return;
-    
+
     // During selecting-out phase - user is selecting which highlighted players to trade out
     if (preseasonPhase === 'selecting-out') {
       // Check if player is highlighted (recommended for trade-out)
       const isHighlighted = preseasonHighlightedPlayers.some(p => p.name === player.name);
       if (!isHighlighted) return; // Only allow clicking highlighted players
-      
+
       setPreseasonSelectedTradeOuts(prev => {
         const exists = prev.some(p => p.name === player.name);
         if (exists) {
           // Deselect - reduce salary cap
           const newList = prev.filter(p => p.name !== player.name);
-          setPreseasonSalaryCap(current => current - (player.price || 0));
+          // Note: preseasonSalaryCap stays as cash in bank - total is calculated when needed
           return newList;
         } else {
-          // Select - increase salary cap
-          setPreseasonSalaryCap(current => current + (player.price || 0));
+          // Select - don't change displayed salary cap (it stays as cash in bank)
           return [...prev, { ...player, originalPosition: position }];
         }
       });
@@ -726,15 +730,36 @@ function TeamView({ players, onBack }) {
       console.log('Trade-out slots:', preseasonSelectedTradeOuts.map(p => p.originalPosition));
       console.log('Has flexible slots:', hasFlexibleSlots);
       console.log('Position filter for API:', tradeOutPositions.length ? tradeOutPositions : 'ALL POSITIONS');
+      console.log('Test approach enabled:', preseasonTestApproach);
       
+      // Calculate total salary cap = cash in bank + traded-out salaries
+      const totalSalaryCap = (cashInBank * 1000) + preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0);
+
+      // If test approach is enabled, set up price bands for filtering
+      if (preseasonTestApproach) {
+        const bands = preseasonSelectedTradeOuts.map(p => ({
+          playerName: p.name,
+          originalPosition: p.originalPosition,
+          price: p.price,
+          minPrice: p.price - 75000,
+          maxPrice: p.price + 75000,
+          filled: false
+        }));
+        setPreseasonPriceBands(bands);
+        console.log('Price bands created:', bands);
+      } else {
+        setPreseasonPriceBands([]);
+      }
+
       // Calculate available trade-ins based on selected trade-outs
       const result = await calculatePreseasonTradeIns(
         teamPlayers,
         preseasonSelectedTradeOuts,
-        preseasonSalaryCap,
+        totalSalaryCap,
         selectedStrategy,
         tradeOutPositions,
-        targetByeRound
+        targetByeRound,
+        preseasonTestApproach // Pass test approach flag
       );
       
       setPreseasonAvailableTradeIns(result.trade_ins || []);
@@ -751,26 +776,71 @@ function TeamView({ players, onBack }) {
   // Handle selecting a trade-in player
   const handlePreseasonTradeInSelect = (player) => {
     if (!player) return;
-    
+
     // Check if player is already selected
     const isAlreadySelected = preseasonSelectedTradeIns.some(p => p.name === player.name);
     if (isAlreadySelected) return;
-    
+
+    // Calculate total available salary = cash in bank + traded-out salaries - already selected trade-in costs
+    const totalAvailableSalary = (cashInBank * 1000) +
+      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+
     // Check if we can afford this player
-    if (player.price > preseasonSalaryCap) return;
+    if (player.price > totalAvailableSalary) return;
     
     // Get remaining slots that haven't been filled
     const remainingSlots = getRemainingTradeOutSlots();
     const playerPosition = player.position || player.positions?.[0];
     
-    // Priority 1: Find a non-flexible slot with matching position
-    let matchingTradeOut = remainingSlots.find(out => {
-      return !isFlexibleSlot(out.originalPosition) && out.originalPosition === playerPosition;
-    });
-    
-    // Priority 2: If no position match, use a flexible slot (INT/EMG)
-    if (!matchingTradeOut) {
-      matchingTradeOut = remainingSlots.find(out => isFlexibleSlot(out.originalPosition));
+    let matchingTradeOut = null;
+    let matchingBandIndex = -1;
+
+    // TEST APPROACH: Match based on price bands using backend's matching_bands data
+    if (preseasonTestApproach && preseasonPriceBands.length > 0) {
+      // Use the matching_bands data provided by the backend
+      const playerMatchingBands = player.matching_bands || [];
+      console.log('Player', player.name, 'matches bands:', playerMatchingBands.map(b => b.index));
+
+      // Find an unfilled band that this player can fill, considering position compatibility
+      for (const bandInfo of playerMatchingBands) {
+        const bandIndex = bandInfo.index;
+        const band = preseasonPriceBands[bandIndex];
+
+        // Skip filled bands
+        if (band.filled) continue;
+
+        // Check if the corresponding trade-out slot is still available
+        const bandSlot = remainingSlots.find(s => s.name === band.playerName);
+        if (!bandSlot) continue;
+
+        // Check position compatibility
+        const isFlexible = isFlexibleSlot(bandSlot.originalPosition);
+        const positionMatches = bandSlot.originalPosition === playerPosition;
+
+        if (isFlexible || positionMatches) {
+          matchingTradeOut = bandSlot;
+          matchingBandIndex = bandIndex;
+          console.log('Using band', bandIndex, 'for player', band.playerName, '- filled by', player.name);
+          break;
+        }
+      }
+
+      if (!matchingTradeOut) {
+        console.log('Test approach: No available matching price band found for:', player.name);
+        return;
+      }
+    } else {
+      // NORMAL APPROACH: Match based on position
+      // Priority 1: Find a non-flexible slot with matching position
+      matchingTradeOut = remainingSlots.find(out => {
+        return !isFlexibleSlot(out.originalPosition) && out.originalPosition === playerPosition;
+      });
+      
+      // Priority 2: If no position match, use a flexible slot (INT/EMG)
+      if (!matchingTradeOut) {
+        matchingTradeOut = remainingSlots.find(out => isFlexibleSlot(out.originalPosition));
+      }
     }
     
     if (!matchingTradeOut) {
@@ -782,13 +852,22 @@ function TeamView({ players, onBack }) {
     const tradeInWithPosition = {
       ...player,
       swappedPosition: matchingTradeOut.originalPosition, // Keep original slot for display
-      swappedForPlayer: matchingTradeOut.name
+      swappedForPlayer: matchingTradeOut.name,
+      matchedBandIndex: matchingBandIndex // Track which band this came from (test approach)
     };
     
     console.log('Trade-in selected:', player.name, '(', playerPosition, ') for slot:', matchingTradeOut.originalPosition);
     
     setPreseasonSelectedTradeIns(prev => [...prev, tradeInWithPosition]);
-    setPreseasonSalaryCap(current => current - player.price);
+    
+    // Mark the price band as filled (test approach)
+    if (preseasonTestApproach && matchingBandIndex >= 0) {
+      setPreseasonPriceBands(prev => {
+        const updated = [...prev];
+        updated[matchingBandIndex] = { ...updated[matchingBandIndex], filled: true };
+        return updated;
+      });
+    }
     
     // Update team display - swap the player in
     setTeamPlayers(prev => {
@@ -812,17 +891,30 @@ function TeamView({ players, onBack }) {
     const originalPlayer = preseasonSelectedTradeOuts.find(
       p => p.name === tradedInPlayer.swappedForPlayer
     );
-    
+
     if (!originalPlayer) return;
-    
+
+    // If test approach, reset the price band to unfilled
+    if (preseasonTestApproach && tradedInPlayer.matchedBandIndex >= 0) {
+      setPreseasonPriceBands(prev => {
+        const updated = [...prev];
+        if (updated[tradedInPlayer.matchedBandIndex]) {
+          updated[tradedInPlayer.matchedBandIndex] = { 
+            ...updated[tradedInPlayer.matchedBandIndex], 
+            filled: false 
+          };
+        }
+        return updated;
+      });
+    }
+
     // Remove from selected trade-ins
-    setPreseasonSelectedTradeIns(prev => 
+    setPreseasonSelectedTradeIns(prev =>
       prev.filter(p => p.name !== tradedInPlayer.name)
     );
-    
-    // Restore salary cap
-    setPreseasonSalaryCap(current => current + tradedInPlayer.price);
-    
+
+    // Note: remaining salary is calculated dynamically, no need to update preseasonSalaryCap
+
     // Restore original player in team
     setTeamPlayers(prev => {
       return prev.map(p => {
@@ -848,11 +940,11 @@ function TeamView({ players, onBack }) {
   // Filter available trade-ins based on remaining positions and salary
   const getFilteredTradeIns = () => {
     const remainingSlots = getRemainingTradeOutSlots();
-    
+
     // Get unique positions needed (for non-flexible slots)
     const positionsNeeded = new Set();
     let hasFlexibleSlot = false;
-    
+
     remainingSlots.forEach(slot => {
       if (isFlexibleSlot(slot.originalPosition)) {
         hasFlexibleSlot = true;
@@ -860,17 +952,61 @@ function TeamView({ players, onBack }) {
         positionsNeeded.add(slot.originalPosition);
       }
     });
-    
+
+    // Calculate total available salary = cash in bank + traded-out salaries - already selected trade-in costs
+    const totalAvailableSalary = (cashInBank * 1000) +
+      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+
     console.log('Remaining slots:', remainingSlots.map(s => s.originalPosition));
     console.log('Positions needed:', Array.from(positionsNeeded), 'Has flexible slot:', hasFlexibleSlot);
-    
+    console.log('Total available salary:', totalAvailableSalary);
+
+    // TEST APPROACH: Filter by price bands using backend's matching_bands data
+    if (preseasonTestApproach && preseasonPriceBands.length > 0) {
+      // Get unfilled bands
+      const unfilledBands = preseasonPriceBands.filter(band => !band.filled);
+      const unfilledBandIndices = new Set(unfilledBands.map(band => preseasonPriceBands.indexOf(band)));
+      console.log('Test approach - Unfilled bands:', unfilledBands.map(b => `${b.playerName}: $${b.minPrice/1000}k-$${b.maxPrice/1000}k`));
+
+      return preseasonAvailableTradeIns.filter(player => {
+        const playerPos = player.position || player.positions?.[0];
+        const notAlreadySelected = !preseasonSelectedTradeIns.some(p => p.name === player.name);
+        const canAfford = player.price <= totalAvailableSalary;
+
+        if (!notAlreadySelected || !canAfford) return false;
+
+        // Use backend's pre-calculated matching_bands data
+        const playerMatchingBands = player.matching_bands || [];
+
+        // Check if player can fill any unfilled band with position compatibility
+        return playerMatchingBands.some(bandInfo => {
+          const bandIndex = bandInfo.index;
+
+          // Only consider unfilled bands
+          if (!unfilledBandIndices.has(bandIndex)) return false;
+
+          // Check position compatibility with the band's original slot
+          const band = preseasonPriceBands[bandIndex];
+          const bandSlot = remainingSlots.find(s => s.name === band.playerName);
+          if (!bandSlot) return false;
+
+          const isFlexible = isFlexibleSlot(bandSlot.originalPosition);
+          const positionMatches = bandSlot.originalPosition === playerPos;
+
+          return isFlexible || positionMatches;
+        });
+      });
+    }
+
+    // NORMAL APPROACH: Filter by position
     return preseasonAvailableTradeIns.filter(player => {
       const playerPos = player.position || player.positions?.[0];
-      // Position matches if: 
+      // Position matches if:
       // 1. There's a flexible slot (INT/EMG) available, OR
       // 2. The player's position matches one of the needed positions
       const positionMatch = hasFlexibleSlot || positionsNeeded.has(playerPos);
-      const canAfford = player.price <= preseasonSalaryCap;
+      const canAfford = player.price <= totalAvailableSalary;
       const notAlreadySelected = !preseasonSelectedTradeIns.some(p => p.name === player.name);
       return positionMatch && canAfford && notAlreadySelected;
     });
@@ -981,6 +1117,24 @@ function TeamView({ players, onBack }) {
                 <span className="toggle-slider" />
               </label>
             </div>
+            {/* Test Approach Toggle - only visible when preseason mode is on */}
+            {isPreseasonMode && (
+              <div className="test-approach-section toggle-section">
+                <div className="toggle-labels">
+                  <label htmlFor="testApproachMobile">Test Approach</label>
+                  <span className="toggle-caption">Price band matching (±$75k)</span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    id="testApproachMobile"
+                    type="checkbox"
+                    checked={preseasonTestApproach}
+                    onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Position Selection (only shown for Positional Swap in normal mode) */}
@@ -1146,9 +1300,18 @@ function TeamView({ players, onBack }) {
         
         {/* Preseason salary cap and status */}
         <div className="trade-out-pinned">
-          <div className={`preseason-salary-cap ${preseasonSalaryCap > 0 ? 'has-budget' : ''}`}>
-            Remaining: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
-          </div>
+                  {(() => {
+                    // Calculate remaining = cash + traded-out salaries - selected trade-in costs
+                    const remaining = (cashInBank * 1000) +
+                      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+
+            return (
+              <div className={`preseason-salary-cap ${remaining > 0 ? 'has-budget' : ''}`}>
+                Remaining: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
+              </div>
+            );
+          })()}
           <div className="preseason-status">
             {preseasonSelectedTradeIns.length} of {preseasonSelectedTradeOuts.length} trade-ins selected
           </div>
@@ -1223,14 +1386,21 @@ function TeamView({ players, onBack }) {
             <h4 className="trade-subtitle">Trade-In Options</h4>
             <div className="preseason-tradein-list">
               {getFilteredTradeIns().length > 0 ? (
-                getFilteredTradeIns().map((player, index) => (
-                  <div 
-                    key={player.name || index}
-                    className={`preseason-tradein-item ${
-                      preseasonSelectedTradeIns.some(p => p.name === player.name) ? 'selected' : ''
-                    } ${player.price > preseasonSalaryCap ? 'disabled' : ''}`}
-                    onClick={() => handlePreseasonTradeInSelect(player)}
-                  >
+                getFilteredTradeIns().map((player, index) => {
+                  // Calculate total available salary for this render = cash + traded-out salaries - selected trade-in costs
+                  const totalAvailableSalary = (cashInBank * 1000) +
+                    preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                    preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+                  const isDisabled = player.price > totalAvailableSalary;
+
+                  return (
+                    <div
+                      key={player.name || index}
+                      className={`preseason-tradein-item ${
+                        preseasonSelectedTradeIns.some(p => p.name === player.name) ? 'selected' : ''
+                      } ${isDisabled ? 'disabled' : ''}`}
+                      onClick={() => handlePreseasonTradeInSelect(player)}
+                    >
                     <span className="trade-player-pos">
                       {player.position || player.positions?.[0] || '—'}
                     </span>
@@ -1238,11 +1408,12 @@ function TeamView({ players, onBack }) {
                     <span className="trade-player-price">
                       ${formatNumberWithCommas(Math.round(player.price / 1000))}k
                     </span>
-                    {player.diff && (
-                      <span className="trade-player-diff">+{player.diff.toFixed(1)}</span>
-                    )}
-                  </div>
-                ))
+                      {player.diff && (
+                        <span className="trade-player-diff">+{player.diff.toFixed(1)}</span>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
                 <p className="empty-message">
                   {allPositionsFilled
@@ -1270,7 +1441,7 @@ function TeamView({ players, onBack }) {
             {/* Show preseason salary cap when in preseason mode */}
             {isPreseasonMode && preseasonPhase !== 'idle' && (
               <div className={`salary-cap-display ${preseasonSalaryCap > 0 ? '' : 'warning'}`} style={preseasonSalaryCap > 0 ? {} : {borderColor: 'rgba(255,100,100,0.4)', color: '#ff6464'}}>
-                {preseasonPhase === 'selecting-out' ? 'Available' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                {preseasonPhase === 'selecting-out' ? 'Cash in Bank' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
               </div>
             )}
             {/* Show normal salary cap when not in preseason mode */}
@@ -1423,6 +1594,24 @@ function TeamView({ players, onBack }) {
                 <span className="toggle-slider" />
               </label>
             </div>
+            {/* Test Approach Toggle - only visible when preseason mode is on */}
+            {isPreseasonMode && (
+              <div className="test-approach-section toggle-section">
+                <div className="toggle-labels">
+                  <label htmlFor="testApproachDesktop">Test Approach</label>
+                  <span className="toggle-caption">Price band matching (±$75k)</span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    id="testApproachDesktop"
+                    type="checkbox"
+                    checked={preseasonTestApproach}
+                    onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+            )}
           </div>
 
           {/* Position Selection (only shown for Positional Swap in normal mode) */}
@@ -1481,7 +1670,7 @@ function TeamView({ players, onBack }) {
               {preseasonPhase === 'selecting-out' && (
                 <>
                   <div className="preseason-salary-cap">
-                    Available: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                    Cash in Bank: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
                   </div>
                   <div className="preseason-status selecting">
                     {preseasonSelectedTradeOuts.length} player{preseasonSelectedTradeOuts.length !== 1 ? 's' : ''} selected for trade-out
@@ -1498,12 +1687,23 @@ function TeamView({ players, onBack }) {
               
               {preseasonPhase === 'selecting-in' && (
                 <>
-                  <div className={`preseason-salary-cap ${preseasonSalaryCap > 0 ? 'has-budget' : ''}`}>
-                    Remaining: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
-                  </div>
-                  <div className="preseason-status">
-                    {preseasonSelectedTradeIns.length} of {preseasonSelectedTradeOuts.length} trade-ins selected
-                  </div>
+                  {(() => {
+                    // Calculate remaining = cash + traded-out salaries - selected trade-in costs
+                    const remaining = (cashInBank * 1000) +
+                      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+
+                    return (
+                      <>
+                        <div className={`preseason-salary-cap ${remaining > 0 ? 'has-budget' : ''}`}>
+                          Remaining: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
+                        </div>
+                        <div className="preseason-status">
+                          {preseasonSelectedTradeIns.length} of {preseasonSelectedTradeOuts.length} trade-ins selected
+                        </div>
+                      </>
+                    );
+                  })()}
                 </>
               )}
             </>
@@ -1556,13 +1756,20 @@ function TeamView({ players, onBack }) {
             <div className="trade-panel">
               <h4 className="trade-subtitle">Trade-In Options</h4>
               <div className="preseason-tradein-list">
-                {getFilteredTradeIns().length > 0 ? (
-                  getFilteredTradeIns().map((player, index) => (
-                    <div 
+              {getFilteredTradeIns().length > 0 ? (
+                getFilteredTradeIns().map((player, index) => {
+                  // Calculate total available salary for this render = cash + traded-out salaries - selected trade-in costs
+                  const totalAvailableSalary = (cashInBank * 1000) +
+                    preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                    preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+                  const isDisabled = player.price > totalAvailableSalary;
+
+                  return (
+                    <div
                       key={player.name || index}
                       className={`preseason-tradein-item ${
                         preseasonSelectedTradeIns.some(p => p.name === player.name) ? 'selected' : ''
-                      } ${player.price > preseasonSalaryCap ? 'disabled' : ''}`}
+                      } ${isDisabled ? 'disabled' : ''}`}
                       onClick={() => handlePreseasonTradeInSelect(player)}
                     >
                       <span className="trade-player-pos">
@@ -1572,11 +1779,12 @@ function TeamView({ players, onBack }) {
                       <span className="trade-player-price">
                         ${formatNumberWithCommas(Math.round(player.price / 1000))}k
                       </span>
-                      {player.diff && (
-                        <span className="trade-player-diff">+{player.diff.toFixed(1)}</span>
-                      )}
-                    </div>
-                  ))
+                        {player.diff && (
+                          <span className="trade-player-diff">+{player.diff.toFixed(1)}</span>
+                        )}
+                      </div>
+                    );
+                  })
                 ) : (
                   <p className="empty-message">
                     {preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length

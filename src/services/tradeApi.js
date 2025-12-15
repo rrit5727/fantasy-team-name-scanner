@@ -93,6 +93,7 @@ export async function calculateTeamTrades(
  * @param {string} strategy - '1' = value, '2' = base, '3' = hybrid
  * @param {Array} positions - Positions to filter trade-ins by (from trade-outs)
  * @param {boolean} targetByeRound - Whether to prioritize bye round coverage
+ * @param {boolean} testApproach - If true, use price band matching (±$75k from trade-out prices)
  * @returns {Promise<Object>} Object with trade_ins array of individual player recommendations
  */
 export async function calculatePreseasonTradeIns(
@@ -101,7 +102,8 @@ export async function calculatePreseasonTradeIns(
   salaryCap,
   strategy = '1',
   positions = [],
-  targetByeRound = false
+  targetByeRound = false,
+  testApproach = false
 ) {
   try {
     // Validate inputs
@@ -125,7 +127,8 @@ export async function calculatePreseasonTradeIns(
       salary_cap: salaryCap,
       strategy: strategy,
       positions: positions.filter(Boolean),
-      target_bye_round: targetByeRound
+      target_bye_round: targetByeRound,
+      test_approach: testApproach
     };
 
     console.log('Sending preseason trade-in request:', payload);

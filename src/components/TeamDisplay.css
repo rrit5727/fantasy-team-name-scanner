@@ -942,6 +942,28 @@
   border-color: rgba(255, 165, 0, 0.8);
 }
 
+/* Test Approach Toggle - nested within preseason mode */
+.test-approach-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed rgba(255, 165, 0, 0.3);
+}
+
+.test-approach-section .toggle-labels label {
+  color: #e0e0e0;
+  font-size: 0.75rem;
+}
+
+.test-approach-section .toggle-caption {
+  color: #8a9a96;
+  font-size: 0.7rem;
+}
+
+.test-approach-section .toggle-switch input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border-color: rgba(139, 92, 246, 0.8);
+}
+
 .btn-highlight-options {
   width: 100%;
   padding: 0.8rem;
