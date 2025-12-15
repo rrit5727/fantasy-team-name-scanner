@@ -20,9 +20,9 @@ const POSITION_CONFIG = {
 
 const POSITION_ORDER = ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB', 'INT', 'EMG'];
 
-function TeamDisplay({ 
-  players, 
-  onTradeOut, 
+function TeamDisplay({
+  players,
+  onTradeOut,
   selectedTradeOut,
   // Pre-season mode props
   isPreseasonMode = false,
@@ -34,7 +34,10 @@ function TeamDisplay({
   injuredPlayers = [],
   lowUpsidePlayers = [],
   notSelectedPlayers = [],
-  junkCheapies = []
+  junkCheapies = [],
+  // Normal mode trade recommendations
+  normalModeHighlighted = [],
+  normalModePriorities = {}
 }) {
   // Group players by their primary position
   const groupedPlayers = {};
@@ -122,6 +125,10 @@ function TeamDisplay({
     const isNotSelected = isPlayerNotSelected(player);
     const isJunkCheap = isPlayerJunkCheap(player);
 
+    // Check if player is highlighted in normal mode
+    const isNormalModeHighlighted = normalModeHighlighted?.some(p => p.name === player.name);
+    const normalModePriority = normalModePriorities?.[player.name];
+
     // Determine CSS classes based on preseason mode state
     let cardClasses = 'player-card';
     
@@ -149,10 +156,17 @@ function TeamDisplay({
         }
       }
     } else {
-      // Normal mode - use existing selected state
-    const isSelected = selectedTradeOut?.name === player.name;
+      // Normal mode - check for highlighting and selection
+      const isSelected = selectedTradeOut?.name === player.name;
       if (isSelected) {
         cardClasses += ' selected';
+      } else if (isNormalModeHighlighted) {
+        // Use different highlight styles based on player status
+        if (isInjured) {
+          cardClasses += ' preseason-highlight-injured';
+        } else {
+          cardClasses += ' preseason-highlight-lowupside';
+        }
       }
     }
 
@@ -160,16 +174,22 @@ function TeamDisplay({
       if (isPreseasonMode && onPreseasonClick) {
         onPreseasonClick(player, position);
       } else if (onTradeOut) {
-        onTradeOut(player);
+        onTradeOut(player, position);
       }
     };
 
     return (
-      <div 
-        key={player.name} 
+      <div
+        key={player.name}
         className={cardClasses}
         onClick={handleClick}
       >
+        {/* Priority indicator for normal mode trade recommendations */}
+        {normalModePriority && (
+          <div className="priority-indicator">
+            {normalModePriority}
+          </div>
+        )}
         {/* Injury indicator - warning triangle with exclamation mark */}
         {isInjured && (
           <div className="injury-indicator">
@@ -384,6 +404,14 @@ function TeamView({ players, onBack }) {
   const [selectedTradeInIndex, setSelectedTradeInIndex] = React.useState(null);
   const [salaryCapRemaining, setSalaryCapRemaining] = React.useState(null);
 
+  // Normal mode trade highlights
+  const [normalModeHighlighted, setNormalModeHighlighted] = React.useState([]);
+  const [normalModePriorities, setNormalModePriorities] = React.useState({});
+
+  // Normal mode trade workflow state
+  const [normalModePhase, setNormalModePhase] = React.useState('recommend'); // 'recommend' | 'calculate'
+  const [hasCalculatedHighlights, setHasCalculatedHighlights] = React.useState(false);
+
   // Pre-season mode state
   const [isPreseasonMode, setIsPreseasonMode] = React.useState(false);
   const [preseasonHighlightedPlayers, setPreseasonHighlightedPlayers] = React.useState([]); // Up to 6 recommended trade-outs
@@ -421,6 +449,8 @@ function TeamView({ players, onBack }) {
         setLowUpsidePlayers([]);
         setNotSelectedPlayers([]);
         setJunkCheapies([]);
+        setNormalModeHighlighted([]);
+        setNormalModePriorities({});
         setIsAnalyzingTeam(false);
         setTeamAnalysisComplete(true);
         return;
@@ -443,6 +473,8 @@ function TeamView({ players, onBack }) {
         setLowUpsidePlayers([]);
         setNotSelectedPlayers([]);
         setJunkCheapies([]);
+        setNormalModeHighlighted([]);
+        setNormalModePriorities({});
       } finally {
         setIsAnalyzingTeam(false);
         setTeamAnalysisComplete(true);
@@ -464,8 +496,24 @@ function TeamView({ players, onBack }) {
       setShowPreseasonTradeIns(false);
       setPreseasonTestApproach(false);
       setPreseasonPriceBands([]);
+    } else {
+      // Clear normal mode highlights when entering preseason mode
+      setNormalModeHighlighted([]);
+      setNormalModePriorities({});
+      setNormalModePhase('recommend');
+      setHasCalculatedHighlights(false);
     }
   }, [isPreseasonMode]);
+
+  // Reset normal mode phase when players change
+  React.useEffect(() => {
+    if (!isPreseasonMode) {
+      setNormalModePhase('recommend');
+      setHasCalculatedHighlights(false);
+      setNormalModeHighlighted([]);
+      setNormalModePriorities({});
+    }
+  }, [teamPlayers]);
 
   // Handle cash in bank input with formatting
   const handleCashChange = (e) => {
@@ -508,6 +556,44 @@ function TeamView({ players, onBack }) {
         );
         
         setTradeOutRecommendations(result.trade_out);
+
+        // Also create highlights for mobile mode
+        if (!isPreseasonMode) {
+          // Combine all players that have issues: injured + overvalued + not selected + junk cheapies
+          const allProblemPlayers = new Set([
+            ...injuredPlayers,
+            ...lowUpsidePlayers,
+            ...notSelectedPlayers,
+            ...junkCheapies
+          ]);
+
+          // Find the actual player objects from teamPlayers that match these names
+          const highlightedPlayers = teamPlayers.filter(player =>
+            allProblemPlayers.has(player.name)
+          );
+
+          // Create priority mapping - higher priority (lower number) for trade-out recommendations
+          const priorities = {};
+          const tradeOutNames = (result.trade_out || []).map(p => p.name);
+
+          // Priority 1-2: Top trade-out recommendations
+          tradeOutNames.forEach((name, index) => {
+            if (allProblemPlayers.has(name)) {
+              priorities[name] = index + 1;
+            }
+          });
+
+          // Priority 3+: Other players with issues
+          let nextPriority = Math.max(3, tradeOutNames.length + 1);
+          highlightedPlayers.forEach(player => {
+            if (!(player.name in priorities)) {
+              priorities[player.name] = nextPriority++;
+            }
+          });
+
+          setNormalModeHighlighted(highlightedPlayers);
+          setNormalModePriorities(priorities);
+        }
       } catch (err) {
         console.error('Error calculating trade-out recommendations:', err);
         setError(err.message || 'Failed to calculate trade-out recommendations');
@@ -517,37 +603,90 @@ function TeamView({ players, onBack }) {
     }
   };
 
-  // Calculate trade recommendations when "Calculate Trade Recommendations" is clicked
-  const handleCalculateTrades = async () => {
+  // Handle the trade recommendation workflow
+  const handleTradeWorkflow = async () => {
     setIsCalculating(true);
     setError(null);
-    
+
     try {
-      const { calculateTeamTrades } = await import('../services/tradeApi.js');
-      
-      const result = await calculateTeamTrades(
-        teamPlayers,
-        cashInBank * 1000, // Convert from thousands to actual amount
-        selectedStrategy,
-        selectedTradeType,
-        numTrades,
-        selectedTradeType === 'positionalSwap' ? selectedPositions : null,
-        targetByeRound
-      );
-      
-      // Set both trade-out and trade-in recommendations
-      setTradeOutRecommendations(result.trade_out);
-      setTradeInRecommendations(result.trade_in);
-      
-      // On mobile, close modal and show trade-in recommendations page
-      // On desktop, just stay on the same page (no action needed, state is updated)
-      if (showTradeModal) {
-        setShowTradeModal(false);
-        setShowTradeInPage(true);
+      if (!isPreseasonMode && normalModePhase === 'recommend') {
+        // Phase 1: Just highlight players, don't calculate trade recommendations
+        // Combine all players that have issues: injured + overvalued + not selected + junk cheapies
+        const allProblemPlayers = new Set([
+          ...injuredPlayers,
+          ...lowUpsidePlayers,
+          ...notSelectedPlayers,
+          ...junkCheapies
+        ]);
+
+        // Find the actual player objects from teamPlayers that match these names
+        const highlightedPlayers = teamPlayers.filter(player =>
+          allProblemPlayers.has(player.name)
+        );
+
+        // Get trade-out recommendations for priority ordering
+        const { calculateTeamTrades } = await import('../services/tradeApi.js');
+        const result = await calculateTeamTrades(
+          teamPlayers,
+          cashInBank * 1000,
+          selectedStrategy,
+          selectedTradeType,
+          numTrades,
+          selectedTradeType === 'positionalSwap' ? selectedPositions : null,
+          targetByeRound
+        );
+
+        const tradeOutNames = (result.trade_out || []).map(p => p.name);
+        const priorities = {};
+
+        // Priority 1-2: Top trade-out recommendations
+        tradeOutNames.forEach((name, index) => {
+          if (allProblemPlayers.has(name)) {
+            priorities[name] = index + 1;
+          }
+        });
+
+        // Priority 3+: Other players with issues
+        let nextPriority = Math.max(3, tradeOutNames.length + 1);
+        highlightedPlayers.forEach(player => {
+          if (!(player.name in priorities)) {
+            priorities[player.name] = nextPriority++;
+          }
+        });
+
+        setNormalModeHighlighted(highlightedPlayers);
+        setNormalModePriorities(priorities);
+        setHasCalculatedHighlights(true);
+        setNormalModePhase('calculate');
+
+      } else {
+        // Phase 2: Calculate trade-in recommendations based on user's selected trade-outs
+        const { calculateTeamTrades } = await import('../services/tradeApi.js');
+
+        const result = await calculateTeamTrades(
+          teamPlayers,
+          cashInBank * 1000,
+          selectedStrategy,
+          selectedTradeType,
+          selectedTradeOutPlayers.length,
+          selectedTradeType === 'positionalSwap' ? selectedPositions : null,
+          targetByeRound,
+          false, // preseasonMode
+          selectedTradeOutPlayers // preselected trade-outs
+        );
+
+        // Set trade-in recommendations based on user's selections
+        setTradeInRecommendations(result.trade_in);
+
+        // On mobile, close modal and show trade-in recommendations page
+        if (showTradeModal) {
+          setShowTradeModal(false);
+          setShowTradeInPage(true);
+        }
       }
     } catch (err) {
-      console.error('Error calculating trades:', err);
-      setError(err.message || 'Failed to calculate trades');
+      console.error('Error in trade workflow:', err);
+      setError(err.message || 'Failed to process trade recommendations');
     } finally {
       setIsCalculating(false);
     }
@@ -563,19 +702,25 @@ function TeamView({ players, onBack }) {
     });
   };
 
-  const handleTradeOut = (player) => {
+  const handleTradeOut = (player, position) => {
     if (!player) return;
+
+    // Only allow selection of highlighted players in normal mode
+    if (!isPreseasonMode && !normalModeHighlighted.some(p => p.name === player.name)) {
+      return;
+    }
+
     setSelectedTradeOutPlayers(prev => {
       const exists = prev.some(p => p.name === player.name);
       if (exists) {
+        // Allow deselection even if at limit
         return prev.filter(p => p.name !== player.name);
       }
-      const updated = [...prev, player];
-      if (updated.length > numTrades) {
-        // Keep most recent selections up to the number of trades requested
-        return updated.slice(updated.length - numTrades);
+      // Prevent selection if already at limit
+      if (prev.length >= numTrades) {
+        return prev;
       }
-      return updated;
+      return [...prev, { ...player, originalPosition: position }];
     });
   };
 
@@ -645,6 +790,14 @@ function TeamView({ players, onBack }) {
     setSelectedTradeInIndex(null);
     setShowTradeInPage(false);
     setShowTradeModal(false);
+
+    // Reset normal mode workflow state
+    if (!isPreseasonMode) {
+      setNormalModePhase('recommend');
+      setHasCalculatedHighlights(false);
+      setNormalModeHighlighted([]);
+      setNormalModePriorities({});
+    }
   };
 
   // ========== PRE-SEASON MODE HANDLERS ==========
@@ -1224,12 +1377,14 @@ function TeamView({ players, onBack }) {
               {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
             </button>
           ) : (
-          <button 
-            className="btn-calculate-trades"
-            onClick={handleCalculateTrades}
-            disabled={isCalculating}
+          <button
+            className={`btn-calculate-trades ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 2 ? 'disabled' : ''}`}
+            onClick={handleTradeWorkflow}
+            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 2)}
           >
-            {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
+            {isCalculating ? 'Calculating...' :
+             normalModePhase === 'recommend' ? 'Recommend players to trade out' :
+             'Calculate trade recommendations'}
           </button>
           )}
 
@@ -1553,6 +1708,8 @@ function TeamView({ players, onBack }) {
             lowUpsidePlayers={lowUpsidePlayers}
             notSelectedPlayers={notSelectedPlayers}
             junkCheapies={junkCheapies}
+            normalModeHighlighted={normalModeHighlighted}
+            normalModePriorities={normalModePriorities}
           />
           )}
         </div>
@@ -1748,12 +1905,14 @@ function TeamView({ players, onBack }) {
             </>
           ) : (
             /* Normal Mode - Calculate Button */
-          <button 
-            className="btn-calculate-trades"
-            onClick={handleCalculateTrades}
-            disabled={isCalculating}
+          <button
+            className={`btn-calculate-trades ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 2 ? 'disabled' : ''}`}
+            onClick={handleTradeWorkflow}
+            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 2)}
           >
-            {isCalculating ? 'Calculating...' : 'Calculate Trade Recommendations'}
+            {isCalculating ? 'Calculating...' :
+             normalModePhase === 'recommend' ? 'Recommend players to trade out' :
+             'Calculate trade recommendations'}
           </button>
           )}
 
@@ -1766,13 +1925,13 @@ function TeamView({ players, onBack }) {
           {/* Trade Panels - Normal mode only */}
           {!isPreseasonMode && (
             <>
-          <TradePanel 
+          <TradePanel
             title="Trade Out"
-            subtitle="Trade-out Recommendations"
-            players={tradeOutRecommendations}
+            subtitle="Selected Trade-outs"
+            players={selectedTradeOutPlayers}
             onSelect={handleTradeOut}
             selectedPlayers={selectedTradeOutPlayers}
-            emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Trade-out recommendations will appear here"}
+            emptyMessage={isCalculatingTradeOut ? "Calculating trade-out recommendations..." : "Click on highlighted players to select them for trade-out"}
             isTradeOut={true}
           />
           

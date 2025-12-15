@@ -25,7 +25,8 @@ export async function calculateTeamTrades(
   numTrades = 2,
   allowedPositions = null,
   targetByeRound = false,
-  preseasonMode = false
+  preseasonMode = false,
+  preselectedTradeOuts = null
 ) {
   try {
     // Validate inputs
@@ -56,7 +57,12 @@ export async function calculateTeamTrades(
       apply_lockout: false,
       excluded_players: null,
       target_bye_round: targetByeRound,
-      preseason_mode: preseasonMode
+      preseason_mode: preseasonMode,
+      preselected_trade_outs: preselectedTradeOuts ? preselectedTradeOuts.map(player => ({
+        name: player.name,
+        positions: player.positions || [],
+        price: player.price || 0
+      })) : null
     };
 
     console.log('Sending trade calculation request:', payload);
