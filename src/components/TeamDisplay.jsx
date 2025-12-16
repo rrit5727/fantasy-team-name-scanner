@@ -556,9 +556,12 @@ function TeamView({ players, onBack }) {
       return;
     }
 
-    // Otherwise open modal for calculating trade recommendations
-    setShowTradeModal(true);
-    setError(null);
+    // Otherwise open modal for calculating trade recommendations (only if players selected)
+    if (selectedTradeOutPlayers.length > 0) {
+      setShowTradeModal(true);
+      setError(null);
+    }
+    // If no players selected, do nothing
   };
 
   // Handle the trade recommendation workflow
@@ -1344,9 +1347,9 @@ function TeamView({ players, onBack }) {
             </button>
           ) : (
           <button
-            className={`btn-calculate-trades ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 2 ? 'disabled' : ''}`}
+            className={`btn-calculate-trades ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1 ? 'disabled' : ''}`}
             onClick={handleTradeWorkflow}
-            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 2)}
+            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
           >
             {isCalculating ? 'Calculating...' :
              normalModePhase === 'recommend' ? 'Recommend players to trade out' :
@@ -1613,7 +1616,11 @@ function TeamView({ players, onBack }) {
               <button className="btn-back" onClick={onBack}>
                 ← Back to Scanner
               </button>
-              <button className="btn-make-trade mobile-only" onClick={handleMakeATrade}>
+              <button
+                className={`btn-make-trade mobile-only ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0 ? 'disabled' : ''}`}
+                onClick={handleMakeATrade}
+                disabled={normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0}
+              >
                 {isPreseasonMode
                   ? 'Trade options'
                   : normalModePhase === 'calculate'
@@ -1893,9 +1900,9 @@ function TeamView({ players, onBack }) {
           ) : (
             /* Normal Mode - Calculate Button */
           <button
-            className={`btn-calculate-trades ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 2 ? 'disabled' : ''}`}
+            className={`btn-calculate-trades ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1 ? 'disabled' : ''}`}
             onClick={handleTradeWorkflow}
-            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 2)}
+            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
           >
             {isCalculating ? 'Calculating...' :
              normalModePhase === 'recommend' ? 'Recommend players to trade out' :

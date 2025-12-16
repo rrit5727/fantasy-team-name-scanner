@@ -1428,9 +1428,18 @@
   letter-spacing: 0.05em;
 }
 
-.btn-make-trade:hover {
+.btn-make-trade:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 4px 15px rgba(0, 217, 163, 0.4);
+}
+
+.btn-make-trade:disabled,
+.btn-make-trade.disabled {
+  background: linear-gradient(135deg, #666 0%, #555 100%);
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Trade Options Modal */
