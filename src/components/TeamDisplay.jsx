@@ -23,7 +23,8 @@ const POSITION_ORDER = ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB', 'INT', 'EMG'];
 function TeamDisplay({
   players,
   onTradeOut,
-  selectedTradeOut,
+  selectedTradeOutPlayers = [],
+  selectionLimitReached = false,
   // Pre-season mode props
   isPreseasonMode = false,
   preseasonHighlighted = [],
@@ -131,7 +132,12 @@ function TeamDisplay({
 
     // Determine CSS classes based on preseason mode state
     let cardClasses = 'player-card';
-    
+
+    // Add selection limit class for hover effects
+    if (selectionLimitReached) {
+      cardClasses += ' selection-limit-reached';
+    }
+
     if (isPreseasonMode) {
       // Check if this player was traded in (replaces a traded out player)
       if (isPlayerInList(player, preseasonTradedIn)) {
@@ -157,7 +163,7 @@ function TeamDisplay({
       }
     } else {
       // Normal mode - check for highlighting and selection
-      const isSelected = selectedTradeOut?.name === player.name;
+      const isSelected = selectedTradeOutPlayers.some(p => p.name === player.name);
       if (isSelected) {
         cardClasses += ' selected';
       } else if (isNormalModeHighlighted) {
@@ -669,18 +675,15 @@ function TeamView({ players, onBack }) {
       return;
     }
 
-    setSelectedTradeOutPlayers(prev => {
-      const exists = prev.some(p => p.name === player.name);
-      if (exists) {
-        // Allow deselection even if at limit
-        return prev.filter(p => p.name !== player.name);
-      }
-      // Prevent selection if already at limit
-      if (prev.length >= numTrades) {
-        return prev;
-      }
-      return [...prev, { ...player, originalPosition: position }];
-    });
+    const exists = selectedTradeOutPlayers.some(p => p.name === player.name);
+    if (exists) {
+      // Allow deselection even if at limit
+      setSelectedTradeOutPlayers(prev => prev.filter(p => p.name !== player.name));
+    } else if (selectedTradeOutPlayers.length < numTrades) {
+      // Only select if under the limit
+      setSelectedTradeOutPlayers(prev => [...prev, { ...player, originalPosition: position }]);
+    }
+    // If not exists and at limit, do nothing
   };
 
   const handleTradeIn = (option, index) => {
@@ -821,6 +824,10 @@ function TeamView({ players, onBack }) {
           // Note: preseasonSalaryCap stays as cash in bank - total is calculated when needed
           return newList;
         } else {
+          // Prevent selection if already at limit (6 for preseason mode)
+          if (prev.length >= 6) {
+            return prev;
+          }
           // Select - don't change displayed salary cap (it stays as cash in bank)
           return [...prev, { ...player, originalPosition: position }];
         }
@@ -1662,6 +1669,8 @@ function TeamView({ players, onBack }) {
           <TeamDisplay
             players={teamPlayers}
             onTradeOut={handleTradeOut}
+            selectedTradeOutPlayers={selectedTradeOutPlayers}
+            selectionLimitReached={selectedTradeOutPlayers.length >= numTrades}
             isPreseasonMode={isPreseasonMode}
             preseasonHighlighted={preseasonHighlightedPlayers}
             preseasonSelectedOut={preseasonSelectedTradeOuts}

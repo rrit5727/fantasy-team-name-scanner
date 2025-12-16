@@ -430,9 +430,11 @@
 }
 
 .player-card.selected {
-  background: rgba(0, 166, 125, 0.25);
+  background: rgba(0, 166, 125, 0.4);
   border-color: #00d9a3;
-  box-shadow: 0 0 15px rgba(0, 217, 163, 0.3);
+  border-width: 3px;
+  box-shadow: 0 0 20px rgba(0, 217, 163, 0.5);
+  transform: translateY(-1px);
 }
 
 .player-card.moved {
@@ -448,10 +450,18 @@
   box-shadow: 0 0 10px rgba(255, 100, 100, 0.2);
 }
 
+.player-card.preseason-highlight-injured.selection-limit-reached {
+  background: rgba(255, 100, 100, 0.25);
+}
+
 .player-card.preseason-highlight-injured:hover {
   background: rgba(255, 100, 100, 0.25);
   border-color: rgba(255, 100, 100, 0.7);
   box-shadow: 0 0 15px rgba(255, 100, 100, 0.35);
+}
+
+.player-card.preseason-highlight-injured.selection-limit-reached:hover {
+  background: rgba(255, 100, 100, 0.25);
 }
 
 .player-card.preseason-selected-out-injured {
@@ -472,10 +482,18 @@
   box-shadow: 0 0 10px rgba(255, 165, 0, 0.2);
 }
 
+.player-card.preseason-highlight-lowupside.selection-limit-reached {
+  background: rgba(255, 165, 0, 0.25);
+}
+
 .player-card.preseason-highlight-lowupside:hover {
   background: rgba(255, 165, 0, 0.25);
   border-color: rgba(255, 165, 0, 0.7);
   box-shadow: 0 0 15px rgba(255, 165, 0, 0.35);
+}
+
+.player-card.preseason-highlight-lowupside.selection-limit-reached:hover {
+  background: rgba(255, 165, 0, 0.25);
 }
 
 .player-card.preseason-selected-out-lowupside {
@@ -1682,7 +1700,7 @@
     min-height: 0;
     max-height: none;
     overflow-y: auto;
-    padding-top: 70px; /* Space for fixed header */
+    padding-top: 100px; /* Space for fixed header */
     padding-bottom: 0;
     margin-top: 0;
   }
@@ -1690,6 +1708,7 @@
   /* Adjust team display when trade-out panel is visible */
   .mobile-tradeout-visible .team-display {
     padding-bottom: calc(var(--mobile-tradeout-height, 190px) + 1rem);
+    padding-top: 100px; /* Maintain consistent top padding */
   }
 
   /* Mobile trade-out panel pinned to bottom */
@@ -1730,6 +1749,7 @@
   
   .team-display {
     padding: 1rem;
+    padding-top: 100px; /* Preserve space for fixed header */
   }
 
   .position-row.position-int,
