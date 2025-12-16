@@ -30,6 +30,7 @@
   align-items: center;
   gap: 0.75rem;
   margin-bottom: 1rem;
+  background: transparent;
 }
 
 .section-header h2 {
@@ -1383,6 +1384,11 @@
   display: flex;
 }
 
+/* Mobile trade-out panel */
+.mobile-tradeout-panel {
+  display: none;
+}
+
 /* Header Buttons Container */
 .header-buttons {
   display: flex;
@@ -1565,61 +1571,140 @@
 }
 
 @media (max-width: 768px) {
+  /* Mobile full-height layout */
+  .team-view {
+    flex-direction: column;
+    min-height: 100vh;
+    --mobile-tradeout-height: 190px;
+  }
+
+  .team-view-main {
+    width: 100%;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0; /* Allow flex child to shrink */
+    position: relative;
+  }
+
   /* Hide desktop sidebar on mobile */
   .desktop-only {
     display: none !important;
   }
-  
+
   /* Show mobile-only elements */
   .mobile-only {
     display: block;
   }
-  
+
   /* Hide team view when showing recommendations on mobile */
   .hidden-mobile {
     display: none !important;
   }
-  
-  /* Full width team view on mobile */
-  .team-view {
-    flex-direction: column;
-  }
-  
-  .team-view-main {
-    width: 100%;
-  }
-  
-  /* Adjust header for mobile */
+
+  /* Pin header to top on mobile with horizontal layout */
   .section-header {
-    flex-direction: column;
-    gap: 0.75rem;
-    align-items: stretch;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 30;
+    background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid rgba(0, 166, 125, 0.35);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    flex-direction: row;
+    gap: 0.5rem;
+    align-items: center;
+    justify-content: flex-start;
+    flex-shrink: 0;
+    flex-wrap: nowrap; /* Keep everything on one line */
+  }
+
+  .section-header h2 {
+    text-align: left;
+    flex-shrink: 0;
+    min-width: fit-content;
+    font-size: 1.2rem;
+    margin-right: 0;
   }
 
   .salary-cap-display {
-    width: 100%;
-    text-align: center;
+    display: none; /* Hide salary cap on mobile to save space */
   }
-  
-  .section-header h2 {
-    text-align: center;
-  }
-  
+
   .header-buttons {
-    flex-direction: column;
-    width: 100%;
+    flex-direction: row;
+    gap: 0.5rem;
+    flex-shrink: 0;
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 0;
   }
-  
-  .btn-back,
+
+  .btn-back {
+    flex: 0 0 auto;
+    min-width: 90px;
+    max-width: 110px;
+    font-size: 0.7rem;
+    padding: 0.4rem 0.5rem;
+  }
+
   .btn-make-trade {
-    width: 100%;
+    flex: 0 0 auto;
+    min-width: 90px;
+    max-width: 110px;
+    font-size: 0.65rem;
+    line-height: 1.1;
+    padding: 0.35rem 0.4rem;
+    white-space: normal;
+    text-align: center;
+    height: auto;
+    min-height: 44px; /* Ensure touch target size */
   }
-  
-  /* Make team display scrollable on mobile */
+
+  .btn-confirm-trade-outs.mobile-only {
+    flex: 0 0 auto;
+    min-width: 90px;
+    max-width: 110px;
+    font-size: 0.65rem;
+    line-height: 1.1;
+    padding: 0.35rem 0.4rem;
+    white-space: normal;
+    text-align: center;
+    height: auto;
+    min-height: 44px;
+  }
+
+  /* Make team display fill available height on mobile */
   .team-display {
-    min-height: auto;
-    max-height: calc(100vh - 200px);
+    flex: 1;
+    min-height: 0;
+    max-height: none;
     overflow-y: auto;
+    padding-top: 70px; /* Space for fixed header */
+    padding-bottom: 0;
+    margin-top: 0;
+  }
+
+  /* Adjust team display when trade-out panel is visible */
+  .mobile-tradeout-visible .team-display {
+    padding-bottom: calc(var(--mobile-tradeout-height, 190px) + 1rem);
+  }
+
+  /* Mobile trade-out panel pinned to bottom */
+  .mobile-tradeout-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: var(--mobile-tradeout-height, 190px);
+    background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+    border-top: 2px solid rgba(0, 166, 125, 0.35);
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.35);
+    padding: 0.75rem 1rem;
+    z-index: 20;
+    flex-shrink: 0;
   }
 }
 
@@ -1773,6 +1858,14 @@
   .trade-modal-content {
     padding: 1rem;
     margin-top: 0.5rem;
+  }
+
+
+  .mobile-tradeout-panel .trade-panel {
+    margin-bottom: 0;
+    height: 100%;
+    max-height: none;
+    overflow-y: auto;
   }
 }
 

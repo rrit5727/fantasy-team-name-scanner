@@ -1586,7 +1586,7 @@ function TeamView({ players, onBack }) {
       {renderTradeInPage()}
       {renderPreseasonTradeInPage()}
       
-      <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''}`}>
+      <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''} ${(!isPreseasonMode && normalModePhase === 'calculate') ? 'mobile-tradeout-visible' : ''}`}>
         <div className="team-view-main">
           <div className="section-header">
             <h2>My Team</h2>
@@ -1610,7 +1610,7 @@ function TeamView({ players, onBack }) {
                 {isPreseasonMode
                   ? 'Trade options'
                   : normalModePhase === 'calculate'
-                    ? 'Calculate trade recs'
+                    ? 'Calc trade recs'
                     : 'Recommend trade-outs'}
               </button>
               {/* Mobile Confirm Trade-Outs button */}
@@ -1679,7 +1679,6 @@ function TeamView({ players, onBack }) {
         {/* Mobile-only trade-out selections panel under the team field */}
         {!isPreseasonMode && normalModePhase === 'calculate' && (
           <div className="mobile-tradeout-panel mobile-only">
-            <h4 className="trade-subtitle">Trade-out Selections</h4>
             <TradePanel
               title="Trade Out"
               subtitle="Trade-out Selections"
