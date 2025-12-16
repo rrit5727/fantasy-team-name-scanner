@@ -398,9 +398,7 @@ function TeamView({ players, onBack }) {
   const [tradeInRecommendations, setTradeInRecommendations] = React.useState([]);
   const [isCalculating, setIsCalculating] = React.useState(false);
   const [selectedStrategy, setSelectedStrategy] = React.useState('1'); // Default to Maximize Value
-  const [selectedTradeType, setSelectedTradeType] = React.useState('likeForLike'); // Default to Like for Like
   const [numTrades, setNumTrades] = React.useState(2);
-  const [selectedPositions, setSelectedPositions] = React.useState([]); // For positional swap
   const [targetByeRound, setTargetByeRound] = React.useState(false);
   const [error, setError] = React.useState(null);
   const [showTradeModal, setShowTradeModal] = React.useState(false);
@@ -591,10 +589,11 @@ function TeamView({ players, onBack }) {
           teamPlayers,
           cashInBank * 1000,
           selectedStrategy,
-          selectedTradeType,
           numTrades,
-          selectedTradeType === 'positionalSwap' ? selectedPositions : null,
-          targetByeRound
+          null,
+          targetByeRound,
+          false, // preseasonMode
+          selectedTradeOutPlayers || [] // preselected trade-outs
         );
 
         const tradeOutNames = (result.trade_out || []).map(p => p.name);
@@ -635,12 +634,11 @@ function TeamView({ players, onBack }) {
           teamPlayers,
           cashInBank * 1000,
           selectedStrategy,
-          selectedTradeType,
           selectedTradeOutPlayers.length,
-          selectedTradeType === 'positionalSwap' ? selectedPositions : null,
+          null,
           targetByeRound,
           false, // preseasonMode
-          selectedTradeOutPlayers // preselected trade-outs
+          selectedTradeOutPlayers || [] // preselected trade-outs
         );
 
         // Set trade-in recommendations based on user's selections
@@ -660,15 +658,6 @@ function TeamView({ players, onBack }) {
     }
   };
 
-  const togglePosition = (position) => {
-    setSelectedPositions(prev => {
-      if (prev.includes(position)) {
-        return prev.filter(p => p !== position);
-      } else {
-        return [...prev, position];
-      }
-    });
-  };
 
   const handleTradeOut = (player, position) => {
     if (!player) return;
@@ -784,11 +773,11 @@ function TeamView({ players, onBack }) {
         teamPlayers,
         cashInBank * 1000,
         selectedStrategy,
-        'likeForLike', // Use like-for-like for preseason recommendations
         preseasonNumTrades,
         null,
         targetByeRound,
-        true // preseasonMode - only include injured, overvalued (diff < -2), or not selected players
+        true, // preseasonMode - only include injured, overvalued (diff < -2), or not selected players
+        null // preselected trade-outs (none at this stage)
       );
       
       // Set highlighted players (up to 6 trade-out recommendations)
@@ -1227,18 +1216,6 @@ function TeamView({ players, onBack }) {
             </select>
           </div>
 
-          {/* Trade Type Selection */}
-          <div className="trade-type-section">
-            <label htmlFor="tradeType">Trade Type</label>
-            <select 
-              id="tradeType" 
-              value={selectedTradeType} 
-              onChange={(e) => setSelectedTradeType(e.target.value)}
-            >
-              <option value="likeForLike">Like for Like</option>
-              <option value="positionalSwap">Positional Swap</option>
-            </select>
-          </div>
 
           {/* Bye round weighting toggle */}
           <div className="toggle-section">
@@ -1294,29 +1271,6 @@ function TeamView({ players, onBack }) {
             )}
           </div>
 
-          {/* Position Selection (only shown for Positional Swap in normal mode) */}
-          {!isPreseasonMode && selectedTradeType === 'positionalSwap' && (
-            <div className="position-selection-section">
-              <label>Select Positions for Swap</label>
-              <div className="position-checkboxes">
-                {['HOK', 'HLF', 'CTR', 'WFB', 'EDG', 'MID'].map(position => (
-                  <label key={position} className="position-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedPositions.includes(position)}
-                      onChange={() => togglePosition(position)}
-                    />
-                    <span>{position}</span>
-                  </label>
-                ))}
-              </div>
-              <p className="position-hint">
-                {selectedPositions.length === 0 
-                  ? 'Select positions to filter trade recommendations' 
-                  : `${selectedPositions.length} position${selectedPositions.length > 1 ? 's' : ''} selected`}
-              </p>
-            </div>
-          )}
 
           {/* Number of Trades (hidden in preseason mode) */}
           {!isPreseasonMode && (
@@ -1737,18 +1691,6 @@ function TeamView({ players, onBack }) {
             </select>
           </div>
 
-          {/* Trade Type Selection */}
-          <div className="trade-type-section">
-            <label htmlFor="tradeType">Trade Type</label>
-            <select 
-              id="tradeType" 
-              value={selectedTradeType} 
-              onChange={(e) => setSelectedTradeType(e.target.value)}
-            >
-              <option value="likeForLike">Like for Like</option>
-              <option value="positionalSwap">Positional Swap</option>
-            </select>
-          </div>
 
           {/* Bye round weighting toggle */}
           <div className="toggle-section">
@@ -1804,29 +1746,6 @@ function TeamView({ players, onBack }) {
             )}
           </div>
 
-          {/* Position Selection (only shown for Positional Swap in normal mode) */}
-          {!isPreseasonMode && selectedTradeType === 'positionalSwap' && (
-            <div className="position-selection-section">
-              <label>Select Positions for Swap</label>
-              <div className="position-checkboxes">
-                {['HOK', 'HLF', 'CTR', 'WFB', 'EDG', 'MID'].map(position => (
-                  <label key={position} className="position-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={selectedPositions.includes(position)}
-                      onChange={() => togglePosition(position)}
-                    />
-                    <span>{position}</span>
-                  </label>
-                ))}
-              </div>
-              <p className="position-hint">
-                {selectedPositions.length === 0 
-                  ? 'Select positions to filter trade recommendations' 
-                  : `${selectedPositions.length} position${selectedPositions.length > 1 ? 's' : ''} selected`}
-              </p>
-            </div>
-          )}
 
           {/* Number of Trades (hidden in preseason mode) */}
           {!isPreseasonMode && (

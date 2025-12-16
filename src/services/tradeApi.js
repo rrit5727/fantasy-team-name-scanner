@@ -10,9 +10,8 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002';
  * @param {Array} teamPlayers - Array of player objects with name, positions, price
  * @param {number} cashInBank - Cash available in bank
  * @param {string} strategy - '1' = value, '2' = base, '3' = hybrid
- * @param {string} tradeType - 'likeForLike' or 'positionalSwap'
  * @param {number} numTrades - Number of trades to make
- * @param {Array} allowedPositions - Array of position strings for positional swap (e.g., ['HOK', 'MID'])
+ * @param {Array} allowedPositions - Array of position strings (e.g., ['HOK', 'MID'])
  * @param {boolean} targetByeRound - Whether to prioritize bye round coverage
  * @param {boolean} preseasonMode - If true, only include players that are injured, overvalued (diff < -2), or not selected
  * @returns {Promise<Object>} Trade recommendations with trade_out and trade_in arrays
@@ -21,7 +20,6 @@ export async function calculateTeamTrades(
   teamPlayers,
   cashInBank = 0,
   strategy = '1',
-  tradeType = 'likeForLike',
   numTrades = 2,
   allowedPositions = null,
   targetByeRound = false,
@@ -50,7 +48,6 @@ export async function calculateTeamTrades(
       })),
       cash_in_bank: cashInBank,
       strategy: strategy,
-      trade_type: tradeType,
       num_trades: numTrades,
       allowed_positions: allowedPositions && allowedPositions.length > 0 ? allowedPositions : null,
       simulate_datetime: null,
@@ -58,10 +55,11 @@ export async function calculateTeamTrades(
       excluded_players: null,
       target_bye_round: targetByeRound,
       preseason_mode: preseasonMode,
-      preselected_trade_outs: preselectedTradeOuts ? preselectedTradeOuts.map(player => ({
+      preselected_trade_outs: (preselectedTradeOuts && Array.isArray(preselectedTradeOuts)) ? preselectedTradeOuts.map(player => ({
         name: player.name,
         positions: player.positions || [],
-        price: player.price || 0
+        price: player.price || 0,
+        slot_position: player.originalPosition || null
       })) : null
     };
 
