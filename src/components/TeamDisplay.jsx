@@ -522,6 +522,7 @@ function TeamView({ players, onBack }) {
       setHasHighlightedPreseason(false);
       setPreseasonHighlighted([]);
       setPreseasonPriorities({});
+      setShowPreseasonDropdown(false); // Close dropdown when toggling off
     } else {
       // Clear normal mode highlights when entering preseason mode
       setNormalModeHighlighted([]);
@@ -562,8 +563,8 @@ function TeamView({ players, onBack }) {
     }
   };
 
-  // Open trade options modal (mobile) without auto-calculating
-  const handleMakeATrade = () => {
+  // Handle trade workflow button - no modal in normal mode
+  const handleMakeATrade = async () => {
     // In preseason mode, if we haven't highlighted recommendations yet, highlight them
     if (isPreseasonMode && !hasHighlightedPreseason) {
       handleHighlightOptions();
@@ -582,18 +583,34 @@ function TeamView({ players, onBack }) {
       return;
     }
 
-    // In normal mode, if we're still in the recommend phase, run highlight flow in-place
-    if (normalModePhase === 'recommend') {
-      handleTradeWorkflow();
-      return;
-    }
-
-    // Otherwise open modal for calculating trade recommendations (only if players selected)
+    // In normal mode calculate phase - go directly to trade-in page (skip modal)
     if (selectedTradeOutPlayers.length > 0) {
-      setShowTradeModal(true);
+      setIsCalculating(true);
       setError(null);
+      
+      try {
+        const { calculateTeamTrades } = await import('../services/tradeApi.js');
+        
+        const result = await calculateTeamTrades(
+          teamPlayers,
+          cashInBank * 1000,
+          selectedStrategy,
+          selectedTradeOutPlayers.length,
+          null,
+          targetByeRound,
+          false, // preseasonMode
+          selectedTradeOutPlayers || []
+        );
+
+        setTradeInRecommendations(result.trade_in);
+        setShowTradeInPage(true); // Go directly to trade-in page
+      } catch (err) {
+        console.error('Error calculating trade recommendations:', err);
+        setError(err.message || 'Failed to calculate trade recommendations');
+      } finally {
+        setIsCalculating(false);
+      }
     }
-    // If no players selected, do nothing
   };
 
   // Handle the trade recommendation workflow
@@ -1378,16 +1395,7 @@ function TeamView({ players, onBack }) {
             className="btn-header-action" 
             onClick={() => setShowTradeInPage(false)}
           >
-            ← My Team
-          </button>
-          <button 
-            className="btn-header-action" 
-            onClick={() => {
-              setShowTradeInPage(false);
-              setShowTradeModal(true);
-            }}
-          >
-            ← Trade Options
+            ← Back to Team
           </button>
         </div>
         
@@ -1477,7 +1485,7 @@ function TeamView({ players, onBack }) {
           {/* Show trade swap rows - split bubble design */}
           <div className="trade-panel">
             <h4 className="trade-subtitle">Trade Swaps</h4>
-            <div className="trade-swap-list">
+            <div className={`trade-swap-list ${preseasonSelectedTradeOuts.length > 1 ? 'multi-column' : ''}`}>
               {preseasonSelectedTradeOuts.map((tradeOutPlayer, index) => {
                 const tradeInPlayer = preseasonSelectedTradeIns.find(
                   p => p.swappedForPlayer === tradeOutPlayer.name
@@ -1595,20 +1603,51 @@ function TeamView({ players, onBack }) {
       {renderTradeInPage()}
       {renderPreseasonTradeInPage()}
       
-      <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''} ${(!isPreseasonMode && normalModePhase === 'calculate') || (isPreseasonMode && hasHighlightedPreseason && preseasonPhase === 'selecting-out') ? 'mobile-tradeout-visible' : ''}`}>
+      <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''}`}>
         <div className="team-view-main">
           <div className="section-header">
             <div className="header-title-row">
               <h2>My Team</h2>
-              {/* Show preseason salary cap when in preseason mode */}
+              {/* Mobile: Show compact trade options directly in header row */}
+              <div className="header-trade-options mobile-only">
+                {/* Cash in bank input - always shown */}
+                <input
+                  className="cash-input-compact"
+                  type="text"
+                  value={cashInBankDisplay}
+                  onChange={handleCashChange}
+                  placeholder="$ Cash"
+                />
+                {/* Strategy dropdown - only in normal mode */}
+                {!isPreseasonMode && (
+                  <select
+                    className="strategy-select-compact"
+                    value={selectedStrategy}
+                    onChange={(e) => setSelectedStrategy(e.target.value)}
+                  >
+                    <option value="1">Max Value</option>
+                    <option value="2">Max Base</option>
+                    <option value="3">Hybrid</option>
+                  </select>
+                )}
+                {/* Target bye round button - always shown */}
+                <button
+                  className={`bye-round-btn-compact ${targetByeRound ? 'active' : ''}`}
+                  onClick={() => setTargetByeRound(!targetByeRound)}
+                  title="Target bye round players"
+                >
+                  Bye
+                </button>
+              </div>
+              {/* Show preseason salary cap when in preseason mode (desktop only now) */}
               {isPreseasonMode && preseasonPhase !== 'idle' && (
-                <div className={`salary-cap-display ${preseasonSalaryCap > 0 ? '' : 'warning'}`} style={preseasonSalaryCap > 0 ? {} : {borderColor: 'rgba(255,100,100,0.4)', color: '#ff6464'}}>
+                <div className={`salary-cap-display desktop-only ${preseasonSalaryCap > 0 ? '' : 'warning'}`} style={preseasonSalaryCap > 0 ? {} : {borderColor: 'rgba(255,100,100,0.4)', color: '#ff6464'}}>
                   {preseasonPhase === 'selecting-out' ? 'Cash in Bank' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
                 </div>
               )}
-              {/* Show normal salary cap when not in preseason mode */}
+              {/* Show normal salary cap when not in preseason mode (desktop only) */}
               {!isPreseasonMode && salaryCapRemaining !== null && (
-                <div className="salary-cap-display">
+                <div className="salary-cap-display desktop-only">
                   Salary Cap: ${formatNumberWithCommas(Math.round(salaryCapRemaining / 1000))}k
                 </div>
               )}
@@ -1637,7 +1676,7 @@ function TeamView({ players, onBack }) {
               </button>
             </div>
 
-            {/* Mobile Preseason Mode Dropdown */}
+            {/* Mobile Preseason Mode Dropdown - positioned below header */}
             {showPreseasonDropdown && (
               <div className="preseason-mode-dropdown mobile-only">
                 <div className="preseason-mode-dropdown-content">
@@ -1732,35 +1771,6 @@ function TeamView({ players, onBack }) {
           />
           )}
 
-        {/* Mobile-only trade-out selections panel under the team field */}
-        {!isPreseasonMode && normalModePhase === 'calculate' && (
-          <div className="mobile-tradeout-panel mobile-only">
-            <TradePanel
-              title="Trade Out"
-              subtitle="Trade-out Selections"
-              players={selectedTradeOutPlayers}
-              onSelect={handleTradeOut}
-              selectedPlayers={selectedTradeOutPlayers}
-              emptyMessage="Tap highlighted players to add them here"
-              isTradeOut={true}
-            />
-          </div>
-        )}
-
-        {/* Mobile-only preseason trade-out selections panel */}
-        {isPreseasonMode && hasHighlightedPreseason && preseasonPhase === 'selecting-out' && (
-          <div className={`mobile-tradeout-panel mobile-only preseason-compact ${preseasonSelectedTradeOuts.length > 2 ? 'preseason-multi-column' : ''}`}>
-            <TradePanel
-              title="Trade Out"
-              subtitle="Trade-out Selections"
-              players={preseasonSelectedTradeOuts}
-              onSelect={handlePreseasonPlayerClick}
-              selectedPlayers={preseasonSelectedTradeOuts}
-              emptyMessage="Tap highlighted players to add them here"
-              isTradeOut={true}
-            />
-          </div>
-        )}
         </div>
         
         <div className="team-view-sidebar desktop-only">
