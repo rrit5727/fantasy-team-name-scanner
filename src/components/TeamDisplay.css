@@ -1805,6 +1805,32 @@
     z-index: 20;
     flex-shrink: 0;
   }
+
+  /* Preseason trade-out panel - always compact styling */
+  .mobile-tradeout-panel.preseason-compact .trade-player-item {
+    padding: 0.2rem 0.3rem !important;
+    min-height: auto;
+  }
+
+  .mobile-tradeout-panel.preseason-compact .trade-player-pos {
+    padding: 0.1rem 0.3rem !important;
+    font-size: 0.6rem !important;
+  }
+
+  .mobile-tradeout-panel.preseason-compact .trade-player-name {
+    font-size: 0.75rem !important;
+  }
+
+  .mobile-tradeout-panel.preseason-compact .trade-player-price {
+    font-size: 0.65rem !important;
+  }
+
+  /* Preseason trade-out panel with 3+ players - 2 column grid */
+  .mobile-tradeout-panel.preseason-multi-column .trade-player-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+  }
 }
 
 @media (max-width: 600px) {

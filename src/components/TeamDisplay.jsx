@@ -1749,7 +1749,7 @@ function TeamView({ players, onBack }) {
 
         {/* Mobile-only preseason trade-out selections panel */}
         {isPreseasonMode && hasHighlightedPreseason && preseasonPhase === 'selecting-out' && (
-          <div className="mobile-tradeout-panel mobile-only">
+          <div className={`mobile-tradeout-panel mobile-only preseason-compact ${preseasonSelectedTradeOuts.length > 2 ? 'preseason-multi-column' : ''}`}>
             <TradePanel
               title="Trade Out"
               subtitle="Trade-out Selections"
