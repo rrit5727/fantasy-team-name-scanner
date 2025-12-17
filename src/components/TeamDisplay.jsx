@@ -1595,7 +1595,7 @@ function TeamView({ players, onBack }) {
       {renderTradeInPage()}
       {renderPreseasonTradeInPage()}
       
-      <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''} ${(!isPreseasonMode && normalModePhase === 'calculate') ? 'mobile-tradeout-visible' : ''}`}>
+      <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''} ${(!isPreseasonMode && normalModePhase === 'calculate') || (isPreseasonMode && hasHighlightedPreseason && preseasonPhase === 'selecting-out') ? 'mobile-tradeout-visible' : ''}`}>
         <div className="team-view-main">
           <div className="section-header">
             <div className="header-title-row">
