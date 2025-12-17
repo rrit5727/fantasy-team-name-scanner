@@ -30,6 +30,7 @@ function TeamDisplay({
   preseasonHighlighted = [],
   preseasonSelectedOut = [],
   preseasonTradedIn = [],
+  preseasonPriorities = {},
   onPreseasonClick,
   // Player status indicator props
   injuredPlayers = [],
@@ -130,6 +131,10 @@ function TeamDisplay({
     const isNormalModeHighlighted = normalModeHighlighted?.some(p => p.name === player.name);
     const normalModePriority = normalModePriorities?.[player.name];
 
+    // Check if player is highlighted in preseason mode
+    const isPreseasonHighlightedPlayer = preseasonHighlighted?.some(p => p.name === player.name);
+    const preseasonPriority = preseasonPriorities?.[player.name];
+
     // Determine CSS classes based on preseason mode state
     let cardClasses = 'player-card';
 
@@ -194,6 +199,12 @@ function TeamDisplay({
         {normalModePriority && (
           <div className="priority-indicator">
             {normalModePriority}
+          </div>
+        )}
+        {/* Priority indicator for preseason mode trade recommendations */}
+        {isPreseasonMode && preseasonPriority && (
+          <div className="priority-indicator">
+            {preseasonPriority}
           </div>
         )}
         {/* Injury indicator - warning triangle with exclamation mark */}
@@ -412,6 +423,10 @@ function TeamView({ players, onBack }) {
   const [normalModeHighlighted, setNormalModeHighlighted] = React.useState([]);
   const [normalModePriorities, setNormalModePriorities] = React.useState({});
 
+  // Pre-season mode trade highlights and priorities
+  const [preseasonHighlighted, setPreseasonHighlighted] = React.useState([]);
+  const [preseasonPriorities, setPreseasonPriorities] = React.useState({});
+
   // Normal mode trade workflow state
   const [normalModePhase, setNormalModePhase] = React.useState('recommend'); // 'recommend' | 'calculate'
   const [hasCalculatedHighlights, setHasCalculatedHighlights] = React.useState(false);
@@ -505,6 +520,8 @@ function TeamView({ players, onBack }) {
       setPreseasonTestApproach(false);
       setPreseasonPriceBands([]);
       setHasHighlightedPreseason(false);
+      setPreseasonHighlighted([]);
+      setPreseasonPriorities({});
     } else {
       // Clear normal mode highlights when entering preseason mode
       setNormalModeHighlighted([]);
@@ -688,7 +705,7 @@ function TeamView({ players, onBack }) {
     if (exists) {
       // Allow deselection even if at limit
       setSelectedTradeOutPlayers(prev => prev.filter(p => p.name !== player.name));
-    } else if (selectedTradeOutPlayers.length < numTrades) {
+    } else if (selectedTradeOutPlayers.length < (isPreseasonMode ? 6 : numTrades)) {
       // Only select if under the limit
       setSelectedTradeOutPlayers(prev => [...prev, { ...player, originalPosition: position }]);
     }
@@ -798,9 +815,19 @@ function TeamView({ players, onBack }) {
       );
       
       // Set highlighted players (up to 6 trade-out recommendations)
-      setPreseasonHighlightedPlayers(result.trade_out || []);
+      const highlightedPlayers = result.trade_out || [];
+      setPreseasonHighlightedPlayers(highlightedPlayers);
       setPreseasonPhase('selecting-out');
       setHasHighlightedPreseason(true);
+
+      // Calculate priorities for the highlighted players (1-6 based on trade-out order)
+      const priorities = {};
+      highlightedPlayers.forEach((player, index) => {
+        priorities[player.name] = index + 1;
+      });
+      setPreseasonPriorities(priorities);
+      setPreseasonHighlighted(highlightedPlayers);
+
       // Initialize salary cap to cash in bank only - traded-out salaries will be added as players are selected
       setPreseasonSalaryCap(cashInBank * 1000);
       
@@ -1689,11 +1716,12 @@ function TeamView({ players, onBack }) {
             players={teamPlayers}
             onTradeOut={handleTradeOut}
             selectedTradeOutPlayers={selectedTradeOutPlayers}
-            selectionLimitReached={selectedTradeOutPlayers.length >= numTrades}
+            selectionLimitReached={selectedTradeOutPlayers.length >= (isPreseasonMode ? 6 : numTrades)}
             isPreseasonMode={isPreseasonMode}
-            preseasonHighlighted={preseasonHighlightedPlayers}
+            preseasonHighlighted={preseasonHighlighted}
             preseasonSelectedOut={preseasonSelectedTradeOuts}
             preseasonTradedIn={preseasonSelectedTradeIns}
+            preseasonPriorities={preseasonPriorities}
             onPreseasonClick={handlePreseasonPlayerClick}
             injuredPlayers={injuredPlayers}
             lowUpsidePlayers={lowUpsidePlayers}
@@ -1713,6 +1741,21 @@ function TeamView({ players, onBack }) {
               players={selectedTradeOutPlayers}
               onSelect={handleTradeOut}
               selectedPlayers={selectedTradeOutPlayers}
+              emptyMessage="Tap highlighted players to add them here"
+              isTradeOut={true}
+            />
+          </div>
+        )}
+
+        {/* Mobile-only preseason trade-out selections panel */}
+        {isPreseasonMode && hasHighlightedPreseason && preseasonPhase === 'selecting-out' && (
+          <div className="mobile-tradeout-panel mobile-only">
+            <TradePanel
+              title="Trade Out"
+              subtitle="Trade-out Selections"
+              players={preseasonSelectedTradeOuts}
+              onSelect={handlePreseasonPlayerClick}
+              selectedPlayers={preseasonSelectedTradeOuts}
               emptyMessage="Tap highlighted players to add them here"
               isTradeOut={true}
             />

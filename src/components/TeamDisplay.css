@@ -472,14 +472,14 @@
 }
 
 .player-card.preseason-selected-out-injured {
-  background: rgba(200, 50, 50, 0.35);
-  border-color: #c83232;
-  box-shadow: 0 0 18px rgba(200, 50, 50, 0.45);
+  background: rgba(0, 166, 125, 0.4);
+  border-color: #00d9a3;
+  box-shadow: 0 0 18px rgba(0, 217, 163, 0.5);
 }
 
 .player-card.preseason-selected-out-injured:hover {
-  background: rgba(200, 50, 50, 0.45);
-  border-color: #d64545;
+  background: rgba(0, 166, 125, 0.5);
+  border-color: #00d9a3;
 }
 
 /* Pre-season Mode Player Card States - LOW UPSIDE (Orange theme) */
@@ -505,14 +505,14 @@
 }
 
 .player-card.preseason-selected-out-lowupside {
-  background: rgba(204, 132, 0, 0.35);
-  border-color: #cc8400;
-  box-shadow: 0 0 18px rgba(204, 132, 0, 0.45);
+  background: rgba(0, 166, 125, 0.4);
+  border-color: #00d9a3;
+  box-shadow: 0 0 18px rgba(0, 217, 163, 0.5);
 }
 
 .player-card.preseason-selected-out-lowupside:hover {
-  background: rgba(204, 132, 0, 0.45);
-  border-color: #e69500;
+  background: rgba(0, 166, 125, 0.5);
+  border-color: #00d9a3;
 }
 
 /* Legacy preseason classes (fallback) */
@@ -529,14 +529,14 @@
 }
 
 .player-card.preseason-selected-out {
-  background: rgba(255, 100, 100, 0.25);
-  border-color: #ff6464;
-  box-shadow: 0 0 15px rgba(255, 100, 100, 0.35);
+  background: rgba(0, 166, 125, 0.4);
+  border-color: #00d9a3;
+  box-shadow: 0 0 18px rgba(0, 217, 163, 0.5);
 }
 
 .player-card.preseason-selected-out:hover {
-  background: rgba(255, 100, 100, 0.35);
-  border-color: #ff7878;
+  background: rgba(0, 166, 125, 0.5);
+  border-color: #00d9a3;
 }
 
 .player-card.preseason-traded-in {
