@@ -553,10 +553,9 @@ function TeamView({ players, onBack }) {
       return;
     }
 
-    // In preseason mode after highlighting, open trade options modal
+    // In preseason mode after highlighting, confirm trade-outs and show trade-in options
     if (isPreseasonMode && hasHighlightedPreseason) {
-      setShowTradeModal(true);
-      setError(null);
+      handleConfirmPreseasonTradeOuts();
       return;
     }
 
@@ -1599,26 +1598,16 @@ function TeamView({ players, onBack }) {
                 Pre-season
               </button>
               <button
-                className={`btn-make-trade mobile-only ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0 ? 'disabled' : ''}`}
+                className={`btn-make-trade mobile-only ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0 ? 'disabled' : ''} ${isPreseasonMode && hasHighlightedPreseason && preseasonSelectedTradeOuts.length === 0 ? 'disabled' : ''}`}
                 onClick={handleMakeATrade}
-                disabled={normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0}
+                disabled={(normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0) || (isPreseasonMode && hasHighlightedPreseason && preseasonSelectedTradeOuts.length === 0)}
               >
                 {isPreseasonMode
-                  ? (hasHighlightedPreseason ? 'Trade options' : 'Recommend trade-outs')
+                  ? (hasHighlightedPreseason ? 'Confirm trade-outs' : 'Recommend trade-outs')
                   : normalModePhase === 'calculate'
                     ? 'Calc trade recs'
                     : 'Recommend trade-outs'}
               </button>
-              {/* Mobile Confirm Trade-Outs button */}
-              {isPreseasonMode && preseasonPhase === 'selecting-out' && preseasonSelectedTradeOuts.length > 0 && (
-                <button
-                  className="btn-confirm-trade-outs mobile-only"
-                  onClick={handleConfirmPreseasonTradeOuts}
-                  disabled={isCalculating}
-                >
-                  {isCalculating ? 'Loading...' : `Confirm ${preseasonSelectedTradeOuts.length} Trade-Out${preseasonSelectedTradeOuts.length !== 1 ? 's' : ''}`}
-                </button>
-              )}
             </div>
 
             {/* Mobile Preseason Mode Dropdown */}
