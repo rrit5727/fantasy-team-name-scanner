@@ -427,6 +427,7 @@ function TeamView({ players, onBack }) {
   const [showPreseasonTradeIns, setShowPreseasonTradeIns] = React.useState(false); // Show trade-in panel after confirming trade-outs
   const [preseasonTestApproach, setPreseasonTestApproach] = React.useState(false); // Test approach toggle - price band matching
   const [preseasonPriceBands, setPreseasonPriceBands] = React.useState([]); // Track price bands for test approach
+  const [hasHighlightedPreseason, setHasHighlightedPreseason] = React.useState(false); // Track if preseason recommendations have been highlighted
 
   // Team status analysis state - front-loaded when team is displayed
   const [injuredPlayers, setInjuredPlayers] = React.useState([]);
@@ -435,6 +436,9 @@ function TeamView({ players, onBack }) {
   const [junkCheapies, setJunkCheapies] = React.useState([]);
   const [isAnalyzingTeam, setIsAnalyzingTeam] = React.useState(true);
   const [teamAnalysisComplete, setTeamAnalysisComplete] = React.useState(false);
+
+  // Mobile preseason mode dropdown state
+  const [showPreseasonDropdown, setShowPreseasonDropdown] = React.useState(false);
 
   React.useEffect(() => {
     setTeamPlayers(players || []);
@@ -500,12 +504,14 @@ function TeamView({ players, onBack }) {
       setShowPreseasonTradeIns(false);
       setPreseasonTestApproach(false);
       setPreseasonPriceBands([]);
+      setHasHighlightedPreseason(false);
     } else {
       // Clear normal mode highlights when entering preseason mode
       setNormalModeHighlighted([]);
       setNormalModePriorities({});
       setNormalModePhase('recommend');
       setHasCalculatedHighlights(false);
+      setHasHighlightedPreseason(false);
     }
   }, [isPreseasonMode]);
 
@@ -541,10 +547,22 @@ function TeamView({ players, onBack }) {
 
   // Open trade options modal (mobile) without auto-calculating
   const handleMakeATrade = () => {
-    // Preseason keeps using the modal
-    if (isPreseasonMode) {
+    // In preseason mode, if we haven't highlighted recommendations yet, highlight them
+    if (isPreseasonMode && !hasHighlightedPreseason) {
+      handleHighlightOptions();
+      return;
+    }
+
+    // In preseason mode after highlighting, open trade options modal
+    if (isPreseasonMode && hasHighlightedPreseason) {
       setShowTradeModal(true);
       setError(null);
+      return;
+    }
+
+    // In normal mode, if we're still in the recommend phase, run highlight flow in-place
+    if (normalModePhase === 'recommend') {
+      handleTradeWorkflow();
       return;
     }
 
@@ -783,6 +801,7 @@ function TeamView({ players, onBack }) {
       // Set highlighted players (up to 6 trade-out recommendations)
       setPreseasonHighlightedPlayers(result.trade_out || []);
       setPreseasonPhase('selecting-out');
+      setHasHighlightedPreseason(true);
       // Initialize salary cap to cash in bank only - traded-out salaries will be added as players are selected
       setPreseasonSalaryCap(cashInBank * 1000);
       
@@ -1553,22 +1572,31 @@ function TeamView({ players, onBack }) {
       <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''} ${(!isPreseasonMode && normalModePhase === 'calculate') ? 'mobile-tradeout-visible' : ''}`}>
         <div className="team-view-main">
           <div className="section-header">
-            <h2>My Team</h2>
-            {/* Show preseason salary cap when in preseason mode */}
-            {isPreseasonMode && preseasonPhase !== 'idle' && (
-              <div className={`salary-cap-display ${preseasonSalaryCap > 0 ? '' : 'warning'}`} style={preseasonSalaryCap > 0 ? {} : {borderColor: 'rgba(255,100,100,0.4)', color: '#ff6464'}}>
-                {preseasonPhase === 'selecting-out' ? 'Cash in Bank' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
-              </div>
-            )}
-            {/* Show normal salary cap when not in preseason mode */}
-            {!isPreseasonMode && salaryCapRemaining !== null && (
-              <div className="salary-cap-display">
-                Salary Cap: ${formatNumberWithCommas(Math.round(salaryCapRemaining / 1000))}k
-              </div>
-            )}
+            <div className="header-title-row">
+              <h2>My Team</h2>
+              {/* Show preseason salary cap when in preseason mode */}
+              {isPreseasonMode && preseasonPhase !== 'idle' && (
+                <div className={`salary-cap-display ${preseasonSalaryCap > 0 ? '' : 'warning'}`} style={preseasonSalaryCap > 0 ? {} : {borderColor: 'rgba(255,100,100,0.4)', color: '#ff6464'}}>
+                  {preseasonPhase === 'selecting-out' ? 'Cash in Bank' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                </div>
+              )}
+              {/* Show normal salary cap when not in preseason mode */}
+              {!isPreseasonMode && salaryCapRemaining !== null && (
+                <div className="salary-cap-display">
+                  Salary Cap: ${formatNumberWithCommas(Math.round(salaryCapRemaining / 1000))}k
+                </div>
+              )}
+            </div>
             <div className="header-buttons">
               <button className="btn-back" onClick={onBack}>
                 ← Back to Scanner
+              </button>
+              {/* Mobile Preseason Mode Button */}
+              <button
+                className={`btn-preseason-mode mobile-only ${isPreseasonMode ? 'active' : ''}`}
+                onClick={() => setShowPreseasonDropdown(!showPreseasonDropdown)}
+              >
+                Pre-season
               </button>
               <button
                 className={`btn-make-trade mobile-only ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0 ? 'disabled' : ''}`}
@@ -1576,14 +1604,14 @@ function TeamView({ players, onBack }) {
                 disabled={normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0}
               >
                 {isPreseasonMode
-                  ? 'Trade options'
+                  ? (hasHighlightedPreseason ? 'Trade options' : 'Recommend trade-outs')
                   : normalModePhase === 'calculate'
                     ? 'Calc trade recs'
                     : 'Recommend trade-outs'}
               </button>
               {/* Mobile Confirm Trade-Outs button */}
               {isPreseasonMode && preseasonPhase === 'selecting-out' && preseasonSelectedTradeOuts.length > 0 && (
-                <button 
+                <button
                   className="btn-confirm-trade-outs mobile-only"
                   onClick={handleConfirmPreseasonTradeOuts}
                   disabled={isCalculating}
@@ -1592,6 +1620,47 @@ function TeamView({ players, onBack }) {
                 </button>
               )}
             </div>
+
+            {/* Mobile Preseason Mode Dropdown */}
+            {showPreseasonDropdown && (
+              <div className="preseason-mode-dropdown mobile-only">
+                <div className="preseason-mode-dropdown-content">
+                  <div className="preseason-mode-header toggle-section">
+                    <div className="toggle-labels">
+                      <label htmlFor="preseasonModeDropdown">Pre-season Mode</label>
+                      <span className="toggle-caption">Up to 6 trades</span>
+                    </div>
+                    <label className="toggle-switch">
+                      <input
+                        id="preseasonModeDropdown"
+                        type="checkbox"
+                        checked={isPreseasonMode}
+                        onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                      />
+                      <span className="toggle-slider" />
+                    </label>
+                  </div>
+                  {/* Test Approach Toggle - only visible when preseason mode is on */}
+                  {isPreseasonMode && (
+                    <div className="test-approach-section toggle-section">
+                      <div className="toggle-labels">
+                        <label htmlFor="testApproachDropdown">Test Approach</label>
+                        <span className="toggle-caption">Price band matching (±$75k)</span>
+                      </div>
+                      <label className="toggle-switch">
+                        <input
+                          id="testApproachDropdown"
+                          type="checkbox"
+                          checked={preseasonTestApproach}
+                          onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                        />
+                        <span className="toggle-slider" />
+                      </label>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Loading screen while analyzing team */}
