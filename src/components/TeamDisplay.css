@@ -451,7 +451,7 @@
 }
 
 .player-card.preseason-highlight-injured.selection-limit-reached {
-  background: rgba(255, 100, 100, 0.25);
+  /* Keep original background when selection limit reached */
 }
 
 .player-card.preseason-highlight-injured:hover {
@@ -461,7 +461,8 @@
 }
 
 .player-card.preseason-highlight-injured.selection-limit-reached:hover {
-  background: rgba(255, 100, 100, 0.25);
+  /* Prevent hover background change when selection limit reached */
+  background: rgba(255, 100, 100, 0.15);
 }
 
 .player-card.preseason-selected-out-injured {
@@ -483,7 +484,7 @@
 }
 
 .player-card.preseason-highlight-lowupside.selection-limit-reached {
-  background: rgba(255, 165, 0, 0.25);
+  /* Keep original background when selection limit reached */
 }
 
 .player-card.preseason-highlight-lowupside:hover {
@@ -493,7 +494,8 @@
 }
 
 .player-card.preseason-highlight-lowupside.selection-limit-reached:hover {
-  background: rgba(255, 165, 0, 0.25);
+  /* Prevent hover background change when selection limit reached */
+  background: rgba(255, 165, 0, 0.15);
 }
 
 .player-card.preseason-selected-out-lowupside {
