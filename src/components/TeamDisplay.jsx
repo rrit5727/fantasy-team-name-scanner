@@ -308,18 +308,21 @@ function TeamDisplay({
       </div>
 
       {/* Trade Type Selector Slide-up Panel */}
-      {showPositionDropdown && (
-        <div className="position-selector-slide-up">
-          <TradeTypeSelector
-          playerName={showPositionDropdown.playerName}
-          slotPosition={showPositionDropdown.slotPosition}
-          positionRequirements={positionRequirements}
-          onPositionRequirementSelect={onPositionRequirementSelect}
-          onCancelPositionRequirement={onCancelPositionRequirement}
-          onPositionRequirementChange={onPositionRequirementChange}
-          />
-        </div>
-      )}
+      {showPositionDropdown && (() => {
+        const player = players.find(p => p.name === showPositionDropdown.playerName);
+        return (
+          <div className="position-selector-slide-up">
+            <TradeTypeSelector
+            player={player}
+            slotPosition={showPositionDropdown.slotPosition}
+            positionRequirements={positionRequirements}
+            onPositionRequirementSelect={onPositionRequirementSelect}
+            onCancelPositionRequirement={onCancelPositionRequirement}
+            onPositionRequirementChange={onPositionRequirementChange}
+            />
+          </div>
+        );
+      })()}
     </div>
   );
 }

@@ -1,22 +1,22 @@
 import { useState, useRef, useEffect } from 'react';
 
-function TradeTypeSelector({ playerName, slotPosition, positionRequirements, onPositionRequirementSelect, onCancelPositionRequirement, onPositionRequirementChange }) {
+function TradeTypeSelector({ player, slotPosition, positionRequirements, onPositionRequirementSelect, onCancelPositionRequirement, onPositionRequirementChange }) {
   const handleConfirm = () => {
-    const selectedPositions = positionRequirements[playerName] || [];
+    const selectedPositions = positionRequirements[player.name] || [];
     if (selectedPositions.length > 0) {
-      onPositionRequirementSelect({ name: playerName }, selectedPositions);
+      onPositionRequirementSelect(player, selectedPositions);
     }
   };
 
   const isConfirmDisabled = () => {
-    return !(positionRequirements[playerName] && positionRequirements[playerName].length > 0);
+    return !(positionRequirements[player.name] && positionRequirements[player.name].length > 0);
   };
 
   return (
     <div className="position-selector-panel">
       <div className="position-selector-header">
         <h3>Select Positions</h3>
-        <p>For {playerName} ({slotPosition})</p>
+        <p>For {player.name} ({slotPosition})</p>
         <button
           className="btn-close-position-selector"
           onClick={handleConfirm}
@@ -33,11 +33,11 @@ function TradeTypeSelector({ playerName, slotPosition, positionRequirements, onP
           id="positions"
           name="positions"
           multiple
-          value={positionRequirements[playerName] || []}
+          value={positionRequirements[player.name] || []}
           onChange={(e) => {
             const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
             if (onPositionRequirementChange) {
-              onPositionRequirementChange(playerName, selectedOptions);
+              onPositionRequirementChange(player.name, selectedOptions);
             }
           }}
         >
