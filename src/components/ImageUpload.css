@@ -313,9 +313,7 @@
 }
 
 .player-position {
-  background: rgba(0, 166, 125, 0.2);
   color: #00d9a3;
-  padding: 0.25rem 0.5rem;
   border-radius: 6px;
   font-size: 0.7rem;
   font-weight: 700;

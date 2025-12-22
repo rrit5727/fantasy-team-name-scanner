@@ -584,11 +584,17 @@
   line-height: 1.2;
 }
 
+.player-card .player-position {
+  color: #8a9a96;
+  font-size: 0.65rem;
+  font-weight: 500;
+  margin: 0 0.3rem;
+}
+
 .player-card .player-price {
   color: #00d9a3;
   font-size: 0.7rem;
   font-weight: 500;
-  margin-top: 0.2rem;
 }
 
 .empty-slot {
@@ -1992,9 +1998,19 @@
     max-width: 100px;
     padding: 0.4rem;
   }
-  
+
   .player-card .player-name {
     font-size: 0.7rem;
+  }
+
+  .player-card .player-position {
+    font-size: 0.55rem;
+    margin: 0 0.2rem;
+  }
+
+  .player-card .player-position {
+    font-size: 0.6rem;
+    margin: 0 0.25rem;
   }
   
   .position-badge {

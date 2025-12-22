@@ -276,6 +276,9 @@ function TeamDisplay({
         </div>
         <div className="player-info">
           <span className="player-name">{player.name}</span>
+          {player.positions && player.positions.length > 0 && (position === 'INT' || position === 'EMG') && (
+            <span className="player-position">{player.positions.join('/')}</span>
+          )}
         {player.price && (
           <span className="player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
         )}
@@ -648,6 +651,9 @@ function TeamView({ players, onBack }) {
         </div>
         <div className="player-info">
           <span className="player-name">{player.name}</span>
+          {player.positions && player.positions.length > 0 && (position === 'INT' || position === 'EMG') && (
+            <span className="player-position">{player.positions.join('/')}</span>
+          )}
         {player.price && (
           <span className="player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
         )}
