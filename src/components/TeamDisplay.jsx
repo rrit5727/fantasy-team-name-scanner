@@ -1313,9 +1313,27 @@ function TeamView({ players, onBack }) {
 
         // Check position compatibility
         const isFlexible = isFlexibleSlot(bandSlot.originalPosition);
-        const positionMatches = bandSlot.originalPosition === playerPosition;
+        let canFillSlot = false;
 
-        if (isFlexible || positionMatches) {
+        if (isFlexible) {
+          // For flexible slots, check position requirements
+          const tradeInPositions = bandSlot.trade_in_positions;
+          if (!tradeInPositions || tradeInPositions.length === 0) {
+            // No specific requirements, any player can fill flexible slots
+            canFillSlot = true;
+          } else {
+            // Player must be able to play at least one of the required positions
+            canFillSlot = tradeInPositions.some(requiredPos => {
+              return playerPosition === requiredPos ||
+                     (player.positions && player.positions.includes(requiredPos));
+            });
+          }
+        } else {
+          // For non-flexible slots, position must match exactly
+          canFillSlot = bandSlot.originalPosition === playerPosition;
+        }
+
+        if (canFillSlot) {
           matchingTradeOut = bandSlot;
           matchingBandIndex = bandIndex;
           console.log('Using band', bandIndex, 'for player', band.playerName, '- filled by', player.name);
@@ -1328,15 +1346,30 @@ function TeamView({ players, onBack }) {
         return;
       }
     } else {
-      // NORMAL APPROACH: Match based on position
+      // NORMAL APPROACH: Match based on position and requirements
       // Priority 1: Find a non-flexible slot with matching position
       matchingTradeOut = remainingSlots.find(out => {
         return !isFlexibleSlot(out.originalPosition) && out.originalPosition === playerPosition;
       });
-      
-      // Priority 2: If no position match, use a flexible slot (INT/EMG)
+
+      // Priority 2: If no position match, find a flexible slot where the player satisfies the position requirements
       if (!matchingTradeOut) {
-        matchingTradeOut = remainingSlots.find(out => isFlexibleSlot(out.originalPosition));
+        matchingTradeOut = remainingSlots.find(out => {
+          if (!isFlexibleSlot(out.originalPosition)) return false;
+
+          // Check if this flexible slot has position requirements
+          const tradeInPositions = out.trade_in_positions;
+          if (!tradeInPositions || tradeInPositions.length === 0) {
+            // No specific requirements, any player can fill flexible slots
+            return true;
+          }
+
+          // Player must be able to play at least one of the required positions
+          return tradeInPositions.some(requiredPos => {
+            return playerPosition === requiredPos ||
+                   (player.positions && player.positions.includes(requiredPos));
+          });
+        });
       }
     }
     
