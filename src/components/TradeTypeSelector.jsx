@@ -14,21 +14,18 @@ function TradeTypeSelector({ player, slotPosition, positionRequirements, onPosit
 
   return (
     <div className="position-selector-panel">
-      <div className="position-selector-header">
-        <h3>Select Positions</h3>
-        <p>For {player.name} ({slotPosition})</p>
-        <button
-          className="btn-close-position-selector"
-          onClick={handleConfirm}
-          disabled={isConfirmDisabled()}
-          title="Confirm position selection"
-        >
-          ✓
-        </button>
-      </div>
-
       <div className="position-selection-content">
-        <label htmlFor="positions">Select Positions for Swap:</label>
+        <div className="position-selector-label-row">
+          <label htmlFor="positions">Select Positions for Swap:</label>
+          <button
+            className="btn-confirm-position-selector"
+            onClick={handleConfirm}
+            disabled={isConfirmDisabled()}
+            title="Confirm position selection"
+          >
+            ✓
+          </button>
+        </div>
         <select
           id="positions"
           name="positions"

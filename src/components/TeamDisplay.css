@@ -2318,31 +2318,21 @@
   padding: 1.5rem;
 }
 
-.position-selector-header {
-  position: relative;
-  text-align: center;
-  margin-bottom: 1.5rem;
-  padding-right: 3rem; /* Space for close button */
+.position-selector-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
 }
 
-.position-selector-header h3 {
-  color: #00d9a3;
-  font-size: 1.4rem;
-  margin: 0 0 0.5rem 0;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.position-selector-header p {
-  color: #e0e0e0;
+.position-selector-label-row label {
   margin: 0;
+  color: #e0e0e0;
   font-size: 1rem;
+  font-weight: 500;
 }
 
-.btn-close-position-selector {
-  position: absolute;
-  top: 0;
-  right: 0;
+.btn-confirm-position-selector {
   width: 2.5rem;
   height: 2.5rem;
   background: linear-gradient(135deg, #00a67d, #00d9a3);
@@ -2359,12 +2349,12 @@
   box-shadow: 0 2px 8px rgba(0, 217, 163, 0.3);
 }
 
-.btn-close-position-selector:hover:not(:disabled) {
+.btn-confirm-position-selector:hover:not(:disabled) {
   transform: scale(1.1);
   box-shadow: 0 4px 12px rgba(0, 217, 163, 0.5);
 }
 
-.btn-close-position-selector:disabled {
+.btn-confirm-position-selector:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
@@ -2432,15 +2422,11 @@
     padding: 1rem;
   }
 
-  .position-selector-header {
-    padding-right: 2.5rem; /* Space for close button on mobile */
+  .position-selector-label-row label {
+    font-size: 0.9rem;
   }
 
-  .position-selector-header h3 {
-    font-size: 1.2rem;
-  }
-
-  .btn-close-position-selector {
+  .btn-confirm-position-selector {
     width: 2rem;
     height: 2rem;
     font-size: 1rem;
