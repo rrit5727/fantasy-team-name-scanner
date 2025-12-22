@@ -20,6 +20,17 @@ const POSITION_CONFIG = {
 
 const POSITION_ORDER = ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB', 'INT', 'EMG'];
 
+// Available positions for trade-in requirements dropdown
+const TRADE_IN_POSITION_OPTIONS = [
+  { value: 'HOK', label: 'Hooker' },
+  { value: 'MID', label: 'Middle' },
+  { value: 'EDG', label: 'Edge' },
+  { value: 'HLF', label: 'Halfback' },
+  { value: 'CTR', label: 'Centre' },
+  { value: 'WFB', label: 'Wing/Fullback' },
+  { value: 'Any', label: 'Any Position' }
+];
+
 function TeamDisplay({
   players,
   onTradeOut,
@@ -39,7 +50,13 @@ function TeamDisplay({
   junkCheapies = [],
   // Normal mode trade recommendations
   normalModeHighlighted = [],
-  normalModePriorities = {}
+  normalModePriorities = {},
+  // Position dropdown props
+  showPositionDropdown = null,
+  positionRequirements = {},
+  onPositionRequirementSelect,
+  onCancelPositionRequirement,
+  onPositionRequirementChange
 }) {
   // Group players by their primary position
   const groupedPlayers = {};
@@ -226,7 +243,7 @@ function TeamDisplay({
             <svg viewBox="0 0 24 24" className="lowupside-icon">
               {/* Banknote (green) */}
               <rect x="2" y="6" width="14" height="10" rx="1" fill="#4CAF50" stroke="#2E7D32" strokeWidth="0.5"/>
-              <circle cx="9" cy="11" r="2.5" fill="#2E7D32"/>
+              <circle cx="9" y="11" r="2.5" fill="#2E7D32"/>
               <text x="9" y="12.5" textAnchor="middle" fontSize="4" fill="#fff" fontWeight="bold">$</text>
               {/* Downward arrow (red) */}
               <path d="M18 4 L18 16 L14 12 M18 16 L22 12" stroke="#e53935" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
@@ -288,6 +305,81 @@ function TeamDisplay({
       <div className="team-field">
         {POSITION_ORDER.map(pos => renderPositionRow(pos))}
       </div>
+
+      {/* Position Requirements Dropdown Modal */}
+      {showPositionDropdown && (
+        <div className="position-dropdown-overlay" onClick={onCancelPositionRequirement}>
+          <div className="position-dropdown-modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Select Trade-in Positions</h3>
+            <p>For {showPositionDropdown.playerName} ({showPositionDropdown.slotPosition})</p>
+            <p className="position-dropdown-subtitle">Choose positions the replacement player should play:</p>
+
+            <div className="position-options-grid">
+              {TRADE_IN_POSITION_OPTIONS.map(option => (
+                <label key={option.value} className="position-option">
+                  <input
+                    type="checkbox"
+                    value={option.value}
+                    onChange={(e) => {
+                      // Handle checkbox changes
+                      const currentSelections = positionRequirements[showPositionDropdown.playerName] || [];
+                      let newSelections;
+
+                      if (e.target.checked) {
+                        if (option.value === 'Any') {
+                          // 'Any' replaces all other selections
+                          newSelections = ['Any'];
+                        } else {
+                          // Remove 'Any' if it was selected and add this position
+                          newSelections = currentSelections.filter(s => s !== 'Any');
+                          if (!newSelections.includes(option.value)) {
+                            newSelections.push(option.value);
+                          }
+                        }
+                      } else {
+                        // Remove this selection
+                        newSelections = currentSelections.filter(s => s !== option.value);
+                      }
+
+                      // Call the parent callback to update the state
+                      if (onPositionRequirementChange) {
+                        onPositionRequirementChange(showPositionDropdown.playerName, newSelections);
+                      }
+                    }}
+                    checked={(positionRequirements[showPositionDropdown.playerName] || []).includes(option.value)}
+                  />
+                  <span className="position-option-label">{option.label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="position-dropdown-actions">
+              <button
+                className="btn-cancel"
+                onClick={onCancelPositionRequirement}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn-confirm"
+                onClick={() => {
+                  const selectedPositions = positionRequirements[showPositionDropdown.playerName] || [];
+                  if (selectedPositions.length > 0) {
+                    // Find the player object
+                    const player = players.find(p => p.name === showPositionDropdown.playerName);
+                    if (player) {
+                      onPositionRequirementSelect(player, selectedPositions);
+                    }
+                  }
+                }}
+                disabled={!positionRequirements[showPositionDropdown.playerName] || positionRequirements[showPositionDropdown.playerName].length === 0}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -455,6 +547,180 @@ function TeamView({ players, onBack }) {
   // Mobile preseason mode dropdown state
   const [showPreseasonDropdown, setShowPreseasonDropdown] = React.useState(false);
 
+  // Position requirements for INT/EMG players
+  const [positionRequirements, setPositionRequirements] = React.useState({});
+  const [showPositionDropdown, setShowPositionDropdown] = React.useState(null); // {playerName, position}
+
+  const renderPlayerCard = (player, position, index) => {
+    if (!player) {
+      return (
+        <div key={`empty-${position}-${index}`} className="player-card empty">
+          <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
+            {position}
+          </div>
+          <div className="player-info">
+            <span className="empty-slot">Empty</span>
+          </div>
+        </div>
+      );
+    }
+
+    // Check player status
+    const isInjured = isPlayerInjured(player);
+    const isLowUpside = isPlayerLowUpside(player);
+    const isNotSelected = isPlayerNotSelected(player);
+    const isJunkCheap = isPlayerJunkCheap(player);
+
+    // Check if player is highlighted in normal mode
+    const isNormalModeHighlighted = normalModeHighlighted?.some(p => p.name === player.name);
+    const normalModePriority = normalModePriorities?.[player.name];
+
+    // Check if player is highlighted in preseason mode
+    const isPreseasonHighlightedPlayer = preseasonHighlighted?.some(p => p.name === player.name);
+    const preseasonPriority = preseasonPriorities?.[player.name];
+
+    // Determine CSS classes based on preseason mode state
+    let cardClasses = 'player-card';
+
+    // Add selection limit class for hover effects
+    if (selectionLimitReached) {
+      cardClasses += ' selection-limit-reached';
+    }
+
+    if (isPreseasonMode) {
+      // Check if this player was traded in (replaces a traded out player)
+      if (isPlayerInList(player, preseasonTradedIn)) {
+        cardClasses += ' preseason-traded-in';
+      }
+      // Check if player is selected for trade out
+      else if (isPlayerInList(player, preseasonSelectedOut)) {
+        // Use different selected styles based on whether injured or low-upside
+        if (isInjured) {
+          cardClasses += ' preseason-selected-out-injured';
+        } else {
+          cardClasses += ' preseason-selected-out-lowupside';
+        }
+      }
+      // Check if player is highlighted as a trade-out recommendation
+      else if (isPlayerInList(player, preseasonHighlighted)) {
+        // Use different highlight styles based on whether injured or low-upside
+        if (isInjured) {
+          cardClasses += ' preseason-highlight-injured';
+        } else {
+          cardClasses += ' preseason-highlight-lowupside';
+        }
+      }
+    } else {
+      // Normal mode - check for highlighting and selection
+      const isSelected = selectedTradeOutPlayers.some(p => p.name === player.name);
+      if (isSelected) {
+        cardClasses += ' selected';
+      } else if (isNormalModeHighlighted) {
+        // Use different highlight styles based on player status
+        if (isInjured) {
+          cardClasses += ' preseason-highlight-injured';
+        } else {
+          cardClasses += ' preseason-highlight-lowupside';
+        }
+      }
+    }
+
+    const handleClick = () => {
+      if (isPreseasonMode && onPreseasonClick) {
+        onPreseasonClick(player, position);
+      } else if (onTradeOut) {
+        onTradeOut(player, position);
+      }
+    };
+
+    // Check if this player has position requirements set
+    const hasPositionRequirements = positionRequirements[player.name];
+
+    return (
+      <div
+        key={player.name}
+        className={cardClasses}
+        onClick={handleClick}
+      >
+        {/* Priority indicator for normal mode trade recommendations */}
+        {normalModePriority && (
+          <div className="priority-indicator">
+            {normalModePriority}
+          </div>
+        )}
+        {/* Priority indicator for preseason mode trade recommendations */}
+        {isPreseasonMode && preseasonPriority && (
+          <div className="priority-indicator">
+            {preseasonPriority}
+          </div>
+        )}
+        {/* Injury indicator - warning triangle with exclamation mark */}
+        {isInjured && (
+          <div className="injury-indicator">
+            <svg viewBox="0 0 24 24" className="warning-icon">
+              {/* Warning triangle */}
+              <path d="M12 2L22 20H2L12 2Z" fill="#ff9800"/>
+              {/* Exclamation mark */}
+              <path d="M12 8V14" stroke="#000000" strokeWidth="2" strokeLinecap="round"/>
+              <circle cx="12" cy="17" r="1" fill="#000000"/>
+            </svg>
+            <div className="tooltip">player injured</div>
+          </div>
+        )}
+        {/* Low upside indicator - green banknote with red arrow in top-right */}
+        {isLowUpside && !isInjured && (
+          <div className="lowupside-indicator">
+            <svg viewBox="0 0 24 24" className="lowupside-icon">
+              {/* Banknote (green) */}
+              <rect x="2" y="6" width="14" height="10" rx="1" fill="#4CAF50" stroke="#2E7D32" strokeWidth="0.5"/>
+              <circle cx="9" cy="11" r="2.5" fill="#2E7D32"/>
+              <text x="9" y="12.5" textAnchor="middle" fontSize="4" fill="#fff" fontWeight="bold">$</text>
+              {/* Downward arrow (red) */}
+              <path d="M18 4 L18 16 L14 12 M18 16 L22 12" stroke="#e53935" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <div className="tooltip">overvalued - will lose money</div>
+          </div>
+        )}
+        {/* Not selected indicator - prohibition symbol */}
+        {isNotSelected && !isInjured && !isLowUpside && (
+          <div className="not-selected-indicator">
+            <svg viewBox="0 0 24 24" className="prohibition-icon">
+              {/* Circle */}
+              <circle cx="12" cy="12" r="10" fill="none" stroke="#e53935" strokeWidth="2"/>
+              {/* Diagonal line */}
+              <path d="M7 7L17 17" stroke="#e53935" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <div className="tooltip">not selected</div>
+          </div>
+        )}
+        {/* Junk cheapies indicator - poo emoji */}
+        {isJunkCheap && !isInjured && !isLowUpside && (
+          <div className="junk-cheap-indicator">
+            💩
+            <div className="tooltip">junk cheapie - trade out</div>
+          </div>
+        )}
+        <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
+          {position}
+        </div>
+        <div className="player-info">
+          <span className="player-name">{player.name}</span>
+        {player.price && (
+          <span className="player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
+        )}
+        {/* Position requirements indicator for INT/EMG players */}
+        {hasPositionRequirements && (
+          <div className="position-requirements-indicator">
+            <span className="position-requirements-text">
+              Trade-in: {hasPositionRequirements.length === 6 ? 'Any' : hasPositionRequirements.join('/')}
+            </span>
+          </div>
+        )}
+        </div>
+      </div>
+    );
+  };
+
   React.useEffect(() => {
     setTeamPlayers(players || []);
     // Reset analysis state when players change
@@ -522,6 +788,8 @@ function TeamView({ players, onBack }) {
       setHasHighlightedPreseason(false);
       setPreseasonHighlighted([]);
       setPreseasonPriorities({});
+      setPositionRequirements({});
+      setShowPositionDropdown(null);
       setShowPreseasonDropdown(false); // Close dropdown when toggling off
     } else {
       // Clear normal mode highlights when entering preseason mode
@@ -542,6 +810,7 @@ function TeamView({ players, onBack }) {
       setNormalModePriorities({});
       setTradeOutRecommendations([]);
       setSelectedTradeOutPlayers([]);
+      setPositionRequirements({});
     }
   }, [teamPlayers]);
 
@@ -722,15 +991,67 @@ function TeamView({ players, onBack }) {
     if (exists) {
       // Allow deselection even if at limit
       setSelectedTradeOutPlayers(prev => prev.filter(p => p.name !== player.name));
+      // Clear position requirements for deselected player
+      setPositionRequirements(prev => {
+        const newReqs = { ...prev };
+        delete newReqs[player.name];
+        return newReqs;
+      });
     } else if (selectedTradeOutPlayers.length < (isPreseasonMode ? 6 : numTrades)) {
-      // Only select if under the limit
-      setSelectedTradeOutPlayers(prev => [...prev, { ...player, originalPosition: position }]);
+      // For INT/EMG players, show position dropdown first
+      if (position === 'INT' || position === 'EMG') {
+        setShowPositionDropdown({ playerName: player.name, slotPosition: position });
+        return;
+      }
+      // For positional players, add directly with automatic position requirement
+      setSelectedTradeOutPlayers(prev => [...prev, {
+        ...player,
+        originalPosition: position,
+        trade_in_positions: [position]  // Positional players require same position replacement
+      }]);
     }
     // If not exists and at limit, do nothing
   };
 
   const handleTradeIn = (option, index) => {
     setSelectedTradeInIndex(index);
+  };
+
+  // Handle position requirement selection for INT/EMG players
+  const handlePositionRequirementSelect = (player, selectedPositions) => {
+    // Convert 'Any' to all positions
+    const tradeInPositions = selectedPositions.includes('Any')
+      ? ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB']
+      : selectedPositions.filter(pos => pos !== 'Any');
+
+    // Add player to selected trade-out players with position requirements
+    setSelectedTradeOutPlayers(prev => [...prev, {
+      ...player,
+      originalPosition: showPositionDropdown.slotPosition,
+      trade_in_positions: tradeInPositions
+    }]);
+
+    // Store position requirements
+    setPositionRequirements(prev => ({
+      ...prev,
+      [player.name]: tradeInPositions
+    }));
+
+    // Close dropdown
+    setShowPositionDropdown(null);
+  };
+
+  // Handle position requirement changes (checkbox toggles)
+  const handlePositionRequirementChange = (playerName, newSelections) => {
+    setPositionRequirements(prev => ({
+      ...prev,
+      [playerName]: newSelections
+    }));
+  };
+
+  // Handle canceling position requirement selection
+  const handleCancelPositionRequirement = () => {
+    setShowPositionDropdown(null);
   };
 
   const handleConfirmTrade = () => {
@@ -1768,6 +2089,11 @@ function TeamView({ players, onBack }) {
             junkCheapies={junkCheapies}
             normalModeHighlighted={normalModeHighlighted}
             normalModePriorities={normalModePriorities}
+            showPositionDropdown={showPositionDropdown}
+            positionRequirements={positionRequirements}
+            onPositionRequirementSelect={handlePositionRequirementSelect}
+            onCancelPositionRequirement={handleCancelPositionRequirement}
+            onPositionRequirementChange={handlePositionRequirementChange}
           />
           )}
 

@@ -59,7 +59,8 @@ export async function calculateTeamTrades(
         name: player.name,
         positions: player.positions || [],
         price: player.price || 0,
-        slot_position: player.originalPosition || null
+        slot_position: player.originalPosition || null,
+        trade_in_positions: player.trade_in_positions || null
       })) : null
     };
 
