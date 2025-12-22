@@ -2298,6 +2298,101 @@
   letter-spacing: 0.03em;
 }
 
+/* Position Selector Slide-up Panel */
+.position-selector-slide-up {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  border-top: 2px solid rgba(0, 166, 125, 0.5);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  animation: slideUp 0.3s ease-out;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.position-selector-panel {
+  padding: 1.5rem;
+}
+
+.position-selector-header {
+  position: relative;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  padding-right: 3rem; /* Space for close button */
+}
+
+.position-selector-header h3 {
+  color: #00d9a3;
+  font-size: 1.4rem;
+  margin: 0 0 0.5rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.position-selector-header p {
+  color: #e0e0e0;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.btn-close-position-selector {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  background: linear-gradient(135deg, #00a67d, #00d9a3);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 217, 163, 0.3);
+}
+
+.btn-close-position-selector:hover:not(:disabled) {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 217, 163, 0.5);
+}
+
+.btn-close-position-selector:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.position-selection-content {
+  margin-top: 1rem;
+}
+
+.position-selection-content label {
+  display: block;
+  color: #8a9a96;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Mobile styles for position dropdown */
 @media (max-width: 768px) {
   .position-dropdown-modal {
@@ -2325,6 +2420,152 @@
 
   .position-dropdown-actions button {
     width: 100%;
+  }
+
+  /* Slide-up panel mobile adjustments */
+  .position-selector-slide-up {
+    border-radius: 15px 15px 0 0;
+    max-height: 80vh;
+  }
+
+  .position-selector-panel {
+    padding: 1rem;
+  }
+
+  .position-selector-header {
+    padding-right: 2.5rem; /* Space for close button on mobile */
+  }
+
+  .position-selector-header h3 {
+    font-size: 1.2rem;
+  }
+
+  .btn-close-position-selector {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1rem;
+  }
+}
+
+/* Trade Type Selector Styles */
+.settings-panel {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  margin-bottom: 40px;
+  width: 70%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.button-row {
+  display: grid;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.button-row-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.setting-box {
+  background: white;
+  border: 2px solid #e2e8f0;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.setting-box.selected {
+  background: linear-gradient(135deg, #00a67d, #00d9a3);
+  color: white;
+  border-color: transparent;
+  box-shadow: 0 4px 14px 0 rgba(0, 217, 163, 0.39);
+}
+
+.setting-box:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Inputs (select included) */
+input[type="text"], input[type="datetime-local"], select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background-color: white;
+  transition: all 0.2s ease;
+  font-size: 16px;
+  color: #374151;
+}
+
+input[type="text"]:focus, input[type="datetime-local"]:focus, select:focus {
+  border-color: #00a67d;
+  box-shadow: 0 0 0 3px rgba(0, 166, 125, 0.1);
+  outline: none;
+}
+
+/* Group spacing */
+.strategy-group,
+.trade-type-group,
+.position-swap-group {
+  position: relative;
+  width: 100%;
+  margin-bottom: 20px;
+}
+
+.strategy-group label,
+.trade-type-group label,
+.position-swap-group label {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+/* Tooltip styling (optional, to match original) */
+.tooltip-container {
+  position: absolute;
+  right: 0;
+  top: 0;
+}
+
+.tooltip-trigger {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #00a67d, #00d9a3);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.tooltip-text {
+  display: none;
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 250px;
+  z-index: 100;
+}
+
+@media (min-width: 769px) {
+  .tooltip-container:hover .tooltip-text {
+    display: block;
+    opacity: 1;
   }
 }
 

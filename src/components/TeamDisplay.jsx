@@ -1,5 +1,6 @@
 import React from 'react';
 import './TeamDisplay.css';
+import TradeTypeSelector from './TradeTypeSelector';
 
 // Helper function to format numbers with comma separators
 const formatNumberWithCommas = (num) => {
@@ -306,78 +307,17 @@ function TeamDisplay({
         {POSITION_ORDER.map(pos => renderPositionRow(pos))}
       </div>
 
-      {/* Position Requirements Dropdown Modal */}
+      {/* Trade Type Selector Slide-up Panel */}
       {showPositionDropdown && (
-        <div className="position-dropdown-overlay" onClick={onCancelPositionRequirement}>
-          <div className="position-dropdown-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Select Trade-in Positions</h3>
-            <p>For {showPositionDropdown.playerName} ({showPositionDropdown.slotPosition})</p>
-            <p className="position-dropdown-subtitle">Choose positions the replacement player should play:</p>
-
-            <div className="position-options-grid">
-              {TRADE_IN_POSITION_OPTIONS.map(option => (
-                <label key={option.value} className="position-option">
-                  <input
-                    type="checkbox"
-                    value={option.value}
-                    onChange={(e) => {
-                      // Handle checkbox changes
-                      const currentSelections = positionRequirements[showPositionDropdown.playerName] || [];
-                      let newSelections;
-
-                      if (e.target.checked) {
-                        if (option.value === 'Any') {
-                          // 'Any' replaces all other selections
-                          newSelections = ['Any'];
-                        } else {
-                          // Remove 'Any' if it was selected and add this position
-                          newSelections = currentSelections.filter(s => s !== 'Any');
-                          if (!newSelections.includes(option.value)) {
-                            newSelections.push(option.value);
-                          }
-                        }
-                      } else {
-                        // Remove this selection
-                        newSelections = currentSelections.filter(s => s !== option.value);
-                      }
-
-                      // Call the parent callback to update the state
-                      if (onPositionRequirementChange) {
-                        onPositionRequirementChange(showPositionDropdown.playerName, newSelections);
-                      }
-                    }}
-                    checked={(positionRequirements[showPositionDropdown.playerName] || []).includes(option.value)}
-                  />
-                  <span className="position-option-label">{option.label}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="position-dropdown-actions">
-              <button
-                className="btn-cancel"
-                onClick={onCancelPositionRequirement}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn-confirm"
-                onClick={() => {
-                  const selectedPositions = positionRequirements[showPositionDropdown.playerName] || [];
-                  if (selectedPositions.length > 0) {
-                    // Find the player object
-                    const player = players.find(p => p.name === showPositionDropdown.playerName);
-                    if (player) {
-                      onPositionRequirementSelect(player, selectedPositions);
-                    }
-                  }
-                }}
-                disabled={!positionRequirements[showPositionDropdown.playerName] || positionRequirements[showPositionDropdown.playerName].length === 0}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
+        <div className="position-selector-slide-up">
+          <TradeTypeSelector
+          playerName={showPositionDropdown.playerName}
+          slotPosition={showPositionDropdown.slotPosition}
+          positionRequirements={positionRequirements}
+          onPositionRequirementSelect={onPositionRequirementSelect}
+          onCancelPositionRequirement={onCancelPositionRequirement}
+          onPositionRequirementChange={onPositionRequirementChange}
+          />
         </div>
       )}
     </div>
