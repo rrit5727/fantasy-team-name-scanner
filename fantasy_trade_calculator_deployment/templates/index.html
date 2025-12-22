@@ -1,0 +1,2262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NRL Trade Calculator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #3cab0e;
+            --secondary-color: #339a0c;
+            --accent-color: #e74c3c;
+            --background-color: #f8fafc;
+            --text-color: #2d3748;
+            --border-radius: 12px;
+            --box-shadow: 
+                0 1px 3px rgba(0,0,0,0.12),
+                0 1px 2px rgba(0,0,0,0.24);
+            --box-shadow-hover: 
+                0 14px 28px rgba(0,0,0,0.25),
+                0 10px 10px rgba(0,0,0,0.22);
+            --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            font-family: var(--font-primary);
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+            letter-spacing: 0.015em;
+            transition: background-color var(--transition-speed) ease;
+            padding-top: 70px;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* Header styling update */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #3cab0e;
+            color: white;
+            padding: 15px 20px;
+            z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .powered-by-text {
+            color: white;
+            font-size: 1rem;
+            margin: 0;
+            white-space: nowrap;
+            font-weight: 200;
+        }
+
+        .powered-by-logo {
+            height: 80px; 
+            width: 80px;
+            border-radius: 50%;
+            object-fit: contain;
+            background-color: white;
+            padding: 2px;
+            margin: 0 5px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            
+            .powered-by-text {
+                font-size: 0.9rem;
+            }
+            
+            .powered-by-logo {
+                height: 80px;
+                width: 80px;
+            }
+        }
+
+        /* Main title styling */
+        .main-title {
+            color: var(--text-color);
+            text-align: center;
+            font-size: 48px;
+            margin: 20px 0;
+            font-weight: 700;
+            letter-spacing: -1px;
+            opacity: 0;
+            animation: fadeUp 0.6s ease forwards;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+       
+        /* Button styling */
+        button, .button-like {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all var(--transition-speed) cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        button:hover, .button-like:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        button::after, .button-like::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(255,255,255,0.2), transparent);
+            opacity: 0;
+            transition: opacity var(--transition-speed) ease;
+        }
+
+        button:hover::after, .button-like:hover::after {
+            opacity: 1;
+        }
+
+        .button-inactive {
+            background-color: #e2e8f0;
+            color: #64748b;
+        }
+
+        .button-inactive:hover {
+            background-color: #cbd5e1;
+        }
+
+        /* Input styling */
+        input[type="text"], input[type="datetime-local"], select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--border-radius);
+            background-color: white;
+            transition: all var(--transition-speed) ease;
+            font-size: 16px;
+            color: var(--text-color);
+        }
+
+        input[type="text"]:focus, input[type="datetime-local"]:focus, select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(60, 171, 14, 0.1);
+            outline: none;
+        }
+
+        /* Panel styling */
+        .panel {
+            padding: 20px;
+            background-color: white;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        /* Main panel title at the top */
+        .main-panel-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        /* Field container for each input group */
+        .field-container {
+            margin-bottom: 15px;
+        }
+
+        /* Field labels aligned with input fields */
+        .field-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+
+        /* Input styling */
+        .cash-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .cash-symbol {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        .cash-input {
+            width: 100%;
+            padding: 12px 15px 12px 30px !important;
+            border-radius: var(--border-radius);
+            border: 1px solid #e2e8f0;
+            font-size: 16px;
+        }
+
+        .player-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* Trade option styling */
+        .trade-option {
+            width: 35%; /* Half of 70% */
+            margin: 30px auto;
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 30px;
+            transition: all var(--transition-speed) cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: 1px solid rgba(0,0,0,0.1);
+            opacity: 0;
+            animation: fadeIn 0.6s ease forwards;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trade-option::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            opacity: 0;
+            transition: opacity var(--transition-speed) ease;
+            z-index: 0;
+        }
+
+        .trade-option > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .trade-option strong {
+            color: var(--primary-color);
+            font-weight: 600;
+            transition: color var(--transition-speed) ease;
+        }
+
+        .trade-option.highlighted::before {
+            opacity: 1;
+        }
+
+        .trade-option.highlighted > * {
+            color: white;
+            transition: color var(--transition-speed) ease;
+        }
+
+        .trade-option.highlighted strong {
+            color: white;
+        }
+
+        .trade-option h3 {
+            color: var(--text-color);
+            font-size: 20px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error {
+            color: var(--accent-color);
+            background-color: rgba(231, 76, 60, 0.1);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-top: 15px;
+            font-weight: 500;
+        }
+
+        /* Loading animation */
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading:after {
+            content: "";
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(60, 171, 14, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            border-left-color: var(--primary-color);
+            animation: spinner 0.8s ease-in-out infinite;
+        }
+
+        @keyframes spinner {
+            to {
+                transform: rotate(360deg) scale(1.1);
+            }
+            50% {
+                transform: rotate(180deg) scale(0.9);
+            }
+        }
+
+        /* Settings panel styling */
+        .settings-panel {
+            background: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 40px;
+            width: 70%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Button grid layouts */
+        .button-row {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .button-row-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .button-row-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        /* For the button styling */
+        .setting-box {
+            background: white;
+            border: 2px solid #e2e8f0;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-color);
+            cursor: pointer;
+            border-radius: var(--border-radius);
+            transition: all var(--transition-speed) cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .setting-box.selected {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-color: transparent;
+            box-shadow: var(--box-shadow);
+        }
+
+        .setting-box:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--box-shadow-hover);
+        }
+
+        .player-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .player-inputs input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: var(--border-radius);
+            background-color: #f8f9fa;
+            transition: all var(--transition-speed) ease;
+        }
+
+        .player-inputs input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(60, 171, 14, 0.1);
+        }
+
+        /* Submit button container */
+        .submit-button-container {
+            width: 35%;  /* Half of the 70% width of the panels */
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        /* Label and tooltip container styling */
+        .strategy-group,
+        .trade-type-group,
+        .position-swap-group {
+            position: relative;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .strategy-group label,
+        .trade-type-group label,
+        .position-swap-group label {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 8px;
+        }
+
+        /* Position tooltips at the absolute right */
+        .strategy-group .tooltip-container,
+        .trade-type-group .tooltip-container,
+        .position-swap-group .tooltip-container {
+            position: absolute;
+            right: 0;
+            top: 0;
+        }
+
+        /* Question mark styling */
+        .tooltip-trigger {
+            width: 20px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        /* Tooltip text positioning */
+        .tooltip-text {
+            display: none;
+            position: absolute;
+            right: 30px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 250px;
+            z-index: 100;
+        }
+
+        @media (max-width: 768px) {
+            .strategy-group .tooltip-container,
+            .trade-type-group .tooltip-container,
+            .position-swap-group .tooltip-container {
+                right: 0;
+            }
+        }
+
+        /* Desktop hover behavior */
+        @media (min-width: 769px) {
+            .tooltip-container:hover .tooltip-text {
+                display: block;
+                opacity: 1;
+            }
+        }
+
+        /* Mobile tooltip behavior */
+        @media (max-width: 768px) {
+            /* Container and panel adjustments */
+            .container {
+                padding: 15px;
+                width: 100%;
+                box-sizing: border-box;
+                overflow-x: hidden;
+            }
+
+            /* Make all panels consistent with trade options cards */
+            .panel,
+            .trade-panel,
+            .settings-panel {
+                width: 100%;
+                margin: 15px 0;
+                padding: 20px;
+                box-sizing: border-box;
+                border-radius: var(--border-radius);
+            }
+
+            /* Strategy buttons adjustments */
+            .button-row {
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                gap: 8px;
+                margin: 10px 0;
+                width: 100%;
+            }
+
+            .setting-box {
+                flex: 1;
+                padding: 12px 15px;
+                font-size: 13px;
+                text-align: center;
+                min-width: 0;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+
+            /* Ensure text wraps consistently */
+            .setting-box span {
+                display: inline-block;
+                white-space: normal;
+                line-height: 1.2;
+                word-break: break-word;
+            }
+
+            /* Player inputs adjustments */
+            .player-inputs {
+                width: 100%;
+                max-width: none;
+            }
+
+            .player-inputs input {
+                width: 100%;
+                box-sizing: border-box;
+                margin-bottom: 10px;
+            }
+
+            /* Remove any unnecessary margins/padding */
+            .settings-panel {
+                padding: 0;
+                background: none;
+                box-shadow: none;
+            }
+
+            /* Ensure consistent spacing */
+            .panel-title {
+                margin-bottom: 20px;
+                text-align: center;
+            }
+
+            /* Match button styling with trade options */
+            .submit-button-container {
+                width: 100%;
+                margin: 15px 0;
+            }
+
+            .submit-button-container button {
+                width: 100%;
+                padding: 15px;
+            }
+
+            .tooltip-trigger {
+                width: 26px;
+                height: 26px;
+                font-size: 18px;
+            }
+
+            .tooltip-text {
+                display: none;
+                position: absolute;
+                right: 30px;  /* Position to the left instead of right */
+                left: auto;   /* Reset left position */
+                top: 50%;
+                transform: translateY(-50%);
+                background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+                color: white;
+                padding: 10px 15px;
+                border-radius: var(--border-radius);
+                font-size: 14px;
+                width: 250px;
+                z-index: 100;
+                box-shadow: var(--box-shadow);
+            }
+            
+            .tooltip-container.active .tooltip-text {
+                display: block;
+                opacity: 1;
+            }
+
+            .trade-option {
+                width: 100%;
+                margin: 15px 0;
+                padding: 20px;
+                box-sizing: border-box;
+                border-radius: var(--border-radius);
+            }
+
+            /* Ensure results container doesn't overflow */
+            #results {
+                width: 100%;
+                overflow-x: hidden;
+            }
+
+            /* Adjust trade option content spacing */
+            .trade-option h3 {
+                font-size: 18px;
+                margin-bottom: 15px;
+            }
+
+            .trade-option div {
+                margin-bottom: 10px;
+            }
+
+            .header h1 {
+                font-size: 20px; /* Smaller text on mobile */
+                margin-right: 50px; /* Make room for dark mode toggle */
+            }
+
+            .checkbox-wrapper {
+                display: inline-flex;
+                margin-right: 15px;
+            }
+
+            .strategy-group label,
+            .trade-type-group label,
+            .position-swap-group label {
+                padding-right: 0;
+            }
+            
+            .tooltip-container {
+                margin-left: auto;
+            }
+        }
+
+        /* Checkbox styling */
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-wrapper input[type="checkbox"] {
+            display: none;
+        }
+
+        .checkbox-wrapper label {
+            position: relative;
+            padding-left: 35px;
+            cursor: pointer;
+            font-size: 16px;
+            user-select: none;
+        }
+
+        .checkbox-wrapper label:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 25px;
+            height: 25px;
+            border: 2px solid #e2e8f0;
+            background-color: #fff;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:checked + label:before {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
+        .checkbox-wrapper input[type="checkbox"]:checked + label:after {
+            content: '\2714';
+            position: absolute;
+            left: 6px;
+            top: 2px;
+            color: white;
+            font-size: 16px;
+        }
+
+        /* Form group styling */
+        .form-group {
+            width: 100%;
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary-color);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary-color);
+        }
+
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #1a202c;
+            color: #e2e8f0;
+        }
+
+        body.dark-mode .panel,
+        body.dark-mode .trade-option,
+        body.dark-mode .settings-panel {
+            background-color: #2d3748;
+            border-color: #4a5568;
+        }
+
+        body.dark-mode input[type="text"],
+        body.dark-mode input[type="datetime-local"],
+        body.dark-mode select {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+
+        body.dark-mode .setting-box {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+
+        /* Ensure text is visible in dark mode */
+        body.dark-mode label,
+        body.dark-mode .panel-title,
+        body.dark-mode .main-title,
+        body.dark-mode .trade-option,
+        body.dark-mode .setting-box,
+        body.dark-mode select,
+        body.dark-mode option {
+            color: #e2e8f0;
+        }
+
+        /* Ensure selected/active buttons remain visible */
+        body.dark-mode .setting-box.selected {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-color: transparent;
+        }
+
+        /* Position selection text in dark mode */
+        body.dark-mode .position-swap-group select,
+        body.dark-mode .position-swap-group option {
+            color: #e2e8f0;
+            background-color: #2d3748;
+        }
+
+        /* Additional Options text in dark mode */
+        body.dark-mode .checkbox-wrapper label {
+            color: #e2e8f0;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 36px;
+            }
+            
+            .panel-title {
+                font-size: 20px;
+            }
+
+            .button-row {
+                grid-template-columns: 1fr;
+            }
+
+            .player-inputs {
+                flex-direction: column;
+            }
+        }
+
+        /* Dark mode header styles */
+        body.dark-mode .header {
+            background: rgba(26, 32, 44, 0.95);
+        }
+
+        body.dark-mode .header:not(.scrolled) h1 {
+            color: #e2e8f0;
+        }
+
+        
+        #excluded-players-pane {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            padding: 15px;
+            box-shadow: var(--box-shadow);
+            z-index: 1100; /* Higher than header's z-index of 1000 */
+            height: 20vh;
+            display: none;
+        }
+
+        .excluded-players-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Center content vertically */
+            height: 100%; /* Take full height of parent */
+        }
+
+        #excluded-players-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .excluded-player-tag {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 5px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .excluded-player-tag .remove-excluded {
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Improved remove player icon - elegant circular design */
+        .remove-player-icon {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            margin-left: 10px;
+            cursor: pointer;
+            border-radius: 50%;
+            background-color: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            /* Better touch target */
+            min-width: 20px;
+            min-height: 20px;
+            /* Remove the text character */
+            font-size: 0;
+        }
+
+        /* Create the X using pseudo-elements for smooth lines */
+        .remove-player-icon::before,
+        .remove-player-icon::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 2px;
+            border-radius: 1px;
+            background-color: #333;
+            transition: all 0.2s ease;
+        }
+
+        /* Rotate to create X */
+        .remove-player-icon::before {
+            transform: rotate(45deg);
+        }
+
+        .remove-player-icon::after {
+            transform: rotate(-45deg);
+        }
+
+        /* Hover effects */
+        .remove-player-icon:hover {
+            transform: scale(1.15);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .remove-player-icon:hover::before,
+        .remove-player-icon:hover::after {
+            background-color: #e74c3c;
+            width: 12px;
+        }
+
+        /* Active state */
+        .remove-player-icon:active {
+            transform: scale(0.95);
+        }
+
+        /* Focus state for accessibility */
+        .remove-player-icon:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(60, 171, 14, 0.5);
+        }
+
+        /* Specifically for highlighted cards */
+        .trade-option.highlighted .remove-player-icon {
+            background-color: white;
+        }
+
+        .trade-option.highlighted .remove-player-icon::before,
+        .trade-option.highlighted .remove-player-icon::after {
+            background-color: #333;
+        }
+
+        .trade-option.highlighted .remove-player-icon:hover::before,
+        .trade-option.highlighted .remove-player-icon:hover::after {
+            background-color: #e74c3c;
+        }
+
+        /* Mobile optimization for excluded players pane */
+        @media (max-width: 768px) {
+            #excluded-players-pane {
+                height: 20vh;
+                padding: 8px;
+                overflow: visible; /* Allow content to be seen immediately */
+            }
+            
+            .excluded-players-container {
+                justify-content: center;
+            }
+            
+            #excluded-players-pane h3 {
+                font-size: 14px;
+                margin: 3px 0;
+                text-align: center;
+            }
+            
+            #excluded-players-list {
+                gap: 6px;
+                margin: 5px 0;
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center; /* Center tags horizontally */
+                max-height: 10vh; /* Ensure list doesn't overflow */
+                overflow-y: auto;
+            }
+            
+            .excluded-player-tag {
+                padding: 3px 8px;
+                font-size: 12px;
+                border-radius: 10px;
+            }
+            
+            .excluded-player-tag .remove-excluded {
+                font-size: 10px;
+                padding: 2px;
+            }
+            
+            .excluded-players-actions {
+                display: flex;
+                gap: 6px;
+                justify-content: center; /* Center buttons */
+                margin-top: 5px;
+            }
+            
+            #recalculate-btn, #clear-excluded-btn {
+                font-size: 12px;
+                padding: 5px 8px;
+                min-height: unset;
+                line-height: 1.2;
+            }
+        }
+
+        /* Adjust body padding when excluded players pane is visible */
+        body.has-excluded-players {
+            padding-top: calc(20vh + 60px); /* Adjust top padding based on header plus pane height */
+        }
+
+        
+        #cashInBank {
+            -moz-appearance: textfield; /* Firefox */
+        }
+
+        #cashInBank::-webkit-inner-spin-button,
+        #cashInBank::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* For consistency in Firefox */
+        @-moz-document url-prefix() {
+            #cashInBank {
+                padding-right: 10px; /* Add some space on the right in Firefox */
+            }
+        }
+
+        /* Match spacing between input groups */
+        .form-group + .form-group {
+            margin-top: 15px;
+        }
+
+        /* For Dark Mode */
+        body.dark-mode #cashInBank {
+            background-color: #2d3748;
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
+
+        /* Cash in Bank styling fixes */
+        .cash-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .cash-symbol {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-color);
+            z-index: 1;
+        }
+
+        .cash-input {
+            width: 100%;
+            padding: 12px 15px 12px 30px !important;
+            border-radius: var(--border-radius);
+            border: 1px solid #e2e8f0;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        /* Player autocomplete styling fixes */
+        .ui-autocomplete {
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            width: auto !important;  /* Allow enough width for prices */
+            box-sizing: border-box;
+        }
+
+        .player-name-price {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            padding: 8px 10px;
+            box-sizing: border-box;
+        }
+
+        .player-name {
+            font-weight: bold;
+            margin-right: 20px; /* Add space between name and price */
+        }
+
+        .player-price {
+            font-weight: normal;
+            color: #718096;
+            white-space: nowrap;
+        }
+
+        /* Dark mode support */
+        body.dark-mode .player-price {
+            color: #a0aec0;
+        }
+
+        body.dark-mode .ui-autocomplete {
+            background: #2d3748;
+            border-color: #4a5568;
+        }
+
+        body.dark-mode .ui-autocomplete .ui-menu-item-wrapper {
+            color: #e2e8f0;
+        }
+
+        /* Fix for label positioning */
+        .form-group.cash-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group.cash-group label {
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* Style for input labels above fields */
+        .input-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 16px;
+            color: var(--text-color);
+        }
+
+        /* Dark mode support */
+        body.dark-mode .input-label {
+            color: #e2e8f0;
+        }
+
+        /* Section headings for trade panel */
+        .section-heading {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: var(--text-color);
+            text-align: left;
+            width: 100%;
+        }
+
+        /* Dark mode support */
+        body.dark-mode .section-heading {
+            color: #e2e8f0;
+        }
+
+        /* Ensure cash and player inputs are properly aligned */
+        .player-inputs {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .cash-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .cash-symbol {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-color);
+            z-index: 1;
+        }
+
+        .cash-input {
+            width: 100%;
+            padding: 12px 15px 12px 30px !important;
+            border-radius: var(--border-radius);
+            border: 1px solid #e2e8f0;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        /* Cash title styling */
+        .panel-title.cash-title {
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        /* Ensure player inputs are properly aligned */
+        .player-inputs {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .cash-input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .cash-symbol {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-color);
+            z-index: 1;
+        }
+
+        .cash-input {
+            width: 100%;
+            padding: 12px 15px 12px 30px !important;
+            border-radius: var(--border-radius);
+            border: 1px solid #e2e8f0;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+
+        /* Formatting for selected players */
+        input[type="text"] {
+            font-weight: normal;
+        }
+
+        
+        .ui-autocomplete .player-name {
+            font-weight: bold;
+        }
+
+        .ui-autocomplete .player-price {
+            font-weight: normal;
+        }
+
+        /* Make sure the input text is properly styled when a player is selected */
+        #player1::first-line, #player2::first-line {
+            font-weight: bold;
+        }
+
+        /* Field containers with proper alignment */
+        .trade-inputs-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .field-container {
+            margin-bottom: 15px;
+            width: 100%;
+        }
+
+        .field-label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 16px;
+            text-align: left;
+        }
+
+        /* Input styling for consistent width */
+        .input-field {
+            position: relative;
+            width: 100%;
+        }
+
+        .player-inputs {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .cash-symbol {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1;
+        }
+
+        .cash-input {
+            width: 100%;
+            padding: 12px 15px 12px 30px !important;
+            border-radius: var(--border-radius);
+            border: 1px solid #e2e8f0;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        /* Player selection styling */
+        .player-name {
+            font-weight: bold;
+        }
+
+        .player-price {
+            font-weight: normal;
+            color: #718096;
+        }
+
+        /* Center align the panel title */
+        .panel-title {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        /* Styling for the remove player button */
+        .remove-player-button {
+            display: inline-block;
+            background-color: #4a6fa5;
+            color: white;
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-left: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .remove-player-button:hover {
+            background-color: #e53e3e;
+        }
+
+        /* For dark mode support */
+        body.dark-mode .remove-player-button {
+            background-color: #e53e3e;
+        }
+
+        body.dark-mode .remove-player-button:hover {
+            background-color: #c53030;
+        }
+
+        /* Change the color of the remove player button when the trade option is highlighted */
+        .trade-option.highlighted .remove-player-button {
+            background-color: #4a6fa5;
+            color: white;
+        }
+
+        /* Ensure the default color remains the same when not highlighted */
+        .remove-player-button {
+            display: inline-block;
+            background-color: var(--accent-color);
+            color: white;
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            margin-left: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .remove-player-button:hover {
+            background-color: #e53e3e;
+        }
+
+        /* For dark mode support */
+        body.dark-mode .remove-player-button {
+            background-color: #e53e3e;
+        }
+
+        body.dark-mode .remove-player-button:hover {
+            background-color: #c53030;
+        }
+
+        /* Powered by styling */
+        .powered-by-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 10px auto 30px;
+            text-align: center;
+        }
+
+        .powered-by-text {
+            font-size: 16px;
+            color: white;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .powered-by-logo {
+            max-width: 220px;
+            height: auto;
+        }
+
+        /* For dark mode */
+        body.dark-mode .powered-by-text {
+            color: #e2e8f0;
+        }
+
+        /* Responsive adjustment */
+        @media (max-width: 768px) {
+            .powered-by-logo {
+                max-width: 180px;
+            }
+        }
+
+        /* Hide the mobile version on desktop */
+        .mobile-powered-by {
+            display: none;
+        }
+        
+        /* Main title alignment */
+        .main-title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        /* Responsive adjustments for mobile */
+        @media (max-width: 768px) {
+            /* Hide desktop powered-by in header */
+            .header-right {
+                display: none;
+            }
+            
+            /* Show mobile powered-by below main title */
+            .mobile-powered-by {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0 auto 30px auto;
+                width: 100%;
+                gap: 10px;
+            }
+            
+            .mobile-powered-by .powered-by-text {
+                color: var(--text-color);
+                font-size: 1rem;
+                margin: 0;
+                white-space: nowrap;
+            }
+            
+            .mobile-powered-by .powered-by-logo {
+                height: 80px;
+                width: 80px;
+                border-radius: 50%;
+                object-fit: contain;
+                background-color: white;
+                padding: 2px;
+                margin: 0 5px;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            }
+        }
+
+        .member-benefits-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 40px auto;
+            text-align: center;
+        }
+
+        .member-benefits-image {
+            width: 100%;
+            max-width: 750px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .member-benefits-container {
+                margin: 20px auto;
+            }
+        }
+
+        .coffee-support-container {
+            width: 100%;
+            max-width: 800px;
+            margin: 20px auto;
+            text-align: center;
+        }
+
+        .coffee-image {
+            max-width: 200px;
+            transition: transform 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .coffee-image:hover {
+            transform: scale(1.05);
+        }
+    </style>
+    <!-- Hotjar Tracking Code -->
+    <script>
+        (function(h,o,t,j,a,r){
+            h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+            h._hjSettings={hjid:'{{ hotjar_id }}',hjsv:6};
+            a=o.getElementsByTagName('head')[0];
+            r=o.createElement('script');r.async=1;
+            r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+            a.appendChild(r);
+        })(window,document,'https://static.hotjar.com/c/hotjar-','.js?sv=');
+    </script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-5KMLE4JRQP"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-5KMLE4JRQP');
+    </script>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <h1>FANTASY TRADE CALCULATOR</h1>
+            <div class="header-right">
+                <span class="powered-by-text">Powered by:</span>
+                <img src="{{ url_for('static', filename='images/Amateurs.png') }}" alt="NRL Amateurs Fantasy Sports" class="powered-by-logo">
+                <img src="{{ url_for('static', filename='images/FFQ.png') }}" alt="FFQ Logo" class="powered-by-logo">
+            </div>
+        </div>
+    </header>
+
+    <div id="excluded-players-pane" style="display: none;">
+        <div class="excluded-players-container">
+            <h3>Excluded Players</h3>
+            <div id="excluded-players-list"></div>
+            <div class="excluded-players-actions">
+                <button id="recalculate-btn" class="btn">Recalculate Without These Players</button>
+                <button id="clear-excluded-btn" class="btn btn-secondary">Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        
+        
+        <!-- Add this mobile-only powered-by section that appears below main title -->
+        <div class="mobile-powered-by">
+            <span class="powered-by-text">Powered by:</span>
+            <img src="{{ url_for('static', filename='images/Amateurs.png') }}" alt="NRL Amateurs Fantasy Sports" class="powered-by-logo">
+            <img src="{{ url_for('static', filename='images/FFQ.png') }}" alt="FFQ Logo" class="powered-by-logo">
+        </div>
+        
+        <form id="tradeForm">
+            <div class="settings-panel">
+                <div class="panel">
+                    <div class="panel-title">Trade Settings</div>
+
+                    <!-- Strategy selection block -->
+                    <div class="form-group strategy-group">
+                        <label>Strategy:
+                            <div class="tooltip-container">
+                                <div class="tooltip-trigger">?</div>
+                                <div class="tooltip-text">
+                                    Choose how to optimise your trades: 'Maximise value' recommends players whose projected score exceeds what they are priced at, 'Maximise points' prioritizes players with the highest projected score, while 'Hybrid approach' recommends a value pick and a high scoring player.
+                                </div>
+                            </div>
+                        </label>
+                        <div class="button-row button-row-3">
+                            <button type="button" class="setting-box selected" data-strategy="1">
+                                <span>Maximise value</span>
+                            </button>
+                            <button type="button" class="setting-box" data-strategy="2">Maximise points</button>
+                            <button type="button" class="setting-box" data-strategy="3">Hybrid approach</button>
+                        </div>
+                        <!-- Hidden input to store selected strategy -->
+                        <input type="hidden" id="strategy" name="strategy" value="1">
+                    </div>
+
+                    <!-- Trade type selection block -->
+                    <div class="form-group trade-type-group">
+                        <label>Trade Type:
+                            <div class="tooltip-container">
+                                <div class="tooltip-trigger">?</div>
+                                <div class="tooltip-text">
+                                    Like-for-Like maintains the same positions as traded out players, while Positional Swap allows trading across different positions. 
+                                </div>
+                            </div>
+                        </label>
+                        <div class="button-row button-row-2">
+                            <button type="button" class="setting-box selected" data-type="likeForLike">Like-for-Like</button>
+                            <button type="button" class="setting-box" data-type="positionalSwap">Positional Swap</button>
+                        </div>
+                        <!-- Hidden input to store selected trade type -->
+                        <input type="hidden" id="tradeType" name="tradeType" value="likeForLike">
+                    </div>
+
+                    <!-- Position Selection for Positional Swap -->
+                    <div id="positionSelection" style="display: none;">
+                        <label for="positions">Select Positions for Swap:
+                            <div class="tooltip-container">
+                                <div class="tooltip-trigger">?</div>
+                                <div class="tooltip-text">
+                                  Selecting all positions recommends the best players across all positions. When 2 positions are selected, suggested players will cover both positions selected.
+                                </div>
+                            </div>
+                        </label>
+                        <select id="positions" name="positions" multiple>
+                            <option value="HOK">HOK</option>
+                            <option value="HLF">HLF</option>
+                            <option value="CTR">CTR</option>
+                            <option value="WFB">WFB</option>
+                            <option value="EDG">EDG</option>
+                            <option value="MID">MID</option>
+                        </select>
+                    </div>
+
+                    <!-- Additional options block -->
+                    <div class="form-group additional-options-group">
+                        <label>Additional Options:</label>
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" id="restrictToTeamList" name="restrictToTeamList">
+                            <label for="restrictToTeamList">Team List Only</label>
+                        </div>
+                        <div class="additional-option">
+                            <div class="checkbox-wrapper">
+                                <input type="checkbox" id="applyLockout" name="applyLockout">
+                                <label for="applyLockout">
+                                    Apply lockout restriction based on current time
+                                    <span class="tooltip-container" style="display: inline-block; vertical-align: middle; margin-left: 5px;">
+                                        <span class="tooltip-trigger">?</span>
+                                        <span class="tooltip-text">Prevents trades involving players whose matches have already started</span>
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Hidden fields to store time info -->
+                        <input type="hidden" id="userLocalTime" name="userLocalTime">
+                        <input type="hidden" id="userTimezone" name="userTimezone">
+                        
+                        <!-- Add this new element for displaying the standardized time -->
+                        <div id="standardizedTimeDisplay" style="display: none; margin-top: 8px; font-size: 0.9em; color: #666; padding-left: 10px; border-left: 3px solid #ddd;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="trade-panel">
+                <div class="panel">
+                    <div class="panel-title" style="text-align: center;">Players to Trade Out</div>
+
+                    <div class="trade-inputs-container">
+                        <div class="field-container">
+                            <div class="field-label">Cash in Bank</div>
+                            <div class="input-field">
+                                <span class="cash-symbol">$</span>
+                                <input type="text" id="cashInBank" name="cashInBank" placeholder="000 k" class="cash-input">
+                            </div>
+                        </div>
+                        
+                        <div class="field-container">
+                            <div class="field-label">Players</div>
+                            <div class="player-inputs">
+                                <input type="text" id="player1" name="player1" placeholder="Player 1" required>
+                                <input type="text" id="player2" name="player2" placeholder="Player 2 (Optional)">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="submit-button-container">
+                <button type="submit">Calculate Trade Options</button>
+            </div>
+        </form>
+
+        <div id="results" class="results"></div>
+
+        <!-- Amateurs images -->
+        <div class="member-benefits-container">
+          <a href="https://buymeacoffee.com/fantasyamateurs/membership" target="_blank" rel="noopener noreferrer">
+            <img src="{{ url_for('static', filename='images/buy_me_a_coffee.png') }}" alt="Exclusive Member Benefits" class="member-benefits-image">
+          </a>
+        </div>
+        <div class="member-benefits-container">
+            <img src="{{ url_for('static', filename='images/members_benefits.png') }}" alt="Exclusive Member Benefits" class="member-benefits-image">
+        </div>
+        
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            let observer = null;
+            let currentHighlightedElement = null;
+            let scrollDirection = 'down';
+            let lastScrollTop = 0;
+            let excludedPlayers = [];
+
+            // Initialize intersection observer
+            function initializeIntersectionObserver() {
+                if (observer) observer.disconnect();
+                
+                observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        const elementTop = entry.boundingClientRect.top;
+                        const elementBottom = entry.boundingClientRect.bottom;
+                        const windowHeight = window.innerHeight;
+                        const midPoint = windowHeight / 2;
+
+                        if (scrollDirection === 'down') {
+                            // When scrolling down, highlight when top crosses midpoint
+                            if (elementTop <= midPoint && entry.isIntersecting) {
+                                if (currentHighlightedElement && currentHighlightedElement !== entry.target) {
+                                    currentHighlightedElement.classList.remove('highlighted');
+                                }
+                                entry.target.classList.add('highlighted');
+                                currentHighlightedElement = entry.target;
+                            }
+                        } else {
+                            // When scrolling up, highlight when bottom crosses midpoint
+                            if (elementBottom >= midPoint && entry.isIntersecting) {
+                                if (currentHighlightedElement && currentHighlightedElement !== entry.target) {
+                                    currentHighlightedElement.classList.remove('highlighted');
+                                }
+                                entry.target.classList.add('highlighted');
+                                currentHighlightedElement = entry.target;
+                            }
+                        }
+                    });
+                }, {
+                    threshold: [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1],
+                    rootMargin: '-50% 0px -50% 0px'
+                });
+
+                // Observe all current trade options
+                document.querySelectorAll('.trade-option').forEach(option => {
+                    observer.observe(option);
+                });
+            }
+
+            // Initial observer setup
+            initializeIntersectionObserver();
+
+            // Fetch player names with prices for autocomplete
+            $.ajax({
+                url: '/get_player_names_with_prices',
+                method: 'GET',
+                success: function(playerData) {
+                    $('#player1, #player2').autocomplete({
+                        source: playerData,
+                        minLength: 2,
+                        select: function(event, ui) {
+                            // Store data for submission
+                            $(this).data('playerName', ui.item.value);
+                            $(this).data('playerPrice', ui.item.price);
+                            
+                            // Create formatted string with name and price
+                            const formattedValue = `<strong>${ui.item.label}</strong> $${ui.item.price}k`;
+                            
+                            // Set the display value with name in bold
+                            $(this).val(ui.item.label + " $" + ui.item.price + "k");
+                            
+                            // Apply bold to player name only using CSS classes
+                            const parts = $(this).val().split('$');
+                            const nameElement = $('<span>').addClass('selected-name').text(parts[0].trim());
+                            const priceElement = $('<span>').addClass('selected-price').text('$' + parts[1]);
+                            
+                            // Apply styling using CSS class
+                            $(this).addClass('player-field-selected');
+                            
+                            return false;
+                        }
+                    }).each(function() {
+                        $(this).autocomplete("instance")._renderItem = function(ul, item) {
+                            return $("<li>")
+                                .append("<div class='player-name-price'><span class='player-name'>" + 
+                                       item.label + "</span><span class='player-price'>$" + 
+                                       item.price + "k</span></div>")
+                                .appendTo(ul);
+                        };
+                    });
+                },
+                error: function(xhr) {
+                    console.error('Error fetching player names with prices:', xhr.responseText);
+                }
+            });
+
+            // Strategy buttons event listener
+            $('.settings-panel .setting-box[data-strategy]').click(function() {
+                $('.settings-panel .setting-box[data-strategy]').removeClass('selected');
+                $(this).addClass('selected');
+                $('#strategy').val($(this).data('strategy'));
+            });
+
+            // Trade type buttons event listener
+            $('.settings-panel .setting-box[data-type]').click(function() {
+                $('.settings-panel .setting-box[data-type]').removeClass('selected');
+                $(this).addClass('selected');
+                $('#tradeType').val($(this).data('type'));
+                // Show the positions dropdown only for positional swap.
+                if ($(this).data('type') === 'positionalSwap') {
+                    $('#positionSelection').slideDown();
+                } else {
+                    $('#positionSelection').slideUp();
+                }
+            });
+
+            // Additional options checkboxes
+            $('#restrictToTeamList, #applyLockout').change(function() {
+                if ($(this).attr('id') === 'applyLockout') {
+                    if ($(this).is(':checked')) {
+                        $('#simulateDateTimeGroup').slideDown();
+                    } else {
+                        $('#simulateDateTimeGroup').slideUp();
+                    }
+                }
+            });
+
+            // form submission to extract player names from data attributes
+            $('#tradeForm').on('submit', function(e) {
+                e.preventDefault();
+                $('#results').html('<div class="loading"></div>');
+                
+                // Create a new FormData object
+                let formData = new FormData(this);
+                
+                // Get the cash value and convert from "k" to actual number
+                let cashValue = formData.get('cashInBank');
+                if (cashValue) {
+                    // Extract just the number part and multiply by 1000
+                    cashValue = parseInt(cashValue.replace(/\D/g, '') || 0) * 1000;
+                    formData.set('cashInBank', cashValue);
+                } else {
+                    formData.set('cashInBank', 0);
+                }
+                
+                // Get actual player names from data attributes
+                const player1Name = $('#player1').data('playerName') || $('#player1').val();
+                formData.set('player1', player1Name);
+                
+                const player2 = $('#player2');
+                if (player2.val()) {
+                    const player2Name = player2.data('playerName') || player2.val();
+                    formData.set('player2', player2Name);
+                } else {
+                    formData.delete('player2');
+                }
+                
+                // Continue with AJAX call
+                $.ajax({
+                    url: '/calculate',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,
+                    contentType: false,
+                    success: function(options) {
+                        let html = '<h2 style="text-align: center;">Trade Options</h2>';
+                        
+                        // Check if strategy is base maximization
+                        let isBaseStrategy = $('#strategy').val() === '2';
+                        
+                        if (options.length === 0) {
+                            html += '<div class="no-results">No valid trade options found.</div>';
+                        } else {
+                            options.forEach((option, index) => {
+                                html += `
+                                    <div class="trade-option">
+                                        <h3>Option ${index + 1}</h3>
+                                        <h4>Players to trade in:</h4>
+                                        ${option.players.map(player => `
+                                            <div>
+                                                <strong>${player.name}</strong> (${player.position})
+                                                <span class="remove-player-button" 
+                                                      data-player="${player.name}" 
+                                                      role="button" 
+                                                      tabindex="0" 
+                                                      title="Remove ${player.name} from trade options"
+                                                      aria-label="Remove ${player.name}">Remove player</span>
+                                                <br>
+                                                Price: $${player.price.toLocaleString()}
+                                                <br>
+                                                ${isBaseStrategy 
+                                                  ? `Projected score: ${player.projection.toFixed(1)}` 
+                                                  : `Upside: ${player.diff.toFixed(1)}`}
+                                            </div>
+                                        `).join('<br>')}
+                                        <br>
+                                        <div>
+                                            Total Price: $${option.totalPrice.toLocaleString()}
+                                            <br>
+                                            Salary Remaining: $${option.salaryRemaining.toLocaleString()}
+                                            <br>
+                                            ${isBaseStrategy 
+                                              ? `Combined projected score: ${option.totalProjection.toFixed(1)}` 
+                                              : `Combined Upside: ${option.totalDiff.toFixed(1)}`}
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+                        
+                        $('#results').html(html);
+                        
+                        // Reinitialize observer for new elements
+                        initializeIntersectionObserver();
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'An error occurred while calculating trade options.';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        }
+                        $('#results').html(`<div class="error">${errorMessage}</div>`);
+                    }
+                });
+            });
+
+            // Handle tooltip clicks on mobile
+            $('.tooltip-trigger').on('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Remove active class from all other tooltips
+                $('.tooltip-container').not($(this).parent()).removeClass('active');
+                
+                // Toggle active class on clicked tooltip
+                $(this).parent().toggleClass('active');
+            });
+            
+            // Close tooltip when clicking anywhere else on the page
+            $(document).on('click', function(e) {
+                if (!$(e.target).closest('.tooltip-container').length) {
+                    $('.tooltip-container').removeClass('active');
+                }
+            });
+
+            $(window).scroll(function() {
+                if ($(this).scrollTop() > 10) {
+                    $('.header').addClass('scrolled');
+                } else {
+                    $('.header').removeClass('scrolled');
+                }
+            });
+
+            // Event delegation for the remove player icons
+            $(document).on('click', '.remove-player-button', function() {
+                const playerName = $(this).data('player');
+                
+                // Add to excluded players if not already there
+                if (!excludedPlayers.includes(playerName)) {
+                    excludedPlayers.push(playerName);
+                    
+                    // Refine the excluded players list
+                    updateExcludedPlayersDisplay();
+                    
+                    // Show the excluded players pane if it's the first player
+                    if (excludedPlayers.length === 1) {
+                        // Show at full height immediately
+                        $('#excluded-players-pane').css({
+                            'display': 'block',
+                            'height': '20vh'
+                        });
+                    }
+                }
+            });
+
+            // Function to update the excluded players display
+            function updateExcludedPlayersDisplay() {
+                const listHTML = excludedPlayers.map(player => `
+                    <div class="excluded-player-tag">
+                        ${player}
+                        <span class="remove-excluded" data-player="${player}">✕</span>
+                    </div>
+                `).join('');
+                
+                $('#excluded-players-list').html(listHTML);
+            }
+
+            // Remove a player from the excluded list
+            $(document).on('click', '.remove-excluded', function() {
+                const playerName = $(this).data('player');
+                excludedPlayers = excludedPlayers.filter(p => p !== playerName);
+                
+                updateExcludedPlayersDisplay();
+                
+                // Hide the pane if no players are excluded
+                if (excludedPlayers.length === 0) {
+                    $('#excluded-players-pane').slideUp(300);
+                }
+            });
+
+            // Clear all excluded players
+            $('#clear-excluded-btn').on('click', function() {
+                excludedPlayers = [];
+                updateExcludedPlayersDisplay();
+                $('#excluded-players-pane').slideUp(300);
+            });
+
+            // Handle the recalculation with excluded players
+            $('#recalculate-btn').on('click', function() {
+                // Show loading indicator
+                $('#results').html('<div class="loading">Recalculating trades...</div>');
+                
+                // Get the form data from the original form
+                let formData = new FormData($('#tradeForm')[0]);
+                
+                // Get the cash value and convert from "k" to actual number
+                let cashValue = formData.get('cashInBank');
+                if (cashValue) {
+                    // Extract just the number part and multiply by 1000
+                    cashValue = parseInt(cashValue.replace(/\D/g, '') || 0) * 1000;
+                    formData.set('cashInBank', cashValue);
+                } else {
+                    formData.set('cashInBank', 0);
+                }
+                
+                // Clean player names by removing price information
+                let player1 = formData.get('player1');
+                if (player1) {
+                    // Extract just the player name by removing any $ and numbers/k that follow
+                    player1 = player1.replace(/\s+\$\d+k?$/, '');
+                    formData.set('player1', player1);
+                }
+                
+                let player2 = formData.get('player2');
+                if (player2) {
+                    // Extract just the player name by removing any $ and numbers/k that follow
+                    player2 = player2.replace(/\s+\$\d+k?$/, '');
+                    formData.set('player2', player2);
+                } else {
+                    formData.delete('player2');
+                }
+                
+                // Add excluded players to form data
+                for (let player of excludedPlayers) {
+                    formData.append('excludedPlayers', player);
+                }
+                
+                // Make the AJAX request with FormData
+                $.ajax({
+                    url: '/calculate',
+                    method: 'POST',
+                    data: formData,
+                    processData: false,  // Important for FormData
+                    contentType: false,  // Important for FormData
+                    success: function(options) {
+                        // Render the results
+                        let html = '<h2 style="text-align: center;">Trade Options (Excluding Selected Players)</h2>';
+                        let isBaseStrategy = $('#strategy').val() === '2';
+                        
+                        if (options.length === 0) {
+                            html += '<div class="no-results">No valid trade options found with the excluded players.</div>';
+                        } else {
+                            options.forEach((option, index) => {
+                                // Same rendering code as the original calculation
+                                html += `
+                                    <div class="trade-option">
+                                        <h3>Option ${index + 1}</h3>
+                                        <h4>Players to trade in:</h4>
+                                        ${option.players.map(player => `
+                                            <div>
+                                                <strong>${player.name}</strong> (${player.position})
+                                                <span class="remove-player-button" 
+                                                      data-player="${player.name}" 
+                                                      role="button" 
+                                                      tabindex="0" 
+                                                      title="Remove ${player.name} from trade options"
+                                                      aria-label="Remove ${player.name}">Remove player</span>
+                                                <br>
+                                                Price: $${player.price.toLocaleString()}
+                                                <br>
+                                                ${isBaseStrategy 
+                                                  ? `Projected score: ${player.projection.toFixed(1)}` 
+                                                  : `Upside: ${player.diff.toFixed(1)}`}
+                                            </div>
+                                        `).join('<br>')}
+                                        <br>
+                                        <div>
+                                            Total Price: $${option.totalPrice.toLocaleString()}
+                                            <br>
+                                            Salary Remaining: $${option.salaryRemaining.toLocaleString()}
+                                            <br>
+                                            ${isBaseStrategy 
+                                              ? `Combined projected score: ${option.totalProjection.toFixed(1)}` 
+                                              : `Combined Upside: ${option.totalDiff.toFixed(1)}`}
+                                        </div>
+                                    </div>
+                                `;
+                            });
+                        }
+                        
+                        $('#results').html(html);
+                        
+                        // Reinitialize observer for new elements
+                        initializeIntersectionObserver();
+                    },
+                    error: function(xhr) {
+                        let errorMessage = 'An error occurred while calculating trade options.';
+                        if (xhr.responseJSON && xhr.responseJSON.error) {
+                            errorMessage = xhr.responseJSON.error;
+                        }
+                        $('#results').html(`<div class="error">${errorMessage}</div>`);
+                    }
+                });
+            });
+
+            // Make the remove icons keyboard accessible
+            $(document).on('keypress', '.remove-player-button', function(e) {
+                // Trigger click on Enter or Space
+                if (e.which === 13 || e.which === 32) {
+                    e.preventDefault();
+                    $(this).trigger('click');
+                }
+            });
+
+            // Add a subtle animation when removing a player
+            $(document).on('click', '.remove-player-button', function() {
+                const playerName = $(this).data('player');
+                
+                // Visual feedback before processing
+                $(this).addClass('removing');
+                const $element = $(this).closest('div');
+                
+                // Subtle animation effect
+                $element.css('transition', 'opacity 0.3s ease')
+                        .css('position', 'relative');
+                
+                setTimeout(function() {
+                    // Let's continue with the original code logic here...
+                    if (!excludedPlayers.includes(playerName)) {
+                        excludedPlayers.push(playerName);
+                        updateExcludedPlayersDisplay();
+                        
+                        if (excludedPlayers.length === 1) {
+                            // Show at full height immediately
+                            $('#excluded-players-pane').css({
+                                'display': 'block',
+                                'height': '20vh'
+                            });
+                        }
+                    }
+                }, 300);
+            });
+
+            // Cash in Bank input handling with "k" suffix
+            const cashInput = $('#cashInBank');
+            
+            // Process input to handle the "k" suffix
+            cashInput.on('input', function() {
+                // Remove all non-numeric characters
+                let value = $(this).val().replace(/\D/g, '');
+                
+                // If there's a value, append " k"
+                if (value) {
+                    $(this).val(value + ' k');
+                    
+                    // Move cursor back before the " k"
+                    const cursorPos = value.length;
+                    setTimeout(function() {
+                        cashInput[0].setSelectionRange(cursorPos, cursorPos);
+                    }, 0);
+                }
+            });
+            
+            // Format on focus
+            cashInput.on('focus', function() {
+                let value = $(this).val().replace(/\D/g, '');
+                $(this).val(value);
+            });
+            
+            // Format on blur
+            cashInput.on('blur', function() {
+                let value = $(this).val().replace(/\D/g, '');
+                if (value) {
+                    $(this).val(value + ' k');
+                } else {
+                    $(this).val('');
+                }
+            });
+
+            // Initially show member benefits below the form
+            positionMemberBenefits();
+            
+            // Reposition after calculation
+            $('#tradeForm').on('submit', function() {
+                // This will execute after trade calculation
+                setTimeout(positionMemberBenefits, 1000);
+            });
+            
+            function positionMemberBenefits() {
+                const $results = $('#results');
+                const $memberBenefits = $('.member-benefits-container');
+                
+                // If there are results, move the member benefits after the results
+                if ($results.children().length > 0) {
+                    $memberBenefits.insertAfter($results);
+                } else {
+                    // Otherwise keep it after the form
+                    $memberBenefits.insertAfter('#tradeForm');
+                }
+            }
+
+            // Function to update time fields
+            function updateTimeFields() {
+                // Get current local time in ISO format
+                const now = new Date();
+                const localTime = now.toISOString();
+                
+                // Get timezone offset in minutes
+                const timezoneOffset = now.getTimezoneOffset();
+                
+                // Update hidden fields
+                $('#userLocalTime').val(localTime);
+                $('#userTimezone').val(timezoneOffset);
+            }
+            
+            // Update time fields when form is submitted or when lockout is toggled
+            $('#tradeForm').on('submit', updateTimeFields);
+            $('#applyLockout').on('change', function() {
+                if($(this).is(':checked')) {
+                    updateTimeFields();
+                    displayStandardizedTime();
+                    $('#standardizedTimeDisplay').slideDown(200);
+                } else {
+                    $('#standardizedTimeDisplay').slideUp(200);
+                }
+            });
+
+            // Add function to calculate and display the standardized time
+            function displayStandardizedTime() {
+                const now = new Date();
+                const userTimezoneOffset = now.getTimezoneOffset();
+                
+                // Convert to UTC by applying timezone offset
+                const utcTime = new Date(now.getTime() + userTimezoneOffset * 60000);
+                
+                // Apply AEDT offset (UTC+11)
+                const aedtTime = new Date(utcTime.getTime() + (11 * 60 * 60000));
+                
+                // Format the time nicely
+                const options = { 
+                    weekday: 'short',
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                };
+                
+                // Create time string with AEDT designation
+                let timeString = aedtTime.toLocaleDateString('en-AU', options);
+                timeString = timeString.replace(/GMT\+\d+/, 'AEDT'); // Replace GMT+xx with AEDT
+                
+                // Update the display
+                $('#standardizedTimeDisplay').html(
+                    `<span>Calculations based on: <strong>${timeString}</strong></span>`
+                );
+            }
+        });
+    </script>
+</body>
+</html>
