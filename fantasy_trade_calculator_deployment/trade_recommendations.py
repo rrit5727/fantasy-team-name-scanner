@@ -680,6 +680,29 @@ def calculate_preseason_trade_in_candidates(
         # Normal approach: filter by salary cap
         latest_data = latest_data[latest_data['Price'] <= salary_cap]
 
+    # Filter by position requirements from trade_out_players (per-player requirements)
+    if trade_out_players:
+        # Collect all unique position requirements from trade-out players
+        all_required_positions = set()
+        for player in trade_out_players:
+            trade_in_positions = player.get('trade_in_positions')
+            if trade_in_positions:
+                if isinstance(trade_in_positions, list):
+                    all_required_positions.update(trade_in_positions)
+                else:
+                    all_required_positions.add(trade_in_positions)
+
+        # If there are position requirements, filter candidates
+        if all_required_positions:
+            print(f"Filtering preseason candidates by position requirements: {all_required_positions}")
+            # Match if POS1 or POS2 is in the required positions
+            mask = (
+                latest_data['POS1'].isin(all_required_positions) |
+                latest_data['POS2'].fillna('').isin(all_required_positions)
+            )
+            latest_data = latest_data[mask]
+            print(f"Players after position requirement filtering: {len(latest_data)}")
+
     # Filter by positions if specified (skip for test approach - frontend handles position filtering)
     if not test_approach and positions and len(positions) > 0:
         # Match if POS1 or POS2 is in the allowed positions

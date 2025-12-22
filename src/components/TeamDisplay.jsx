@@ -973,12 +973,21 @@ function TeamView({ players, onBack }) {
       ? ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB']
       : selectedPositions.filter(pos => pos !== 'Any');
 
-    // Add player to selected trade-out players with position requirements
-    setSelectedTradeOutPlayers(prev => [...prev, {
-      ...player,
-      originalPosition: showPositionDropdown.slotPosition,
-      trade_in_positions: tradeInPositions
-    }]);
+    if (isPreseasonMode) {
+      // Add player to preseason selected trade-out players
+      setPreseasonSelectedTradeOuts(prev => [...prev, {
+        ...player,
+        originalPosition: showPositionDropdown.slotPosition,
+        trade_in_positions: tradeInPositions
+      }]);
+    } else {
+      // Add player to selected trade-out players with position requirements
+      setSelectedTradeOutPlayers(prev => [...prev, {
+        ...player,
+        originalPosition: showPositionDropdown.slotPosition,
+        trade_in_positions: tradeInPositions
+      }]);
+    }
 
     // Store position requirements
     setPositionRequirements(prev => ({
@@ -986,7 +995,7 @@ function TeamView({ players, onBack }) {
       [player.name]: tradeInPositions
     }));
 
-    // Close dropdown
+    // Close the dropdown
     setShowPositionDropdown(null);
   };
 
@@ -1151,22 +1160,34 @@ function TeamView({ players, onBack }) {
       const isHighlighted = preseasonHighlightedPlayers.some(p => p.name === player.name);
       if (!isHighlighted) return; // Only allow clicking highlighted players
 
-      setPreseasonSelectedTradeOuts(prev => {
-        const exists = prev.some(p => p.name === player.name);
-        if (exists) {
-          // Deselect - reduce salary cap
-          const newList = prev.filter(p => p.name !== player.name);
-          // Note: preseasonSalaryCap stays as cash in bank - total is calculated when needed
-          return newList;
-        } else {
-          // Prevent selection if already at limit (6 for preseason mode)
-          if (prev.length >= 6) {
-            return prev;
-          }
-          // Select - don't change displayed salary cap (it stays as cash in bank)
-          return [...prev, { ...player, originalPosition: position }];
+      const exists = preseasonSelectedTradeOuts.some(p => p.name === player.name);
+      if (exists) {
+        // Deselect - reduce salary cap and clear position requirements
+        setPreseasonSelectedTradeOuts(prev => prev.filter(p => p.name !== player.name));
+        setPositionRequirements(prev => {
+          const newReqs = { ...prev };
+          delete newReqs[player.name];
+          return newReqs;
+        });
+      } else {
+        // Prevent selection if already at limit (6 for preseason mode)
+        if (preseasonSelectedTradeOuts.length >= 6) {
+          return;
         }
-      });
+
+        // For INT/EMG players, show position dropdown first
+        if (position === 'INT' || position === 'EMG') {
+          setShowPositionDropdown({ playerName: player.name, slotPosition: position });
+          return;
+        }
+
+        // For positional players, add directly with automatic position requirement
+        setPreseasonSelectedTradeOuts(prev => [...prev, {
+          ...player,
+          originalPosition: position,
+          trade_in_positions: [position]  // Positional players require same position replacement
+        }]);
+      }
     }
     // During selecting-in phase - user might click a traded-in player to reverse
     else if (preseasonPhase === 'selecting-in') {

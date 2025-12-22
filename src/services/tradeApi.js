@@ -127,7 +127,8 @@ export async function calculatePreseasonTradeIns(
         name: player.name,
         positions: player.positions || [],
         price: player.price || 0,
-        position: player.originalPosition || player.positions?.[0]
+        position: player.originalPosition || player.positions?.[0],
+        trade_in_positions: player.trade_in_positions || null
       })),
       salary_cap: salaryCap,
       strategy: strategy,
