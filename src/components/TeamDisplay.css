@@ -2332,6 +2332,34 @@
   font-weight: 500;
 }
 
+.position-selector-buttons {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.btn-cancel-position-selector {
+  width: 2.5rem;
+  height: 2.5rem;
+  background: linear-gradient(135deg, #cc4040, #ff6464);
+  border: none;
+  border-radius: 50%;
+  color: white;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(255, 100, 100, 0.3);
+}
+
+.btn-cancel-position-selector:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(255, 100, 100, 0.5);
+}
+
 .btn-confirm-position-selector {
   width: 2.5rem;
   height: 2.5rem;
@@ -2424,6 +2452,16 @@
 
   .position-selector-label-row label {
     font-size: 0.9rem;
+  }
+
+  .position-selector-buttons {
+    gap: 0.5rem;
+  }
+
+  .btn-cancel-position-selector {
+    width: 2rem;
+    height: 2rem;
+    font-size: 1rem;
   }
 
   .btn-confirm-position-selector {

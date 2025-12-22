@@ -993,7 +993,18 @@ function TeamView({ players, onBack }) {
   };
 
   // Handle canceling position requirement selection
-  const handleCancelPositionRequirement = () => {
+  const handleCancelPositionRequirement = (player) => {
+    // Clear position requirements for the player
+    setPositionRequirements(prev => {
+      const newReqs = { ...prev };
+      delete newReqs[player.name];
+      return newReqs;
+    });
+
+    // Deselect the player from trade-out selection
+    setSelectedTradeOutPlayers(prev => prev.filter(p => p.name !== player.name));
+
+    // Close the dropdown
     setShowPositionDropdown(null);
   };
 
