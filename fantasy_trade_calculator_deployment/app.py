@@ -455,6 +455,38 @@ def check_injured_players():
         return jsonify({'error': str(e), 'injured_players': []}), 500
 
 
+@app.route('/lookup_player_prices', methods=['POST'])
+def lookup_player_prices():
+    """
+    Look up prices for players from the database.
+    Used for Format 2 screenshots where prices aren't visible in the OCR text.
+    """
+    try:
+        from trade_recommendations import fill_missing_prices
+        
+        # Extract JSON data
+        data = request.get_json()
+        team_players = data.get('team_players', [])
+        
+        if not team_players:
+            return jsonify({'players': []})
+        
+        # Load data
+        consolidated_data = cached_load_data()
+        
+        # Fill in missing prices from database
+        players_with_prices = fill_missing_prices(team_players, consolidated_data)
+        
+        return jsonify({
+            'players': players_with_prices
+        })
+        
+    except Exception as e:
+        app.logger.error(f"Error in lookup_player_prices: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': str(e), 'players': []}), 500
+
+
 @app.route('/analyze_team_status', methods=['POST'])
 def analyze_team_status():
     """

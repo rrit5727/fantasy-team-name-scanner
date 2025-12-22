@@ -270,3 +270,48 @@ export async function checkBackendHealth() {
   }
 }
 
+/**
+ * Look up player prices from the database
+ * Used for Format 2 screenshots where prices aren't visible in the OCR text
+ * @param {Array} teamPlayers - Array of player objects with name, positions (price may be null/0)
+ * @returns {Promise<Array>} Array of player objects with prices filled in
+ */
+export async function lookupPlayerPrices(teamPlayers) {
+  try {
+    if (!teamPlayers || teamPlayers.length === 0) {
+      return [];
+    }
+
+    const payload = {
+      team_players: teamPlayers.map(player => ({
+        name: player.name,
+        positions: player.positions || [],
+        price: player.price || null
+      }))
+    };
+
+    console.log('Looking up player prices:', payload);
+
+    const response = await fetch(`${API_BASE_URL}/lookup_player_prices`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      console.error('Error looking up player prices:', response.status);
+      return teamPlayers; // Return original players if lookup fails
+    }
+
+    const data = await response.json();
+    console.log('Player prices looked up:', data);
+    
+    return data.players || teamPlayers;
+  } catch (error) {
+    console.error('Error looking up player prices:', error);
+    return teamPlayers; // Return original players if lookup fails
+  }
+}
+

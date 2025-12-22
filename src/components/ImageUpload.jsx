@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import Tesseract from 'tesseract.js';
+import { lookupPlayerPrices } from '../services/tradeApi';
 import './ImageUpload.css';
 
 function ImageUpload({ onPlayersExtracted }) {
@@ -470,19 +471,37 @@ function ImageUpload({ onPlayersExtracted }) {
       }
 
       // Merge with existing screenshot data
-      setScreenshotData(prev => {
-        const allData = [...prev, ...newScreenshotData];
-        const mergedPlayers = mergeAndOrderPlayers(allData);
-        
-        console.log('Final merged players:', mergedPlayers);
-        setExtractedPlayers(mergedPlayers);
-        
-        if (onPlayersExtracted) {
-          onPlayersExtracted(mergedPlayers);
+      const allData = [...screenshotData, ...newScreenshotData];
+      const mergedPlayers = mergeAndOrderPlayers(allData);
+      
+      console.log('Final merged players:', mergedPlayers);
+      
+      // Check if any players have missing prices (Format 2 screenshots)
+      const hasMissingPrices = mergedPlayers.some(p => !p.price || p.price === 0);
+      
+      let finalPlayers = mergedPlayers;
+      if (hasMissingPrices) {
+        console.log('Format 2 detected: Looking up player prices from database...');
+        try {
+          const playersWithPrices = await lookupPlayerPrices(mergedPlayers);
+          // Map the looked-up prices back to the merged players
+          finalPlayers = mergedPlayers.map(player => {
+            const lookedUp = playersWithPrices.find(p => p.name === player.name);
+            return lookedUp ? { ...player, price: lookedUp.price } : player;
+          });
+          console.log('Players with prices:', finalPlayers);
+        } catch (err) {
+          console.error('Failed to look up player prices:', err);
+          // Continue with original players even if lookup fails
         }
-        
-        return allData;
-      });
+      }
+      
+      setExtractedPlayers(finalPlayers);
+      setScreenshotData(allData);
+      
+      if (onPlayersExtracted) {
+        onPlayersExtracted(finalPlayers);
+      }
       
     } catch (err) {
       console.error('Processing error:', err);
