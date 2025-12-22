@@ -1297,11 +1297,15 @@ function TeamView({ players, onBack }) {
     if (preseasonTestApproach && preseasonPriceBands.length > 0) {
       // Use the matching_bands data provided by the backend
       const playerMatchingBands = player.matching_bands || [];
-      console.log('Player', player.name, 'matches bands:', playerMatchingBands.map(b => b.index));
+      console.log('Player', player.name, 'matches bands:', playerMatchingBands.map(b => b.player_name));
 
       // Find an unfilled band that this player can fill, considering position compatibility
+      // Match by player_name instead of index (backend indices may differ from frontend)
       for (const bandInfo of playerMatchingBands) {
-        const bandIndex = bandInfo.index;
+        // Find the band in our frontend array by player_name
+        const bandIndex = preseasonPriceBands.findIndex(b => b.playerName === bandInfo.player_name);
+        if (bandIndex === -1) continue;
+        
         const band = preseasonPriceBands[bandIndex];
 
         // Skip filled bands
@@ -1314,6 +1318,9 @@ function TeamView({ players, onBack }) {
         // Check position compatibility
         const isFlexible = isFlexibleSlot(bandSlot.originalPosition);
         let canFillSlot = false;
+        
+        // Get all positions the player can play (not just primary)
+        const playerPositions = player.positions || [playerPosition];
 
         if (isFlexible) {
           // For flexible slots, check position requirements
@@ -1324,13 +1331,13 @@ function TeamView({ players, onBack }) {
           } else {
             // Player must be able to play at least one of the required positions
             canFillSlot = tradeInPositions.some(requiredPos => {
-              return playerPosition === requiredPos ||
-                     (player.positions && player.positions.includes(requiredPos));
+              return playerPositions.includes(requiredPos);
             });
           }
         } else {
-          // For non-flexible slots, position must match exactly
-          canFillSlot = bandSlot.originalPosition === playerPosition;
+          // For non-flexible slots, check if ANY of the player's positions match
+          // (e.g., Jazz Tevaga with MID/HOK can fill a HOK slot)
+          canFillSlot = playerPositions.includes(bandSlot.originalPosition);
         }
 
         if (canFillSlot) {
@@ -1342,14 +1349,21 @@ function TeamView({ players, onBack }) {
       }
 
       if (!matchingTradeOut) {
-        console.log('Test approach: No available matching price band found for:', player.name);
+        const unfilledBandNames = preseasonPriceBands.filter(b => !b.filled).map(b => b.playerName);
+        console.log('Test approach: No available matching price band found for:', player.name,
+          '\n  Player matches bands for:', playerMatchingBands.map(b => b.player_name),
+          '\n  Unfilled bands:', unfilledBandNames,
+          '\n  Remaining slots:', remainingSlots.map(s => `${s.name} (${s.originalPosition})`));
         return;
       }
     } else {
       // NORMAL APPROACH: Match based on position and requirements
-      // Priority 1: Find a non-flexible slot with matching position
+      // Get all positions the player can play
+      const playerPositions = player.positions || [playerPosition];
+      
+      // Priority 1: Find a non-flexible slot with matching position (any of player's positions)
       matchingTradeOut = remainingSlots.find(out => {
-        return !isFlexibleSlot(out.originalPosition) && out.originalPosition === playerPosition;
+        return !isFlexibleSlot(out.originalPosition) && playerPositions.includes(out.originalPosition);
       });
 
       // Priority 2: If no position match, find a flexible slot where the player satisfies the position requirements
@@ -1366,8 +1380,7 @@ function TeamView({ players, onBack }) {
 
           // Player must be able to play at least one of the required positions
           return tradeInPositions.some(requiredPos => {
-            return playerPosition === requiredPos ||
-                   (player.positions && player.positions.includes(requiredPos));
+            return playerPositions.includes(requiredPos);
           });
         });
       }
@@ -1507,9 +1520,9 @@ function TeamView({ players, onBack }) {
 
     // TEST APPROACH: Filter by price bands using backend's matching_bands data
     if (preseasonTestApproach && preseasonPriceBands.length > 0) {
-      // Get unfilled bands
+      // Get unfilled bands - use player names for matching (not indices)
       const unfilledBands = preseasonPriceBands.filter(band => !band.filled);
-      const unfilledBandIndices = new Set(unfilledBands.map(band => preseasonPriceBands.indexOf(band)));
+      const unfilledBandPlayerNames = new Set(unfilledBands.map(band => band.playerName));
       console.log('Test approach - Unfilled bands:', unfilledBands.map(b => `${b.playerName}: $${b.minPrice/1000}k-$${b.maxPrice/1000}k`));
 
       return preseasonAvailableTradeIns.filter(player => {
@@ -1523,21 +1536,39 @@ function TeamView({ players, onBack }) {
         const playerMatchingBands = player.matching_bands || [];
 
         // Check if player can fill any unfilled band with position compatibility
+        // Match by player_name instead of index (backend indices may differ from frontend)
         return playerMatchingBands.some(bandInfo => {
-          const bandIndex = bandInfo.index;
+          // Only consider unfilled bands - match by player_name
+          if (!unfilledBandPlayerNames.has(bandInfo.player_name)) return false;
 
-          // Only consider unfilled bands
-          if (!unfilledBandIndices.has(bandIndex)) return false;
+          // Find the band in our frontend array by player_name
+          const band = preseasonPriceBands.find(b => b.playerName === bandInfo.player_name);
+          if (!band) return false;
 
           // Check position compatibility with the band's original slot
-          const band = preseasonPriceBands[bandIndex];
           const bandSlot = remainingSlots.find(s => s.name === band.playerName);
           if (!bandSlot) return false;
 
           const isFlexible = isFlexibleSlot(bandSlot.originalPosition);
-          const positionMatches = bandSlot.originalPosition === playerPos;
+          
+          // Check if ANY of the player's positions match the slot requirement
+          // (not just the primary position - secondary positions count too!)
+          const playerPositions = player.positions || [playerPos];
+          const positionMatches = playerPositions.includes(bandSlot.originalPosition);
 
-          return isFlexible || positionMatches;
+          // For flexible slots, also check if player matches the trade_in_positions requirements
+          if (isFlexible) {
+            const tradeInPositions = bandSlot.trade_in_positions;
+            if (tradeInPositions && tradeInPositions.length > 0) {
+              const matchesRequirement = tradeInPositions.some(requiredPos =>
+                playerPositions.includes(requiredPos)
+              );
+              return matchesRequirement;
+            }
+            return true; // No specific requirements, any position can fill flexible slots
+          }
+
+          return positionMatches;
         });
       });
     }

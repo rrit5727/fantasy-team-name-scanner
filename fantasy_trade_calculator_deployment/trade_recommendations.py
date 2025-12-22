@@ -644,37 +644,115 @@ def calculate_preseason_trade_in_candidates(
     latest_data['Projection'] = pd.to_numeric(latest_data['Projection'], errors='coerce').fillna(0)
     latest_data['Price'] = pd.to_numeric(latest_data['Price'], errors='coerce').fillna(0)
     
-    # TEST APPROACH: Filter by price bands from trade-out players
+    # TEST APPROACH: Filter by cascading price bands from trade-out players
     if test_approach and trade_out_players:
-        print(f"\n=== TEST APPROACH: Price band filtering ===")
-        print(f"Trade-out players: {[(p.get('name'), p.get('price'), p.get('position')) for p in trade_out_players]}")
+        print(f"\n=== TEST APPROACH: Cascading price band filtering ===")
+        print(f"Trade-out players: {[(p.get('name'), p.get('price'), p.get('originalPosition'), p.get('trade_in_positions')) for p in trade_out_players]}")
 
-        # Build price bands from trade-out players
-        price_bands = []
+        # Build cascading price bands from trade-out players
+        # For each trade-out player, find the lowest price band that contains players with diff >= 7
+        # AND that match the position requirement for that slot
+        final_bands = []
+
         for player in trade_out_players:
-            price = player.get('price', 0)
-            if price > 0:
-                min_price = price - PRICE_BAND_MARGIN
-                max_price = price + PRICE_BAND_MARGIN
-                price_bands.append({
-                    'player_name': player.get('name'),
-                    'position': player.get('position'),
+            player_price = player.get('price', 0)
+            if player_price <= 0:
+                continue
+
+            player_name = player.get('name')
+            # Frontend sends 'position', not 'originalPosition'
+            original_position = player.get('position') or player.get('originalPosition')
+            trade_in_positions = player.get('trade_in_positions', [])  # Position requirements set by frontend
+            
+            # Use trade_in_positions directly as the required positions
+            # Frontend always sets this: for positional slots it's [position], for flexible slots it's user-selected
+            if isinstance(trade_in_positions, list) and trade_in_positions:
+                required_positions = trade_in_positions
+            elif trade_in_positions:
+                required_positions = [trade_in_positions]
+            else:
+                # Fallback: use the slot position if trade_in_positions not set
+                required_positions = [original_position] if original_position else []
+            
+            print(f"  {player_name}: slot={original_position}, required_positions={required_positions}")
+
+            # Start with original band and cascade downward until we find players with diff >= 7
+            # that also match the position requirement
+            band_offset = 0
+            found_valid_band = False
+
+            while not found_valid_band and band_offset < 10:  # Prevent infinite loops
+                if band_offset == 0:
+                    # Original band: ±75k
+                    min_price = player_price - PRICE_BAND_MARGIN
+                    max_price = player_price + PRICE_BAND_MARGIN
+                else:
+                    # Lower bands: center - (75k * (offset + 1)) to center - (75k * offset)
+                    min_price = player_price - (PRICE_BAND_MARGIN * (band_offset + 1))
+                    max_price = player_price - (PRICE_BAND_MARGIN * band_offset)
+
+                # Check if this band contains players with diff >= 7 AND matching position
+                band_players = latest_data[
+                    (latest_data['Price'] >= min_price) &
+                    (latest_data['Price'] <= max_price) &
+                    (latest_data['Diff'] >= 7)
+                ]
+                
+                # If we have position requirements, also filter by position
+                if required_positions and len(band_players) > 0:
+                    position_mask = (
+                        band_players['POS1'].isin(required_positions) |
+                        band_players['POS2'].fillna('').isin(required_positions)
+                    )
+                    band_players = band_players[position_mask]
+
+                if len(band_players) > 0:
+                    # Found a valid band with players having diff >= 7 AND matching position
+                    final_bands.append({
+                        'player_name': player_name,
+                        'position': original_position,
+                        'trade_in_positions': required_positions,
+                        'min_price': min_price,
+                        'max_price': max_price,
+                        'center_price': player_price,
+                        'band_offset': band_offset
+                    })
+                    print(f"  -> Price band for {player_name} ({original_position}): ${min_price:,} - ${max_price:,} (offset: {band_offset}, {len(band_players)} players)")
+                    found_valid_band = True
+                else:
+                    print(f"  -> No valid players (diff >= 7, positions {required_positions}) in band ${min_price:,} - ${max_price:,}, trying lower band...")
+                    band_offset += 1
+
+            if not found_valid_band:
+                # Fallback: use original band even if no players with diff >= 7 and matching position
+                min_price = player_price - PRICE_BAND_MARGIN
+                max_price = player_price + PRICE_BAND_MARGIN
+                final_bands.append({
+                    'player_name': player_name,
+                    'position': original_position,
+                    'trade_in_positions': required_positions,
                     'min_price': min_price,
                     'max_price': max_price,
-                    'center_price': price
+                    'center_price': player_price,
+                    'band_offset': band_offset
                 })
-                print(f"Price band for {player.get('name')} ({player.get('position')}): ${min_price:,} - ${max_price:,}")
+                print(f"  -> Fallback: Using original band for {player_name} (${min_price:,} - ${max_price:,}) - no valid players found after {band_offset} cascades")
 
-        # Filter players to those within any price band
-        if price_bands:
-            # Create a mask for players within any price band
+        # Filter players to those within any final price band AND with diff >= 7
+        # (The cascading logic finds bands based on players with diff >= 7, so we should only show those players)
+        if final_bands:
+            # Create a mask for players within any final price band
             price_mask = pd.Series([False] * len(latest_data), index=latest_data.index)
-            for band in price_bands:
+            for band in final_bands:
                 band_mask = (latest_data['Price'] >= band['min_price']) & (latest_data['Price'] <= band['max_price'])
                 price_mask = price_mask | band_mask
 
             latest_data = latest_data[price_mask]
-            print(f"Players after price band filtering: {len(latest_data)}")
+            print(f"Players after cascading price band filtering: {len(latest_data)}")
+            
+            # Also filter by diff >= 7 to ensure only valuable trade-in options are shown
+            latest_data = latest_data[latest_data['Diff'] >= 7]
+            print(f"Players after diff >= 7 filtering: {len(latest_data)}")
 
     else:
         # Normal approach: filter by salary cap
@@ -750,15 +828,28 @@ def calculate_preseason_trade_in_candidates(
         
         # If test approach, add price band info to help frontend filtering
         if test_approach and trade_out_players:
-            # Find which band(s) this player fits into
+            # Find which final band(s) this player fits into (price AND position must match)
             matching_bands = []
-            for i, band in enumerate(price_bands):
-                if band['min_price'] <= row['Price'] <= band['max_price']:
-                    matching_bands.append({
-                        'index': i,
-                        'player_name': band['player_name'],
-                        'position': band['position']
-                    })
+            for i, band in enumerate(final_bands):
+                # Check price is within band
+                if not (band['min_price'] <= row['Price'] <= band['max_price']):
+                    continue
+                
+                # Check position compatibility
+                band_positions = band.get('trade_in_positions', [])
+                if band_positions:
+                    # Player must have at least one position that matches the requirement
+                    player_positions = positions_list  # Already computed above
+                    position_matches = any(pos in band_positions for pos in player_positions)
+                    if not position_matches:
+                        continue
+                
+                matching_bands.append({
+                    'index': i,
+                    'player_name': band['player_name'],
+                    'position': band['position'],
+                    'trade_in_positions': band_positions
+                })
             candidate['matching_bands'] = matching_bands
         
         candidates.append(candidate)
