@@ -32,19 +32,13 @@ export async function calculateTeamTrades(
       throw new Error('No team players provided');
     }
 
-    // Filter out players without prices for now (though backend can handle it)
-    const playersWithPrices = teamPlayers.filter(p => p.price && p.price > 0);
-    
-    if (playersWithPrices.length === 0) {
-      throw new Error('No players with valid prices found. Please ensure prices are extracted from screenshots.');
-    }
-
-    // Prepare request payload
+    // Send all players to backend - backend will look up prices from database if not provided
+    // This supports Format 2 screenshots where prices aren't visible
     const payload = {
-      team_players: playersWithPrices.map(player => ({
+      team_players: teamPlayers.map(player => ({
         name: player.name,
         positions: player.positions || [],
-        price: player.price || 0
+        price: player.price || null  // null prices will be looked up by backend
       })),
       cash_in_bank: cashInBank,
       strategy: strategy,
@@ -116,17 +110,17 @@ export async function calculatePreseasonTradeIns(
       throw new Error('No trade-out players provided');
     }
 
-    // Prepare request payload
+    // Prepare request payload - backend will look up prices from database if not provided
     const payload = {
       team_players: teamPlayers.map(player => ({
         name: player.name,
         positions: player.positions || [],
-        price: player.price || 0
+        price: player.price || null
       })),
       trade_out_players: tradeOutPlayers.map(player => ({
         name: player.name,
         positions: player.positions || [],
-        price: player.price || 0,
+        price: player.price || null,
         position: player.originalPosition || player.positions?.[0],
         trade_in_positions: player.trade_in_positions || null
       })),
@@ -178,7 +172,7 @@ export async function checkInjuredPlayers(teamPlayers) {
       team_players: teamPlayers.map(player => ({
         name: player.name,
         positions: player.positions || [],
-        price: player.price || 0
+        price: player.price || null
       }))
     };
 
@@ -220,7 +214,7 @@ export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
       team_players: teamPlayers.map(player => ({
         name: player.name,
         positions: player.positions || [],
-        price: player.price || 0
+        price: player.price || null
       })),
       low_upside_count: lowUpsideCount
     };

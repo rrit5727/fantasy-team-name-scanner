@@ -4,6 +4,51 @@ from nrl_trade_calculator import calculate_trade_options, match_abbreviated_name
 from bye_analyser import apply_bye_weighting
 
 
+def fill_missing_prices(team_players: List[Dict], consolidated_data: pd.DataFrame) -> List[Dict]:
+    """
+    Fill in missing prices for players by looking them up in the database.
+    This is needed for Format 2 screenshots where prices aren't visible.
+    
+    Parameters:
+    team_players (List[Dict]): List of player dictionaries with 'name', 'positions', 'price' (price may be None/0)
+    consolidated_data (pd.DataFrame): DataFrame containing player data with Price column
+    
+    Returns:
+    List[Dict]: Same list with prices filled in from database where missing
+    """
+    if not team_players:
+        return team_players
+    
+    # Get the latest round data
+    latest_round = consolidated_data['Round'].max()
+    latest_data = consolidated_data[consolidated_data['Round'] == latest_round]
+    
+    filled_players = []
+    for player in team_players:
+        player_copy = player.copy()
+        
+        # Check if price is missing (None, 0, or not present)
+        price = player_copy.get('price')
+        if price is None or price == 0:
+            # Look up price from database
+            player_name = player_copy['name']
+            full_name = match_abbreviated_name_to_full(player_name, consolidated_data)
+            
+            # Find player in latest data
+            player_data = latest_data[latest_data['Player'] == full_name]
+            if not player_data.empty:
+                db_price = player_data.iloc[0]['Price']
+                player_copy['price'] = int(db_price) if pd.notna(db_price) else 0
+                print(f"Filled price for {player_name}: ${player_copy['price']:,}")
+            else:
+                print(f"Warning: Could not find price for {player_name} in database")
+                player_copy['price'] = 0
+        
+        filled_players.append(player_copy)
+    
+    return filled_players
+
+
 def identify_injured_players(team_players: List[Dict], consolidated_data: pd.DataFrame) -> List[Dict]:
     """
     Identify players from the user's team who have Injured=TRUE in the database.
@@ -522,6 +567,11 @@ def calculate_combined_trade_recommendations(
     Returns:
     Dict: Dictionary with 'trade_out' and 'trade_in' recommendations
     """
+    # Step 0: Fill in missing prices from database (for Format 2 screenshots)
+    team_players = fill_missing_prices(team_players, consolidated_data)
+    if preselected_trade_outs:
+        preselected_trade_outs = fill_missing_prices(preselected_trade_outs, consolidated_data)
+    
     # Step 1: Use pre-selected trade-outs if provided, otherwise calculate recommendations
     if preselected_trade_outs:
         trade_out_players = preselected_trade_outs
@@ -618,6 +668,10 @@ def calculate_preseason_trade_in_candidates(
     List[Dict]: List of trade-in candidate players
     """
     PRICE_BAND_MARGIN = 75000  # ±$75k price band
+    
+    # Fill in missing prices for trade-out players (for Format 2 screenshots)
+    if trade_out_players:
+        trade_out_players = fill_missing_prices(trade_out_players, consolidated_data)
     
     latest_round = consolidated_data['Round'].max()
     latest_data = consolidated_data[consolidated_data['Round'] == latest_round].copy()
