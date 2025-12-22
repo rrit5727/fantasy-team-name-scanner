@@ -400,25 +400,40 @@ def generate_trade_options(
                 if not has_valid_position(trade_in_player, all_positions):
                     return False
 
-            # For each trade-out player with specific requirements, ensure at least one trade-in player can satisfy them
+            # Check per-trade-out-player requirements with DPP limitation:
+            # Each trade-out player with requirements must be satisfied by at least one trade-in player,
+            # but each trade-in player can only satisfy one trade-out player's requirements
+
+            # First, collect unsatisfied trade-out requirements
+            unsatisfied_requirements = []
             for trade_out_req in traded_out_positions:
                 required_positions = trade_out_req.get('required_positions', [])
+                if required_positions:
+                    unsatisfied_requirements.append(required_positions)
 
-                # Skip if no specific requirements (e.g., all positions selected or INT/EMG with no selection)
-                if not required_positions:
+            if not unsatisfied_requirements:
+                return True  # No requirements to satisfy
+
+            # For each trade-in player, see which requirements they can satisfy
+            # Each trade-in player can only satisfy one requirement group
+            satisfied_count = 0
+            used_players = set()
+
+            for trade_in_player in player_combo:
+                if trade_in_player['Player'] in used_players:
                     continue
 
-                # Check if at least one trade-in player can satisfy this trade-out player's requirements
-                satisfied = False
-                for trade_in_player in player_combo:
-                    if has_valid_position(trade_in_player, required_positions):
-                        satisfied = True
+                # Check if this player can satisfy any unsatisfied requirement
+                for i, req_positions in enumerate(unsatisfied_requirements):
+                    if any(pos in position_mapping[trade_in_player['Player']] for pos in req_positions):
+                        # This player can satisfy this requirement
+                        unsatisfied_requirements.pop(i)  # Remove satisfied requirement
+                        used_players.add(trade_in_player['Player'])
+                        satisfied_count += 1
                         break
 
-                if not satisfied:
-                    return False
-
-            return True
+            # All requirements must be satisfied
+            return len(unsatisfied_requirements) == 0
         else:
             # Old format: each player must have at least one valid position (backward compatibility)
             if not all(has_valid_position(player, traded_out_positions) for player in player_combo):
@@ -692,20 +707,20 @@ def generate_trade_options(
                     
         else:  # maximize_value - use Diff
             # For 2+ player trades, find combinations with highest total Diff
-            for i, first_player in enumerate(players):
-                if first_player['Player'] in used_players or first_player['Price'] > salary_freed:
+            for i in range(len(players)):
+                if players[i]['Player'] in used_players:
                     continue
-                
-                # Use all available players
-                second_player_candidates = players
-                
+
+                first_player = players[i]
+
                 # Find the best valid second player
                 best_second_player = None
-                best_j = -1
-                found_match = False
-                for j, second_player in enumerate(second_player_candidates):
-                    if second_player['Player'] == first_player['Player'] or second_player['Player'] in used_players:
+                best_total_diff = -1
+                for j in range(len(players)):
+                    if j == i or players[j]['Player'] in used_players:
                         continue
+
+                    second_player = players[j]
 
                     # Check if the combination meets position requirements
                     position_valid = is_valid_trade_combo([first_player, second_player])
@@ -715,13 +730,11 @@ def generate_trade_options(
 
                     total_price = first_player['Price'] + second_player['Price']
                     if total_price <= salary_freed:
-                        # For bye round mode, prefer players higher in the list (better bye grading)
-                        if best_second_player is None or (target_bye_round and j < best_j):
+                        total_diff = first_player['Diff'] + second_player['Diff']
+                        # Choose the combination with highest total diff
+                        if best_second_player is None or total_diff > best_total_diff:
                             best_second_player = second_player
-                            best_j = j
-                        # In normal mode, take the first valid one
-                        if not target_bye_round:
-                            break
+                            best_total_diff = total_diff
 
                 if best_second_player:
                     total_price = first_player['Price'] + best_second_player['Price']
@@ -729,9 +742,8 @@ def generate_trade_options(
                     valid_combinations.append(combo)
                     used_players.add(first_player['Player'])
                     used_players.add(best_second_player['Player'])
-                    found_match = True
-                
-                if found_match and len(valid_combinations) >= max_options:
+
+                if len(valid_combinations) >= max_options:
                     break
     
     # Sort the final combinations before returning
