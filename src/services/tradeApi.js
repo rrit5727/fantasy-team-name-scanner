@@ -199,15 +199,23 @@ export async function checkInjuredPlayers(teamPlayers) {
 }
 
 /**
- * Analyze team status - get both injured players and low-upside (overvalued) players
+ * Analyze team status - get injured players and overvalued players (by threshold)
  * @param {Array} teamPlayers - Array of player objects with name, positions, price
- * @param {number} lowUpsideCount - Number of low-upside players to identify (default 2)
- * @returns {Promise<Object>} Object with injured_players and low_upside_players arrays
+ * @returns {Promise<Object>} Object with injured_players, urgent_overvalued_players, overvalued_players arrays
+ * 
+ * Overvalued categories (based on Diff value):
+ * - urgent_overvalued_players: Diff <= -7 (very overvalued, losing lots of money)
+ * - overvalued_players: -7 < Diff <= -1 (moderately overvalued)
  */
-export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
+export async function analyzeTeamStatus(teamPlayers) {
   try {
     if (!teamPlayers || teamPlayers.length === 0) {
-      return { injured_players: [], low_upside_players: [], not_selected_players: [] };
+      return { 
+        injured_players: [], 
+        urgent_overvalued_players: [], 
+        overvalued_players: [], 
+        not_selected_players: [] 
+      };
     }
 
     const payload = {
@@ -215,8 +223,7 @@ export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
         name: player.name,
         positions: player.positions || [],
         price: player.price || null
-      })),
-      low_upside_count: lowUpsideCount
+      }))
     };
 
     const response = await fetch(`${API_BASE_URL}/analyze_team_status`, {
@@ -231,14 +238,20 @@ export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
       console.error('Error analyzing team status:', response.status);
       // Fallback to just checking injured players if endpoint doesn't exist
       const injured = await checkInjuredPlayers(teamPlayers);
-      return { injured_players: injured, low_upside_players: [], not_selected_players: [] };
+      return { 
+        injured_players: injured, 
+        urgent_overvalued_players: [], 
+        overvalued_players: [], 
+        not_selected_players: [] 
+      };
     }
 
     const data = await response.json();
     console.log('Team analysis complete:', data);
     return {
       injured_players: data.injured_players || [],
-      low_upside_players: data.low_upside_players || [],
+      urgent_overvalued_players: data.urgent_overvalued_players || [],
+      overvalued_players: data.overvalued_players || [],
       not_selected_players: data.not_selected_players || [],
       junk_cheapies: data.junk_cheapies || []
     };
@@ -247,9 +260,18 @@ export async function analyzeTeamStatus(teamPlayers, lowUpsideCount = 2) {
     // Fallback to just checking injured players
     try {
       const injured = await checkInjuredPlayers(teamPlayers);
-      return { injured_players: injured, low_upside_players: [] };
+      return { 
+        injured_players: injured, 
+        urgent_overvalued_players: [], 
+        overvalued_players: [] 
+      };
     } catch {
-      return { injured_players: [], low_upside_players: [], not_selected_players: [] };
+      return { 
+        injured_players: [], 
+        urgent_overvalued_players: [], 
+        overvalued_players: [], 
+        not_selected_players: [] 
+      };
     }
   }
 }

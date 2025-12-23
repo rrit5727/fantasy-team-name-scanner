@@ -249,7 +249,9 @@
 .position-row.position-int .not-selected-indicator .tooltip,
 .position-row.position-emg .not-selected-indicator .tooltip,
 .position-row.position-int .lowupside-indicator .tooltip,
-.position-row.position-emg .lowupside-indicator .tooltip {
+.position-row.position-emg .lowupside-indicator .tooltip,
+.position-row.position-int .urgent-overvalued-indicator .tooltip,
+.position-row.position-emg .urgent-overvalued-indicator .tooltip {
   font-size: 0.7rem;
   padding: 4px 8px;
 }
@@ -262,6 +264,16 @@
   top: -4px;
   right: -4px;
   padding: 1px;
+}
+
+/* Smaller urgent-overvalued indicator for INT/EMG rows */
+.position-row.position-int .urgent-overvalued-indicator,
+.position-row.position-emg .urgent-overvalued-indicator {
+  width: 18px;
+  height: 18px;
+  top: -4px;
+  right: -4px;
+  font-size: 11px;
 }
 
 .position-row.position-int .lowupside-icon,
@@ -326,6 +338,7 @@
 .injury-indicator .tooltip,
 .not-selected-indicator .tooltip,
 .lowupside-indicator .tooltip,
+.urgent-overvalued-indicator .tooltip,
 .junk-cheap-indicator .tooltip {
   position: absolute;
   top: -35px;
@@ -385,6 +398,7 @@
 .injury-indicator:hover .tooltip,
 .not-selected-indicator:hover .tooltip,
 .lowupside-indicator:hover .tooltip,
+.urgent-overvalued-indicator:hover .tooltip,
 .junk-cheap-indicator:hover .tooltip {
   opacity: 1;
   visibility: visible;
@@ -411,6 +425,33 @@
 .lowupside-icon {
   width: 18px;
   height: 18px;
+}
+
+/* Urgent Overvalued Indicator - Alarm emoji for very overvalued players (Diff <= -7) */
+.urgent-overvalued-indicator {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 24px;
+  height: 24px;
+  background: #1a1a1a;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  font-size: 14px;
+}
+
+.urgent-overvalued-indicator .tooltip {
+  color: #ff4444;
+}
+
+.urgent-overvalued-indicator:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  top: -40px;
 }
 
 .junk-cheap-indicator {
@@ -2081,6 +2122,15 @@
     height: 14px;
   }
 
+  /* Smaller urgent-overvalued indicator on mobile */
+  .urgent-overvalued-indicator {
+    width: 18px;
+    height: 18px;
+    top: -4px;
+    right: -4px;
+    font-size: 11px;
+  }
+
   /* Even smaller for INT/EMG on mobile */
   .position-row.position-int .injury-indicator,
   .position-row.position-emg .injury-indicator {
@@ -2112,7 +2162,8 @@
 
   /* Mobile tooltip adjustments */
   .injury-indicator .tooltip,
-  .lowupside-indicator .tooltip {
+  .lowupside-indicator .tooltip,
+  .urgent-overvalued-indicator .tooltip {
     font-size: 0.7rem;
     padding: 4px 8px;
   }
@@ -2129,6 +2180,15 @@
   .position-row.position-emg .lowupside-icon {
     width: 11px;
     height: 11px;
+  }
+
+  .position-row.position-int .urgent-overvalued-indicator,
+  .position-row.position-emg .urgent-overvalued-indicator {
+    width: 15px;
+    height: 15px;
+    top: -3px;
+    right: -3px;
+    font-size: 9px;
   }
   
   /* Loading overlay mobile */

@@ -179,6 +179,97 @@ def identify_low_upside_players(
     return low_upside_players
 
 
+def identify_overvalued_players_by_threshold(
+    team_players: List[Dict], 
+    consolidated_data: pd.DataFrame, 
+    exclude_names: List[str] = None,
+    urgent_threshold: float = -7.0,
+    overvalued_threshold: float = -1.0
+) -> Dict[str, List[Dict]]:
+    """
+    Identify overvalued players from the user's team using Diff thresholds.
+    
+    Categories:
+    - Urgent overvalued (very overvalued): Diff <= urgent_threshold (default -7)
+    - Overvalued: urgent_threshold < Diff <= overvalued_threshold (default -7 < Diff <= -1)
+    
+    Parameters:
+    team_players (List[Dict]): List of player dictionaries with 'name', 'positions', 'price'
+    consolidated_data (pd.DataFrame): DataFrame containing player data with Diff column
+    exclude_names (List[str]): Names to exclude (e.g., already identified injured players)
+    urgent_threshold (float): Diff threshold for urgent overvalued (default -7)
+    overvalued_threshold (float): Diff threshold for regular overvalued (default -1)
+    
+    Returns:
+    Dict with 'urgent_overvalued' and 'overvalued' lists of player dicts
+    """
+    result = {
+        'urgent_overvalued': [],
+        'overvalued': []
+    }
+    
+    if not team_players:
+        return result
+    
+    # Get the latest round data
+    latest_round = consolidated_data['Round'].max()
+    latest_data = consolidated_data[consolidated_data['Round'] == latest_round].copy()
+    
+    # Build a mapping from abbreviated names to full names
+    name_mapping = {}  # abbreviated -> full
+    reverse_mapping = {}  # full -> abbreviated
+    for player in team_players:
+        abbrev_name = player['name']
+        full_name = match_abbreviated_name_to_full(abbrev_name, consolidated_data)
+        name_mapping[abbrev_name] = full_name
+        reverse_mapping[full_name] = abbrev_name
+    
+    # Get the set of full names for DB lookups
+    full_names_set = set(name_mapping.values())
+    
+    # Get excluded full names
+    excluded_full_names = set()
+    if exclude_names:
+        for name in exclude_names:
+            full_name = match_abbreviated_name_to_full(name, consolidated_data)
+            excluded_full_names.add(full_name)
+    
+    # Filter to only team players and exclude specified names
+    team_data = latest_data[latest_data['Player'].isin(full_names_set)]
+    team_data = team_data[~team_data['Player'].isin(excluded_full_names)]
+    
+    # Convert Diff to numeric
+    team_data = team_data.copy()
+    team_data['Diff'] = pd.to_numeric(team_data['Diff'], errors='coerce').fillna(0)
+    
+    # Categorize players by threshold
+    for _, row in team_data.iterrows():
+        diff_value = float(row['Diff'])
+        full_name = row['Player']
+        abbrev_name = reverse_mapping.get(full_name, full_name)
+        
+        # Find the original player data to get the price
+        original_player = next((p for p in team_players if p['name'] == abbrev_name), None)
+        
+        player_data = {
+            'name': abbrev_name,
+            'positions': [row['POS1']] + ([row['POS2']] if pd.notna(row.get('POS2')) else []),
+            'price': original_player.get('price', 0) if original_player else int(row['Price']),
+            'diff': diff_value
+        }
+        
+        if diff_value <= urgent_threshold:
+            # Very overvalued - urgent
+            result['urgent_overvalued'].append(player_data)
+        elif diff_value <= overvalued_threshold:
+            # Moderately overvalued
+            result['overvalued'].append(player_data)
+    
+    print(f"Urgent overvalued players: {[p['name'] for p in result['urgent_overvalued']]}")
+    print(f"Overvalued players: {[p['name'] for p in result['overvalued']]}")
+    return result
+
+
 def identify_junk_cheapies(
     team_players: List[Dict],
     consolidated_data: pd.DataFrame,

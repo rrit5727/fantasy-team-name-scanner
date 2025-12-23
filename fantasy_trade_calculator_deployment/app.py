@@ -490,21 +490,25 @@ def lookup_player_prices():
 @app.route('/analyze_team_status', methods=['POST'])
 def analyze_team_status():
     """
-    Analyze team status - returns injured players, low-upside (overvalued) players, and not selected players.
+    Analyze team status - returns injured players, overvalued players (by threshold), and not selected players.
     This is used to front-load the analysis and display indicators on the My Team screen.
+    
+    Overvalued categories (based on Diff value):
+    - urgent_overvalued: Diff <= -7 (very overvalued, losing lots of money)
+    - overvalued: -7 < Diff <= -1 (moderately overvalued)
     """
     try:
-        from trade_recommendations import identify_injured_players, identify_low_upside_players, identify_junk_cheapies
+        from trade_recommendations import identify_injured_players, identify_overvalued_players_by_threshold, identify_junk_cheapies
 
         # Extract JSON data
         data = request.get_json()
         team_players = data.get('team_players', [])
-        low_upside_count = int(data.get('low_upside_count', 2))
 
         if not team_players:
             return jsonify({
                 'injured_players': [],
-                'low_upside_players': [],
+                'urgent_overvalued_players': [],
+                'overvalued_players': [],
                 'not_selected_players': []
             })
 
@@ -515,17 +519,17 @@ def analyze_team_status():
         injured = identify_injured_players(team_players, consolidated_data)
         injured_names = [p['name'] for p in injured]
 
-        # Get low-upside players (excluding injured ones)
-        low_upside = identify_low_upside_players(
+        # Get overvalued players by threshold (excluding injured ones)
+        overvalued_result = identify_overvalued_players_by_threshold(
             team_players,
             consolidated_data,
-            count=low_upside_count,
             exclude_names=injured_names
         )
-        low_upside_names = [p['name'] for p in low_upside]
+        urgent_overvalued_names = [p['name'] for p in overvalued_result['urgent_overvalued']]
+        overvalued_names = [p['name'] for p in overvalued_result['overvalued']]
 
-        # Get junk cheapies (excluding injured and low-upside players)
-        excluded_names = injured_names + low_upside_names
+        # Get junk cheapies (excluding injured and all overvalued players)
+        excluded_names = injured_names + urgent_overvalued_names + overvalued_names
         junk_cheapies = identify_junk_cheapies(
             team_players,
             consolidated_data,
@@ -607,7 +611,8 @@ def analyze_team_status():
 
         return jsonify({
             'injured_players': injured_names,
-            'low_upside_players': low_upside_names,
+            'urgent_overvalued_players': urgent_overvalued_names,
+            'overvalued_players': overvalued_names,
             'not_selected_players': not_selected_names,
             'junk_cheapies': junk_cheapies_names
         })
@@ -618,7 +623,8 @@ def analyze_team_status():
         return jsonify({
             'error': str(e),
             'injured_players': [],
-            'low_upside_players': [],
+            'urgent_overvalued_players': [],
+            'overvalued_players': [],
             'not_selected_players': []
         }), 500
 

@@ -46,7 +46,8 @@ function TeamDisplay({
   onPreseasonClick,
   // Player status indicator props
   injuredPlayers = [],
-  lowUpsidePlayers = [],
+  urgentOvervaluedPlayers = [],
+  overvaluedPlayers = [],
   notSelectedPlayers = [],
   junkCheapies = [],
   // Normal mode trade recommendations
@@ -101,11 +102,19 @@ function TeamDisplay({
     );
   };
 
-  // Helper to check if player is low-upside/overvalued (by name string match)
-  const isPlayerLowUpside = (player) => {
-    if (!player || !lowUpsidePlayers || lowUpsidePlayers.length === 0) return false;
-    return lowUpsidePlayers.some(lowUpsideName =>
-      lowUpsideName.toLowerCase() === player.name?.toLowerCase()
+  // Helper to check if player is urgent overvalued (very overvalued, Diff <= -7)
+  const isPlayerUrgentOvervalued = (player) => {
+    if (!player || !urgentOvervaluedPlayers || urgentOvervaluedPlayers.length === 0) return false;
+    return urgentOvervaluedPlayers.some(name =>
+      name.toLowerCase() === player.name?.toLowerCase()
+    );
+  };
+
+  // Helper to check if player is overvalued (moderately overvalued, -7 < Diff <= -1)
+  const isPlayerOvervalued = (player) => {
+    if (!player || !overvaluedPlayers || overvaluedPlayers.length === 0) return false;
+    return overvaluedPlayers.some(name =>
+      name.toLowerCase() === player.name?.toLowerCase()
     );
   };
 
@@ -141,7 +150,9 @@ function TeamDisplay({
 
     // Check player status
     const isInjured = isPlayerInjured(player);
-    const isLowUpside = isPlayerLowUpside(player);
+    const isUrgentOvervalued = isPlayerUrgentOvervalued(player);
+    const isOvervalued = isPlayerOvervalued(player);
+    const isAnyOvervalued = isUrgentOvervalued || isOvervalued;
     const isNotSelected = isPlayerNotSelected(player);
     const isJunkCheap = isPlayerJunkCheap(player);
 
@@ -168,7 +179,7 @@ function TeamDisplay({
       }
       // Check if player is selected for trade out
       else if (isPlayerInList(player, preseasonSelectedOut)) {
-        // Use different selected styles based on whether injured or low-upside
+        // Use different selected styles based on whether injured or overvalued
         if (isInjured) {
           cardClasses += ' preseason-selected-out-injured';
         } else {
@@ -177,7 +188,7 @@ function TeamDisplay({
       }
       // Check if player is highlighted as a trade-out recommendation
       else if (isPlayerInList(player, preseasonHighlighted)) {
-        // Use different highlight styles based on whether injured or low-upside
+        // Use different highlight styles based on whether injured or overvalued
         if (isInjured) {
           cardClasses += ' preseason-highlight-injured';
         } else {
@@ -238,8 +249,15 @@ function TeamDisplay({
             <div className="tooltip">player injured</div>
           </div>
         )}
-        {/* Low upside indicator - green banknote with red arrow in top-right */}
-        {isLowUpside && !isInjured && (
+        {/* Urgent overvalued indicator - alarm emoji (Diff <= -7) */}
+        {isUrgentOvervalued && !isInjured && (
+          <div className="urgent-overvalued-indicator">
+            🚨
+            <div className="tooltip">Very overvalued: losing money</div>
+          </div>
+        )}
+        {/* Overvalued indicator - green banknote with red arrow (-7 < Diff <= -1) */}
+        {isOvervalued && !isInjured && !isUrgentOvervalued && (
           <div className="lowupside-indicator">
             <svg viewBox="0 0 24 24" className="lowupside-icon">
               {/* Banknote (green) */}
@@ -249,11 +267,11 @@ function TeamDisplay({
               {/* Downward arrow (red) */}
               <path d="M18 4 L18 16 L14 12 M18 16 L22 12" stroke="#e53935" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <div className="tooltip">overvalued - will lose money</div>
+            <div className="tooltip">overvalued</div>
           </div>
         )}
         {/* Not selected indicator - prohibition symbol */}
-        {isNotSelected && !isInjured && !isLowUpside && (
+        {isNotSelected && !isInjured && !isAnyOvervalued && (
           <div className="not-selected-indicator">
             <svg viewBox="0 0 24 24" className="prohibition-icon">
               {/* Circle */}
@@ -265,7 +283,7 @@ function TeamDisplay({
           </div>
         )}
         {/* Junk cheapies indicator - poo emoji */}
-        {isJunkCheap && !isInjured && !isLowUpside && (
+        {isJunkCheap && !isInjured && !isAnyOvervalued && !isNotSelected && (
           <div className="junk-cheap-indicator">
             💩
             <div className="tooltip">junk cheapie - trade out</div>
@@ -484,7 +502,8 @@ function TeamView({ players, onBack }) {
 
   // Team status analysis state - front-loaded when team is displayed
   const [injuredPlayers, setInjuredPlayers] = React.useState([]);
-  const [lowUpsidePlayers, setLowUpsidePlayers] = React.useState([]);
+  const [urgentOvervaluedPlayers, setUrgentOvervaluedPlayers] = React.useState([]);
+  const [overvaluedPlayers, setOvervaluedPlayers] = React.useState([]);
   const [notSelectedPlayers, setNotSelectedPlayers] = React.useState([]);
   const [junkCheapies, setJunkCheapies] = React.useState([]);
   const [isAnalyzingTeam, setIsAnalyzingTeam] = React.useState(true);
@@ -513,7 +532,9 @@ function TeamView({ players, onBack }) {
 
     // Check player status
     const isInjured = isPlayerInjured(player);
-    const isLowUpside = isPlayerLowUpside(player);
+    const isUrgentOvervalued = isPlayerUrgentOvervalued(player);
+    const isOvervalued = isPlayerOvervalued(player);
+    const isAnyOvervalued = isUrgentOvervalued || isOvervalued;
     const isNotSelected = isPlayerNotSelected(player);
     const isJunkCheap = isPlayerJunkCheap(player);
 
@@ -540,7 +561,7 @@ function TeamView({ players, onBack }) {
       }
       // Check if player is selected for trade out
       else if (isPlayerInList(player, preseasonSelectedOut)) {
-        // Use different selected styles based on whether injured or low-upside
+        // Use different selected styles based on whether injured or overvalued
         if (isInjured) {
           cardClasses += ' preseason-selected-out-injured';
         } else {
@@ -549,7 +570,7 @@ function TeamView({ players, onBack }) {
       }
       // Check if player is highlighted as a trade-out recommendation
       else if (isPlayerInList(player, preseasonHighlighted)) {
-        // Use different highlight styles based on whether injured or low-upside
+        // Use different highlight styles based on whether injured or overvalued
         if (isInjured) {
           cardClasses += ' preseason-highlight-injured';
         } else {
@@ -613,8 +634,15 @@ function TeamView({ players, onBack }) {
             <div className="tooltip">player injured</div>
           </div>
         )}
-        {/* Low upside indicator - green banknote with red arrow in top-right */}
-        {isLowUpside && !isInjured && (
+        {/* Urgent overvalued indicator - alarm emoji (Diff <= -7) */}
+        {isUrgentOvervalued && !isInjured && (
+          <div className="urgent-overvalued-indicator">
+            🚨
+            <div className="tooltip">Very overvalued: losing money</div>
+          </div>
+        )}
+        {/* Overvalued indicator - green banknote with red arrow (-7 < Diff <= -1) */}
+        {isOvervalued && !isInjured && !isUrgentOvervalued && (
           <div className="lowupside-indicator">
             <svg viewBox="0 0 24 24" className="lowupside-icon">
               {/* Banknote (green) */}
@@ -624,11 +652,11 @@ function TeamView({ players, onBack }) {
               {/* Downward arrow (red) */}
               <path d="M18 4 L18 16 L14 12 M18 16 L22 12" stroke="#e53935" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <div className="tooltip">overvalued - will lose money</div>
+            <div className="tooltip">overvalued</div>
           </div>
         )}
         {/* Not selected indicator - prohibition symbol */}
-        {isNotSelected && !isInjured && !isLowUpside && (
+        {isNotSelected && !isInjured && !isAnyOvervalued && (
           <div className="not-selected-indicator">
             <svg viewBox="0 0 24 24" className="prohibition-icon">
               {/* Circle */}
@@ -640,7 +668,7 @@ function TeamView({ players, onBack }) {
           </div>
         )}
         {/* Junk cheapies indicator - poo emoji */}
-        {isJunkCheap && !isInjured && !isLowUpside && (
+        {isJunkCheap && !isInjured && !isAnyOvervalued && !isNotSelected && (
           <div className="junk-cheap-indicator">
             💩
             <div className="tooltip">junk cheapie - trade out</div>
@@ -679,12 +707,13 @@ function TeamView({ players, onBack }) {
     }
   }, [players]);
 
-  // Front-load team analysis (injured + low-upside) when team players are loaded
+  // Front-load team analysis (injured + overvalued) when team players are loaded
   React.useEffect(() => {
     const analyzeTeam = async () => {
       if (!teamPlayers || teamPlayers.length === 0) {
         setInjuredPlayers([]);
-        setLowUpsidePlayers([]);
+        setUrgentOvervaluedPlayers([]);
+        setOvervaluedPlayers([]);
         setNotSelectedPlayers([]);
         setJunkCheapies([]);
         setNormalModeHighlighted([]);
@@ -697,18 +726,22 @@ function TeamView({ players, onBack }) {
       setIsAnalyzingTeam(true);
       try {
         const { analyzeTeamStatus } = await import('../services/tradeApi.js');
-        const result = await analyzeTeamStatus(teamPlayers, 2);
+        const result = await analyzeTeamStatus(teamPlayers);
         setInjuredPlayers(result.injured_players || []);
-        setLowUpsidePlayers(result.low_upside_players || []);
+        setUrgentOvervaluedPlayers(result.urgent_overvalued_players || []);
+        setOvervaluedPlayers(result.overvalued_players || []);
         setNotSelectedPlayers(result.not_selected_players || []);
         setJunkCheapies(result.junk_cheapies || []);
         console.log('Team analysis complete:', result);
+        console.log('Urgent overvalued players:', result.urgent_overvalued_players || []);
+        console.log('Overvalued players:', result.overvalued_players || []);
         console.log('Not selected players:', result.not_selected_players || []);
         console.log('Junk cheapies:', result.junk_cheapies || []);
       } catch (err) {
         console.error('Error analyzing team:', err);
         setInjuredPlayers([]);
-        setLowUpsidePlayers([]);
+        setUrgentOvervaluedPlayers([]);
+        setOvervaluedPlayers([]);
         setNotSelectedPlayers([]);
         setJunkCheapies([]);
         setNormalModeHighlighted([]);
@@ -839,10 +872,11 @@ function TeamView({ players, onBack }) {
     try {
       if (!isPreseasonMode && normalModePhase === 'recommend') {
         // Phase 1: Just highlight players, don't calculate trade recommendations
-        // Combine all players that have issues: injured + overvalued + not selected + junk cheapies
+        // Combine all players that have issues: injured + overvalued (urgent + regular) + not selected + junk cheapies
         const allProblemPlayers = new Set([
           ...injuredPlayers,
-          ...lowUpsidePlayers,
+          ...urgentOvervaluedPlayers,
+          ...overvaluedPlayers,
           ...notSelectedPlayers,
           ...junkCheapies
         ]);
@@ -852,35 +886,53 @@ function TeamView({ players, onBack }) {
           allProblemPlayers.has(player.name)
         );
 
-        // Get trade-out recommendations for priority ordering
-        const { calculateTeamTrades } = await import('../services/tradeApi.js');
-        const result = await calculateTeamTrades(
-          teamPlayers,
-          cashInBank * 1000,
-          selectedStrategy,
-          numTrades,
-          null,
-          targetByeRound,
-          false, // preseasonMode
-          selectedTradeOutPlayers || [] // preselected trade-outs
-        );
+        // Helper to get player's urgency priority based on category and price
+        // Priority hierarchy (lower number = higher urgency):
+        // 1. Very overvalued (urgent overvalued) - any price
+        // 2. Injured AND price > $300k
+        // 3. Not selected AND price > $300k
+        // 4. Overvalued AND price > $300k
+        // 5. Overvalued AND price <= $300k
+        // 6. Injured AND price <= $300k
+        // 7. Not selected AND price <= $300k
+        // 8. Junk cheapies
+        const PRICE_THRESHOLD = 300000;
+        const getUrgencyScore = (playerName) => {
+          const player = teamPlayers.find(p => p.name === playerName);
+          const price = player?.price || 0;
+          const isHighValue = price > PRICE_THRESHOLD;
+          
+          // Check categories (in priority order)
+          const isUrgentOvervalued = urgentOvervaluedPlayers.includes(playerName);
+          const isInjured = injuredPlayers.includes(playerName);
+          const isNotSelected = notSelectedPlayers.includes(playerName);
+          const isOvervalued = overvaluedPlayers.includes(playerName);
+          const isJunkCheapie = junkCheapies.includes(playerName);
+          
+          if (isUrgentOvervalued) return 1;
+          if (isInjured && isHighValue) return 2;
+          if (isNotSelected && isHighValue) return 3;
+          if (isOvervalued && isHighValue) return 4;
+          if (isOvervalued && !isHighValue) return 5;
+          if (isInjured && !isHighValue) return 6;
+          if (isNotSelected && !isHighValue) return 7;
+          if (isJunkCheapie) return 8;
+          return 9; // fallback
+        };
 
-        const tradeOutNames = (result.trade_out || []).map(p => p.name);
-        const priorities = {};
-
-        // Priority 1-2: Top trade-out recommendations
-        tradeOutNames.forEach((name, index) => {
-          if (allProblemPlayers.has(name)) {
-            priorities[name] = index + 1;
-          }
+        // Sort highlighted players by urgency score, then by price (higher price first within same score)
+        const sortedPlayers = [...highlightedPlayers].sort((a, b) => {
+          const scoreA = getUrgencyScore(a.name);
+          const scoreB = getUrgencyScore(b.name);
+          if (scoreA !== scoreB) return scoreA - scoreB;
+          // Within same urgency, prioritize higher priced players
+          return (b.price || 0) - (a.price || 0);
         });
 
-        // Priority 3+: Other players with issues
-        let nextPriority = Math.max(3, tradeOutNames.length + 1);
-        highlightedPlayers.forEach(player => {
-          if (!(player.name in priorities)) {
-            priorities[player.name] = nextPriority++;
-          }
+        // Assign priorities based on sorted order
+        const priorities = {};
+        sortedPlayers.forEach((player, index) => {
+          priorities[player.name] = index + 1;
         });
 
         setNormalModeHighlighted(highlightedPlayers);
@@ -1127,9 +1179,52 @@ function TeamView({ players, onBack }) {
       setPreseasonPhase('selecting-out');
       setHasHighlightedPreseason(true);
 
-      // Calculate priorities for the highlighted players (1-6 based on trade-out order)
+      // Helper to get player's urgency priority based on category and price
+      // Priority hierarchy (lower number = higher urgency):
+      // 1. Very overvalued (urgent overvalued) - any price
+      // 2. Injured AND price > $300k
+      // 3. Not selected AND price > $300k
+      // 4. Overvalued AND price > $300k
+      // 5. Overvalued AND price <= $300k
+      // 6. Injured AND price <= $300k
+      // 7. Not selected AND price <= $300k
+      // 8. Junk cheapies
+      const PRICE_THRESHOLD = 300000;
+      const getUrgencyScore = (playerName) => {
+        const player = teamPlayers.find(p => p.name === playerName);
+        const price = player?.price || 0;
+        const isHighValue = price > PRICE_THRESHOLD;
+        
+        // Check categories (in priority order)
+        const isUrgentOvervalued = urgentOvervaluedPlayers.includes(playerName);
+        const isInjured = injuredPlayers.includes(playerName);
+        const isNotSelected = notSelectedPlayers.includes(playerName);
+        const isOvervalued = overvaluedPlayers.includes(playerName);
+        const isJunkCheapie = junkCheapies.includes(playerName);
+        
+        if (isUrgentOvervalued) return 1;
+        if (isInjured && isHighValue) return 2;
+        if (isNotSelected && isHighValue) return 3;
+        if (isOvervalued && isHighValue) return 4;
+        if (isOvervalued && !isHighValue) return 5;
+        if (isInjured && !isHighValue) return 6;
+        if (isNotSelected && !isHighValue) return 7;
+        if (isJunkCheapie) return 8;
+        return 9; // fallback
+      };
+
+      // Sort highlighted players by urgency score, then by price (higher price first within same score)
+      const sortedPlayers = [...highlightedPlayers].sort((a, b) => {
+        const scoreA = getUrgencyScore(a.name);
+        const scoreB = getUrgencyScore(b.name);
+        if (scoreA !== scoreB) return scoreA - scoreB;
+        // Within same urgency, prioritize higher priced players
+        return (b.price || 0) - (a.price || 0);
+      });
+
+      // Calculate priorities for the highlighted players based on urgency order
       const priorities = {};
-      highlightedPlayers.forEach((player, index) => {
+      sortedPlayers.forEach((player, index) => {
         priorities[player.name] = index + 1;
       });
       setPreseasonPriorities(priorities);
@@ -2129,7 +2224,8 @@ function TeamView({ players, onBack }) {
             preseasonPriorities={preseasonPriorities}
             onPreseasonClick={handlePreseasonPlayerClick}
             injuredPlayers={injuredPlayers}
-            lowUpsidePlayers={lowUpsidePlayers}
+            urgentOvervaluedPlayers={urgentOvervaluedPlayers}
+            overvaluedPlayers={overvaluedPlayers}
             notSelectedPlayers={notSelectedPlayers}
             junkCheapies={junkCheapies}
             normalModeHighlighted={normalModeHighlighted}
