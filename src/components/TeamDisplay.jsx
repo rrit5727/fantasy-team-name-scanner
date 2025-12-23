@@ -1149,7 +1149,8 @@ function TeamView({ players, onBack }) {
 
   // ========== PRE-SEASON MODE HANDLERS ==========
 
-  // Handle "Highlight Options" button - calculates and highlights trade-out recommendations
+  // Handle "Highlight Options" button - highlights ALL players that satisfy trade-out rules
+  // Uses the same logic as normal mode for consistency
   const handleHighlightOptions = async () => {
     if (!teamPlayers || teamPlayers.length === 0) return;
     
@@ -1157,27 +1158,20 @@ function TeamView({ players, onBack }) {
     setError(null);
     
     try {
-      const { calculateTeamTrades } = await import('../services/tradeApi.js');
-      
-      // In preseason mode, use 6 trades
-      const preseasonNumTrades = 6;
-      
-      const result = await calculateTeamTrades(
-        teamPlayers,
-        cashInBank * 1000,
-        selectedStrategy,
-        preseasonNumTrades,
-        null,
-        targetByeRound,
-        true, // preseasonMode - only include injured, overvalued (diff < -2), or not selected players
-        null // preselected trade-outs (none at this stage)
+      // Use the same logic as normal mode - highlight ALL problem players
+      // Combine all players that have issues: injured + overvalued (urgent + regular) + not selected + junk cheapies
+      const allProblemPlayers = new Set([
+        ...injuredPlayers,
+        ...urgentOvervaluedPlayers,
+        ...overvaluedPlayers,
+        ...notSelectedPlayers,
+        ...junkCheapies
+      ]);
+
+      // Find the actual player objects from teamPlayers that match these names
+      const highlightedPlayers = teamPlayers.filter(player =>
+        allProblemPlayers.has(player.name)
       );
-      
-      // Set highlighted players (up to 6 trade-out recommendations)
-      const highlightedPlayers = result.trade_out || [];
-      setPreseasonHighlightedPlayers(highlightedPlayers);
-      setPreseasonPhase('selecting-out');
-      setHasHighlightedPreseason(true);
 
       // Helper to get player's urgency priority based on category and price
       // Priority hierarchy (lower number = higher urgency):
@@ -1227,6 +1221,11 @@ function TeamView({ players, onBack }) {
       sortedPlayers.forEach((player, index) => {
         priorities[player.name] = index + 1;
       });
+
+      // Set all highlighted players (not limited to 6) - selection limit is enforced elsewhere
+      setPreseasonHighlightedPlayers(highlightedPlayers);
+      setPreseasonPhase('selecting-out');
+      setHasHighlightedPreseason(true);
       setPreseasonPriorities(priorities);
       setPreseasonHighlighted(highlightedPlayers);
 
