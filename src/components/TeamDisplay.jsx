@@ -1928,6 +1928,11 @@ function TeamView({ players, onBack }) {
 
     const allPositionsFilled = preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length;
 
+    // Calculate remaining = cash + traded-out salaries - selected trade-in costs
+    const remaining = (cashInBank * 1000) +
+      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+
     return (
       <div className="trade-in-page">
         <div className="trade-in-page-header">
@@ -1940,29 +1945,17 @@ function TeamView({ players, onBack }) {
           >
             ← Back to Team
           </button>
+          <div className={`preseason-salary-cap ${remaining > 0 ? 'has-budget' : ''}`}>
+            Cash: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
+          </div>
+          <div className="preseason-status">
+            {preseasonSelectedTradeIns.length}/{preseasonSelectedTradeOuts.length} selected
+          </div>
         </div>
         
-        {/* Preseason salary cap and status */}
+        {/* Trade swap rows - split bubble design */}
         <div className="trade-out-pinned">
-                  {(() => {
-                    // Calculate remaining = cash + traded-out salaries - selected trade-in costs
-                    const remaining = (cashInBank * 1000) +
-                      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
-                      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
-
-            return (
-              <div className={`preseason-salary-cap ${remaining > 0 ? 'has-budget' : ''}`}>
-                Remaining: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
-              </div>
-            );
-          })()}
-          <div className="preseason-status">
-            {preseasonSelectedTradeIns.length} of {preseasonSelectedTradeOuts.length} trade-ins selected
-          </div>
-          
-          {/* Show trade swap rows - split bubble design */}
           <div className="trade-panel">
-            <h4 className="trade-subtitle">Trade Swaps</h4>
             <div className={`trade-swap-list ${preseasonSelectedTradeOuts.length > 1 ? 'multi-column' : ''}`}>
               {preseasonSelectedTradeOuts.map((tradeOutPlayer, index) => {
                 const tradeInPlayer = preseasonSelectedTradeIns.find(
@@ -2404,7 +2397,7 @@ function TeamView({ players, onBack }) {
                           Remaining: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
                         </div>
                         <div className="preseason-status">
-                          {preseasonSelectedTradeIns.length} of {preseasonSelectedTradeOuts.length} trade-ins selected
+                          {preseasonSelectedTradeIns.length}/{preseasonSelectedTradeOuts.length} selected
                         </div>
                       </>
                     );

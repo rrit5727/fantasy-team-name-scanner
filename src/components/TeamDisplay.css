@@ -1230,14 +1230,7 @@
   gap: 0.5rem;
 }
 
-/* Desktop: show 2 swaps per row using CSS grid */
-@media (min-width: 769px) {
-  .trade-swap-list {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-  }
-}
+/* Always show 1 swap per row - removed 2-column grid */
 
 .trade-swap-row {
   display: flex;
@@ -1435,15 +1428,15 @@
   }
   
   .trade-swap-bubble .trade-player-name {
-    font-size: 0.65rem;
-    max-width: 70px;
+    font-size: 0.7rem;
+    max-width: 90px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   
   .trade-swap-bubble .trade-player-price {
-    font-size: 0.6rem;
+    font-size: 0.65rem;
   }
   
   .trade-swap-bubble .trade-player-pos {
@@ -1452,15 +1445,15 @@
   }
   
   .trade-swap-arrows {
-    padding: 0.15rem 0.25rem;
-    font-size: 0.55rem;
+    padding: 0.15rem 0.35rem;
+    font-size: 0.7rem;
   }
   
-  /* 2-column layout on mobile for multiple swaps */
+  /* Always 1 per row - multi-column class ignored */
   .trade-swap-list.multi-column {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.35rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
   }
 }
 
@@ -1745,25 +1738,46 @@
 
 .trade-in-page-header {
   background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   border-bottom: 2px solid rgba(0, 166, 125, 0.3);
   display: flex;
-  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: 0.5rem;
   z-index: 10;
   flex-shrink: 0;
+}
+
+/* Header inline elements */
+.trade-in-page-header .preseason-salary-cap {
+  margin-bottom: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.trade-in-page-header .preseason-status {
+  margin-bottom: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.7rem;
+  white-space: nowrap;
 }
 
 .btn-header-action {
   background: transparent;
   border: 2px solid rgba(0, 166, 125, 0.5);
   color: #00d9a3;
-  padding: 0.5rem 1rem;
+  padding: 0.3rem 0.5rem;
   border-radius: 10px;
   font-weight: 600;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  flex: 1;
+  flex-shrink: 0;
+  white-space: normal;
+  width: 75px;
+  text-align: center;
+  line-height: 1.2;
 }
 
 .btn-header-action:hover {
@@ -1771,14 +1785,16 @@
   border-color: #00d9a3;
 }
 
-/* Trade-out pinned at top */
+/* Trade-out/swaps panel section - fills space between header and content */
 .trade-out-pinned {
   background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
   border-bottom: 2px solid rgba(0, 166, 125, 0.3);
-  padding: 0.75rem 1rem;
-  flex-shrink: 0;
-  max-height: 45vh; /* Limit height to leave room for trade-in options */
+  padding: 0.5rem 1rem;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .trade-out-pinned .trade-panel {
@@ -1786,11 +1802,21 @@
   border-radius: 10px;
   padding: 0.75rem;
   margin-bottom: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .trade-out-pinned .trade-subtitle {
   font-size: 0.75rem;
   margin-bottom: 0.5rem;
+  flex-shrink: 0;
+}
+
+.trade-out-pinned .trade-swap-list {
+  flex: 1;
+  overflow-y: auto;
 }
 
 /* Trade-in scrollable content */
