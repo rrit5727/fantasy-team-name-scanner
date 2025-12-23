@@ -511,6 +511,7 @@ function TeamView({ players, onBack }) {
 
   // Mobile preseason mode dropdown state
   const [showPreseasonDropdown, setShowPreseasonDropdown] = React.useState(false);
+  const preseasonDropdownRef = React.useRef(null);
 
   // Position requirements for INT/EMG players
   const [positionRequirements, setPositionRequirements] = React.useState({});
@@ -754,6 +755,23 @@ function TeamView({ players, onBack }) {
 
     analyzeTeam();
   }, [teamPlayers]);
+
+  // Handle click outside preseason dropdown to close it
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (preseasonDropdownRef.current && !preseasonDropdownRef.current.contains(event.target)) {
+        setShowPreseasonDropdown(false);
+      }
+    };
+
+    if (showPreseasonDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showPreseasonDropdown]);
 
   // Reset preseason state when mode is toggled off
   React.useEffect(() => {
@@ -2117,12 +2135,54 @@ function TeamView({ players, onBack }) {
                 ← Back to Scanner
               </button>
               {/* Mobile Preseason Mode Button */}
-              <button
-                className={`btn-preseason-mode mobile-only ${isPreseasonMode ? 'active' : ''}`}
-                onClick={() => setShowPreseasonDropdown(!showPreseasonDropdown)}
-              >
-                Pre-season
-              </button>
+              <div className="preseason-dropdown-wrapper mobile-only" ref={preseasonDropdownRef}>
+                <button
+                  className={`btn-preseason-mode ${isPreseasonMode ? 'active' : ''}`}
+                  onClick={() => setShowPreseasonDropdown(!showPreseasonDropdown)}
+                >
+                  Pre-season
+                </button>
+                {/* Mobile Preseason Mode Dropdown - positioned below button */}
+                {showPreseasonDropdown && (
+                  <div className="preseason-mode-dropdown">
+                    <div className="preseason-mode-dropdown-content">
+                      <div className="preseason-mode-header toggle-section">
+                        <div className="toggle-labels">
+                          <label htmlFor="preseasonModeDropdown">Pre-season Mode</label>
+                          <span className="toggle-caption">Up to 6 trades</span>
+                        </div>
+                        <label className="toggle-switch">
+                          <input
+                            id="preseasonModeDropdown"
+                            type="checkbox"
+                            checked={isPreseasonMode}
+                            onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                          />
+                          <span className="toggle-slider" />
+                        </label>
+                      </div>
+                      {/* Test Approach Toggle - only visible when preseason mode is on */}
+                      {isPreseasonMode && (
+                        <div className="test-approach-section toggle-section">
+                          <div className="toggle-labels">
+                            <label htmlFor="testApproachDropdown">Test Approach</label>
+                            <span className="toggle-caption">Price band matching (±$75k)</span>
+                          </div>
+                          <label className="toggle-switch">
+                            <input
+                              id="testApproachDropdown"
+                              type="checkbox"
+                              checked={preseasonTestApproach}
+                              onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                            />
+                            <span className="toggle-slider" />
+                          </label>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 className={`btn-make-trade mobile-only ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0 ? 'disabled' : ''} ${isPreseasonMode && hasHighlightedPreseason && preseasonSelectedTradeOuts.length === 0 ? 'disabled' : ''}`}
                 onClick={handleMakeATrade}
@@ -2135,47 +2195,6 @@ function TeamView({ players, onBack }) {
                     : 'Recommend trade-outs'}
               </button>
             </div>
-
-            {/* Mobile Preseason Mode Dropdown - positioned below header */}
-            {showPreseasonDropdown && (
-              <div className="preseason-mode-dropdown mobile-only">
-                <div className="preseason-mode-dropdown-content">
-                  <div className="preseason-mode-header toggle-section">
-                    <div className="toggle-labels">
-                      <label htmlFor="preseasonModeDropdown">Pre-season Mode</label>
-                      <span className="toggle-caption">Up to 6 trades</span>
-                    </div>
-                    <label className="toggle-switch">
-                      <input
-                        id="preseasonModeDropdown"
-                        type="checkbox"
-                        checked={isPreseasonMode}
-                        onChange={(e) => setIsPreseasonMode(e.target.checked)}
-                      />
-                      <span className="toggle-slider" />
-                    </label>
-                  </div>
-                  {/* Test Approach Toggle - only visible when preseason mode is on */}
-                  {isPreseasonMode && (
-                    <div className="test-approach-section toggle-section">
-                      <div className="toggle-labels">
-                        <label htmlFor="testApproachDropdown">Test Approach</label>
-                        <span className="toggle-caption">Price band matching (±$75k)</span>
-                      </div>
-                      <label className="toggle-switch">
-                        <input
-                          id="testApproachDropdown"
-                          type="checkbox"
-                          checked={preseasonTestApproach}
-                          onChange={(e) => setPreseasonTestApproach(e.target.checked)}
-                        />
-                        <span className="toggle-slider" />
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Loading screen while analyzing team */}

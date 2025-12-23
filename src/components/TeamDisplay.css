@@ -1559,6 +1559,11 @@
   color: #fff;
 }
 
+/* Preseason dropdown wrapper - contains button and dropdown for click-outside handling */
+.preseason-dropdown-wrapper {
+  position: relative;
+}
+
 /* Preseason Mode Dropdown - positioned below header, not overlapping team */
 .preseason-mode-dropdown {
   position: fixed;
