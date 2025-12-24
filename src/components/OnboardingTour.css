@@ -1,0 +1,335 @@
+/* Onboarding Tour Overlay */
+.onboarding-tour-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  pointer-events: auto;
+}
+
+.tour-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(2px);
+}
+
+.tour-highlight {
+  position: absolute;
+  border: 4px solid #00ffcc;
+  border-radius: 12px;
+  box-shadow: 
+    0 0 0 9999px rgba(0, 0, 0, 0.85),
+    0 0 0 2px rgba(0, 255, 204, 0.8),
+    0 0 30px rgba(0, 255, 204, 0.6),
+    inset 0 0 20px rgba(0, 255, 204, 0.2);
+  z-index: 10001;
+  pointer-events: none;
+  transition: all 0.3s ease;
+  animation: tour-pulse 2s ease-in-out infinite;
+  background: rgba(0, 255, 204, 0.05);
+}
+
+@keyframes tour-pulse {
+  0%, 100% {
+    border-color: #00ffcc;
+    box-shadow: 
+      0 0 0 9999px rgba(0, 0, 0, 0.85),
+      0 0 0 2px rgba(0, 255, 204, 0.8),
+      0 0 30px rgba(0, 255, 204, 0.6),
+      inset 0 0 20px rgba(0, 255, 204, 0.2);
+  }
+  50% {
+    border-color: #00e6b8;
+    box-shadow: 
+      0 0 0 9999px rgba(0, 0, 0, 0.85),
+      0 0 0 3px rgba(0, 255, 204, 1),
+      0 0 40px rgba(0, 255, 204, 0.9),
+      inset 0 0 25px rgba(0, 255, 204, 0.3);
+  }
+}
+
+.tour-tooltip {
+  position: fixed;
+  z-index: 10002;
+  max-width: 350px;
+  min-width: 280px;
+  pointer-events: auto;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+}
+
+.tour-tooltip-content {
+  background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  border: 2px solid rgba(0, 217, 163, 0.5);
+  border-radius: 16px;
+  padding: 1.25rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.tour-tooltip-text {
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0 0 1rem 0;
+}
+
+.tour-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: auto;
+}
+
+.tour-progress {
+  color: #00d9a3;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(0, 217, 163, 0.2);
+  flex-shrink: 0;
+}
+
+.tour-buttons {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tour-btn {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  flex: 1;
+  min-width: 80px;
+}
+
+.tour-btn-primary {
+  background: linear-gradient(135deg, #00d9a3 0%, #00a67d 100%);
+  color: #0a1f1a;
+}
+
+.tour-btn-primary:hover {
+  background: linear-gradient(135deg, #00e4b3 0%, #00b68d 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 217, 163, 0.3);
+}
+
+.tour-btn-secondary {
+  background: transparent;
+  color: #00d9a3;
+  border: 2px solid rgba(0, 217, 163, 0.5);
+}
+
+.tour-btn-secondary:hover {
+  background: rgba(0, 217, 163, 0.1);
+  border-color: #00d9a3;
+}
+
+.tour-btn-link {
+  background: transparent;
+  color: #8a9a96;
+  text-decoration: underline;
+  flex: 0 0 auto;
+  min-width: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+.tour-btn-link:hover {
+  color: #00d9a3;
+}
+
+/* Tooltip positioning arrows */
+.tour-tooltip-bottom::before {
+  content: '';
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid rgba(0, 217, 163, 0.5);
+}
+
+.tour-tooltip-top::after {
+  content: '';
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 10px solid rgba(0, 217, 163, 0.5);
+}
+
+.tour-tooltip-right::before {
+  content: '';
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-right: 10px solid rgba(0, 217, 163, 0.5);
+}
+
+.tour-tooltip-left::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 10px solid transparent;
+  border-bottom: 10px solid transparent;
+  border-left: 10px solid rgba(0, 217, 163, 0.5);
+}
+
+/* Mobile optimizations */
+@media (max-width: 767px) {
+  .tour-tooltip {
+    max-width: calc(100vw - 2rem);
+    min-width: 280px;
+    left: 1rem !important;
+    right: 1rem !important;
+    transform: none !important;
+  }
+
+  .tour-tooltip-content {
+    padding: 1rem;
+  }
+
+  .tour-tooltip-text {
+    font-size: 0.9rem;
+  }
+
+  .tour-buttons {
+    flex-direction: column;
+  }
+
+  .tour-btn {
+    width: 100%;
+  }
+
+  .tour-highlight {
+    border-width: 2px;
+    border-radius: 8px;
+  }
+}
+
+/* Preseason Mode Carousel Modal */
+.preseason-tour-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10003;
+  padding: 1rem;
+}
+
+.preseason-tour-carousel {
+  background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  border: 2px solid rgba(0, 217, 163, 0.5);
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.preseason-tour-slide {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.preseason-tour-slide h3 {
+  color: #00d9a3;
+  font-size: 1.5rem;
+  margin: 0;
+  text-align: center;
+}
+
+.preseason-tour-slide p {
+  color: #e0e0e0;
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0;
+  text-align: center;
+}
+
+.preseason-tour-carousel-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  gap: 1rem;
+}
+
+.preseason-tour-carousel-nav {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.preseason-tour-dots {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex: 1;
+}
+
+.preseason-tour-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0, 217, 163, 0.3);
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+}
+
+.preseason-tour-dot.active {
+  background: #00d9a3;
+  width: 24px;
+  border-radius: 4px;
+}
+
+@media (max-width: 767px) {
+  .preseason-tour-carousel {
+    padding: 1.5rem;
+  }
+
+  .preseason-tour-slide h3 {
+    font-size: 1.25rem;
+  }
+
+  .preseason-tour-slide p {
+    font-size: 0.95rem;
+  }
+}
+

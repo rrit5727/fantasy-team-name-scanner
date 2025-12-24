@@ -1,9 +1,18 @@
 import { useState, useRef, useCallback } from 'react';
 import Tesseract from 'tesseract.js';
 import { lookupPlayerPrices } from '../services/tradeApi';
+import OnboardingTour from './OnboardingTour';
 import './ImageUpload.css';
 
-function ImageUpload({ onPlayersExtracted }) {
+function ImageUpload({ 
+  onPlayersExtracted,
+  isTourActive = false,
+  currentTourStep = 0,
+  onTourNext,
+  onTourPrevious,
+  onTourSkip,
+  onTourComplete
+}) {
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -591,6 +600,41 @@ function ImageUpload({ onPlayersExtracted }) {
     });
   };
 
+  // Tour step configuration for landing page
+  const tourSteps = [
+    {
+      id: 'upload',
+      target: '.drop-zone',
+      tooltip: 'Upload screenshots of your team. The app will automatically detect the correct order.',
+      position: 'bottom',
+      waitForAction: false
+    },
+    {
+      id: 'confirm-team',
+      target: '.btn-confirm-team',
+      tooltip: 'Click here to generate your team from the uploaded screenshots.',
+      position: 'top',
+      waitForAction: true,
+      scrollTo: true
+    }
+  ];
+
+  // Get current tour step config (only steps 0-1 are for landing page)
+  const currentStepConfig = isTourActive && currentTourStep < 2 
+    ? tourSteps[currentTourStep] 
+    : null;
+
+  // Handle tour progression - auto-advance when user uploads images
+  const handleFileChangeWithTour = (e) => {
+    handleFileChange(e);
+    // If tour is active and on step 0, advance to step 1 after upload
+    if (isTourActive && currentTourStep === 0 && e.target.files.length > 0) {
+      setTimeout(() => {
+        if (onTourNext) onTourNext();
+      }, 500);
+    }
+  };
+
   return (
     <div className="image-upload-container">
       <div className="upload-instructions">
@@ -620,7 +664,7 @@ function ImageUpload({ onPlayersExtracted }) {
           type="file"
           accept="image/*"
           multiple
-          onChange={handleFileChange}
+          onChange={handleFileChangeWithTour}
           className="file-input"
         />
         
@@ -740,11 +784,42 @@ function ImageUpload({ onPlayersExtracted }) {
           
           <button 
             className="btn-confirm-team"
-            onClick={() => onPlayersExtracted?.(extractedPlayers, true)}
+            onClick={() => {
+              onPlayersExtracted?.(extractedPlayers, true);
+              // Advance tour if active
+              if (isTourActive && currentTourStep === 1 && onTourNext) {
+                setTimeout(() => {
+                  onTourNext();
+                }, 100);
+              }
+            }}
           >
             ✓ Confirm Team
           </button>
         </div>
+      )}
+
+      {/* Onboarding Tour */}
+      {isTourActive && currentTourStep < 2 && (
+        <OnboardingTour
+          isActive={isTourActive && currentStepConfig !== null}
+          currentStep={currentTourStep}
+          totalSteps={10}
+          onNext={onTourNext}
+          onPrevious={onTourPrevious}
+          onSkip={onTourSkip}
+          onComplete={() => {
+            // On landing page, "Got it" should advance to next step, not complete tour
+            // Tour will continue on team view
+            if (currentTourStep < 1) {
+              onTourNext();
+            } else {
+              // If on step 1 (confirm team), just advance - tour continues on team view
+              onTourNext();
+            }
+          }}
+          stepConfig={currentStepConfig}
+        />
       )}
     </div>
   );

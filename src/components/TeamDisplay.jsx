@@ -1,6 +1,7 @@
 import React from 'react';
 import './TeamDisplay.css';
 import TradeTypeSelector from './TradeTypeSelector';
+import OnboardingTour, { PreseasonTourModal } from './OnboardingTour';
 
 // Helper function to format numbers with comma separators
 const formatNumberWithCommas = (num) => {
@@ -223,6 +224,7 @@ function TeamDisplay({
         key={player.name}
         className={cardClasses}
         onClick={handleClick}
+        data-player-name={player.name}
       >
         {/* Priority indicator for normal mode trade recommendations */}
         {normalModePriority && (
@@ -457,7 +459,16 @@ function TradePanel({
   );
 }
 
-function TeamView({ players, onBack }) {
+function TeamView({ 
+  players, 
+  onBack,
+  isTourActive = false,
+  currentTourStep = 0,
+  onTourNext,
+  onTourPrevious,
+  onTourSkip,
+  onTourComplete
+}) {
   const [teamPlayers, setTeamPlayers] = React.useState(players || []);
   const [cashInBank, setCashInBank] = React.useState(0);
   const [cashInBankDisplay, setCashInBankDisplay] = React.useState('');
@@ -609,6 +620,7 @@ function TeamView({ players, onBack }) {
         key={player.name}
         className={cardClasses}
         onClick={handleClick}
+        data-player-name={player.name}
       >
         {/* Priority indicator for normal mode trade recommendations */}
         {normalModePriority && (
@@ -873,6 +885,13 @@ function TeamView({ players, onBack }) {
 
         setTradeInRecommendations(result.trade_in);
         setShowTradeInPage(true); // Go directly to trade-in page
+        
+        // Advance tour if active
+        if (isTourActive && currentTourStep === 6 && onTourNext) {
+          setTimeout(() => {
+            onTourNext(); // Advance to step 7 (trade-in page)
+          }, 500);
+        }
       } catch (err) {
         console.error('Error calculating trade recommendations:', err);
         setError(err.message || 'Failed to calculate trade recommendations');
@@ -960,6 +979,13 @@ function TeamView({ players, onBack }) {
         setHasCalculatedHighlights(true);
         setNormalModePhase('calculate');
         
+        // Advance tour if active
+        if (isTourActive && currentTourStep === 3 && onTourNext) {
+          setTimeout(() => {
+            onTourNext(); // Advance to step 4 (priority numbers)
+          }, 500);
+        }
+        
         // Close modal on mobile after highlighting so the team view is visible
         if (showTradeModal) {
           setShowTradeModal(false);
@@ -982,6 +1008,13 @@ function TeamView({ players, onBack }) {
 
         // Set trade-in recommendations based on user's selections
         setTradeInRecommendations(result.trade_in);
+
+        // Advance tour if active
+        if (isTourActive && currentTourStep === 6 && onTourNext) {
+          setTimeout(() => {
+            onTourNext(); // Advance to step 7 (trade-in page)
+          }, 500);
+        }
 
         // On mobile, close modal and show trade-in recommendations page
         if (showTradeModal) {
@@ -1017,6 +1050,12 @@ function TeamView({ players, onBack }) {
         return newReqs;
       });
     } else if (selectedTradeOutPlayers.length < (isPreseasonMode ? 6 : numTrades)) {
+      // Advance tour if this is first selection
+      if (isTourActive && currentTourStep === 5 && selectedTradeOutPlayers.length === 0 && onTourNext) {
+        setTimeout(() => {
+          onTourNext(); // Advance to step 6 (calculate button)
+        }, 300);
+      }
       // For INT/EMG players, show position dropdown first
       if (position === 'INT' || position === 'EMG') {
         setShowPositionDropdown({ playerName: player.name, slotPosition: position });
@@ -1162,6 +1201,13 @@ function TeamView({ players, onBack }) {
       setHasCalculatedHighlights(false);
       setNormalModeHighlighted([]);
       setNormalModePriorities({});
+    }
+    
+    // Complete tour if active
+    if (isTourActive && currentTourStep >= 7 && onTourComplete) {
+      setTimeout(() => {
+        onTourComplete();
+      }, 500);
     }
   };
 
@@ -2068,11 +2114,157 @@ function TeamView({ players, onBack }) {
     );
   };
 
+  // Tour step configuration for team view
+  // Steps 0-1 are for landing page, steps 2-9 are for team view
+  const getTourStepConfig = () => {
+    if (!isTourActive || currentTourStep < 2) return null;
+    
+    // Wait for team analysis to complete before showing tour steps
+    if (!teamAnalysisComplete) return null;
+
+    // Step 2 (index 2): Status indicators explanation (first player with status indicator)
+    if (currentTourStep === 2) {
+      // Find first player with a status indicator
+      const playerWithStatus = teamPlayers.find(p => 
+        injuredPlayers.some(ip => ip.name === p.name) ||
+        urgentOvervaluedPlayers.some(op => op.name === p.name) ||
+        overvaluedPlayers.some(op => op.name === p.name) ||
+        notSelectedPlayers.some(np => np.name === p.name)
+      );
+      
+      if (playerWithStatus) {
+        // Use data attribute approach - we'll add this to player cards
+        return {
+          id: 'status-indicators',
+          target: `[data-player-name="${playerWithStatus.name}"]`,
+          tooltip: 'These symbols show player status: ⚠️ Injured, 🚨 Very overvalued, 💵 Overvalued, ⛔ Not selected. Players with these indicators are candidates for trade-out.',
+          position: 'right',
+          waitForAction: false
+        };
+      }
+      // Fallback to first player card
+      return {
+        id: 'status-indicators',
+        target: '.player-card:first-of-type',
+        tooltip: 'These symbols show player status: ⚠️ Injured, 🚨 Very overvalued, 💵 Overvalued, ⛔ Not selected. Players with these indicators are candidates for trade-out.',
+        position: 'right',
+        waitForAction: false
+      };
+    }
+
+    // Step 3: Recommend trade-outs button
+    if (currentTourStep === 3) {
+      return {
+        id: 'recommend-trade-outs',
+        target: '.btn-calculate-trades, .btn-make-trade',
+        tooltip: 'Click this button to see which players the app recommends trading out based on injuries, value, and selection status.',
+        position: 'top',
+        waitForAction: false
+      };
+    }
+
+    // Step 4: Priority numbers (after recommendations are shown)
+    if (currentTourStep === 4 && hasCalculatedHighlights && normalModeHighlighted.length > 0) {
+      const firstHighlighted = normalModeHighlighted[0];
+      return {
+        id: 'priority-numbers',
+        target: firstHighlighted ? `[data-player-name="${firstHighlighted.name}"]` : '.player-card:has(.priority-indicator)',
+        tooltip: 'Priority numbers (1, 2, 3...) show the recommended trade-out order. Lower numbers = higher priority.',
+        position: 'right',
+        waitForAction: false
+      };
+    }
+
+    // Step 5: Selecting players
+    if (currentTourStep === 5 && hasCalculatedHighlights && normalModeHighlighted.length > 0) {
+      const firstHighlighted = normalModeHighlighted[0];
+      return {
+        id: 'selecting-players',
+        target: firstHighlighted ? `[data-player-name="${firstHighlighted.name}"]` : '.player-card.preseason-highlight-injured, .player-card.preseason-highlight-lowupside',
+        tooltip: 'Click a highlighted player card to select them for trade-out. You can select up to 2 players (or 6 in preseason mode).',
+        position: 'right',
+        waitForAction: false
+      };
+    }
+
+    // Step 6: Calculate trade recs button (only if player selected)
+    if (currentTourStep === 6 && selectedTradeOutPlayers.length > 0) {
+      return {
+        id: 'calculate-trade-recs',
+        target: '.btn-calculate-trades, .btn-make-trade',
+        tooltip: 'Once you\'ve selected players to trade out, click here to see trade-in recommendations that fit your salary cap and position needs.',
+        position: 'top',
+        waitForAction: false
+      };
+    }
+
+    // Step 7: Trade-in cards (on trade-in page)
+    if (currentTourStep === 7 && showTradeInPage && tradeInRecommendations.length > 0) {
+      return {
+        id: 'trade-in-cards',
+        target: '.trade-player-item',
+        tooltip: 'Trade-in recommendations appear in order of value/score (depending on your strategy). Each option covers the position requirements from your trade-outs.',
+        position: 'bottom',
+        waitForAction: false
+      };
+    }
+
+    // Step 8: Confirm trade
+    if (currentTourStep === 8 && showTradeInPage && tradeInRecommendations.length > 0) {
+      return {
+        id: 'confirm-trade',
+        target: '.btn-confirm-option',
+        tooltip: 'Select a trade-in option you like, then confirm to execute the trade and return to your team view.',
+        position: 'top',
+        waitForAction: false
+      };
+    }
+
+    return null;
+  };
+
+  const currentStepConfig = getTourStepConfig();
+  const totalTourSteps = 10; // 2 landing + 8 team view
+
+  // Handle preseason mode tour modal
+  const [showPreseasonTourModal, setShowPreseasonTourModal] = React.useState(false);
+  const [hasShownPreseasonModal, setHasShownPreseasonModal] = React.useState(false);
+  
+  React.useEffect(() => {
+    // Show preseason tour modal when preseason mode is activated during tour (on team view steps)
+    if (isTourActive && isPreseasonMode && !hasShownPreseasonModal && currentTourStep >= 2) {
+      setShowPreseasonTourModal(true);
+      setHasShownPreseasonModal(true);
+    }
+  }, [isTourActive, isPreseasonMode, currentTourStep, hasShownPreseasonModal]);
+
   return (
     <>
       {renderTradeOptionsModal()}
       {renderTradeInPage()}
       {renderPreseasonTradeInPage()}
+      
+      {/* Preseason Tour Modal */}
+      {showPreseasonTourModal && (
+        <PreseasonTourModal
+          isOpen={showPreseasonTourModal}
+          onClose={() => setShowPreseasonTourModal(false)}
+        />
+      )}
+      
+      {/* Onboarding Tour */}
+      {isTourActive && currentTourStep >= 2 && currentStepConfig && (
+        <OnboardingTour
+          isActive={isTourActive && currentStepConfig !== null}
+          currentStep={currentTourStep}
+          totalSteps={totalTourSteps}
+          onNext={onTourNext}
+          onPrevious={onTourPrevious}
+          onSkip={onTourSkip}
+          onComplete={onTourComplete}
+          stepConfig={currentStepConfig}
+        />
+      )}
       
       <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''}`}>
         <div className="team-view-main">

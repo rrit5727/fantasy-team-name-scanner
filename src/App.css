@@ -34,6 +34,39 @@
   line-height: 1.4;
 }
 
+.btn-new-to-app {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 2px solid rgba(0, 217, 163, 0.5);
+  border-radius: 8px;
+  color: #00d9a3;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-new-to-app:hover {
+  background: rgba(0, 217, 163, 0.1);
+  border-color: #00d9a3;
+  transform: translateY(-1px);
+}
+
+.btn-new-to-app-icon {
+  font-size: 1rem;
+}
+
+@media (max-width: 767px) {
+  .btn-new-to-app {
+    font-size: 0.85rem;
+    padding: 0.45rem 0.9rem;
+  }
+}
+
 .app-main {
   flex: 1;
   display: flex;
