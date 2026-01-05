@@ -48,7 +48,7 @@ const OnboardingTour = ({
       const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
       const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
-      // Set highlight box - exact element dimensions (border renders inward with box-sizing)
+      // Set highlight box - exact element dimensions
       setHighlightBox({
         top: rect.top + scrollTop,
         left: rect.left + scrollLeft,
