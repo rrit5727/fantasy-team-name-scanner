@@ -9,16 +9,6 @@
   pointer-events: auto;
 }
 
-.tour-backdrop {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(2px);
-}
-
 .tour-highlight {
   position: absolute;
   border: 4px solid #00ffcc;
@@ -32,7 +22,7 @@
   pointer-events: none;
   transition: all 0.3s ease;
   animation: tour-pulse 2s ease-in-out infinite;
-  background: rgba(0, 255, 204, 0.05);
+  background: transparent;
 }
 
 @keyframes tour-pulse {

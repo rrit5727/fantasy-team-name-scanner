@@ -174,9 +174,6 @@ const OnboardingTour = ({
 
   return (
     <div className="onboarding-tour-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-      {/* Darkened background */}
-      <div className="tour-backdrop" />
-      
       {/* Highlighted element */}
       {targetElement && (
         <div 
