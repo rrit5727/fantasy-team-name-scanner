@@ -13,50 +13,39 @@ const OnboardingTour = ({
 }) => {
   const [targetElement, setTargetElement] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0, adjustedPosition: 'bottom' });
-  const [highlightBox, setHighlightBox] = useState({ top: 0, left: 0, width: 0, height: 0 });
-  const overlayRef = useRef(null);
   const tooltipRef = useRef(null);
+  const tourOverlayRef = useRef(null);
 
   useEffect(() => {
     if (!isActive || !stepConfig) return;
 
-    const updatePosition = () => {
-      const selector = stepConfig.target;
-      if (!selector) {
-        setTargetElement(null);
-        return;
-      }
+    const selector = stepConfig.target;
+    if (!selector) {
+      setTargetElement(null);
+      return;
+    }
 
-      // Try to find element by selector
-      let element = null;
-      if (typeof selector === 'string') {
-        element = document.querySelector(selector);
-      } else if (selector instanceof HTMLElement) {
-        element = selector;
-      }
+    // Try to find element by selector
+    let element = null;
+    if (typeof selector === 'string') {
+      element = document.querySelector(selector);
+    } else if (selector instanceof HTMLElement) {
+      element = selector;
+    }
 
-      if (!element) {
-        // Element not found yet, might need to wait
-        setTargetElement(null);
-        return;
-      }
+    if (!element) {
+      setTargetElement(null);
+      return;
+    }
 
-      setTargetElement(element);
+    setTargetElement(element);
 
-      // Get element position
+    // Add spotlight class directly to the target element
+    element.classList.add('tour-spotlight');
+
+    // Calculate tooltip position with viewport bounds checking
+    const updateTooltipPosition = () => {
       const rect = element.getBoundingClientRect();
-      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-
-      // Set highlight box - exact element dimensions
-      setHighlightBox({
-        top: rect.top + scrollTop,
-        left: rect.left + scrollLeft,
-        width: rect.width,
-        height: rect.height
-      });
-
-      // Calculate tooltip position with viewport bounds checking
       const position = stepConfig.position || 'bottom';
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
@@ -67,47 +56,45 @@ const OnboardingTour = ({
       let adjustedPosition = position;
 
       if (position === 'bottom') {
-        const bottomSpace = viewportHeight - (rect.bottom + scrollTop);
-        const topSpace = rect.top + scrollTop;
-        
+        const bottomSpace = viewportHeight - rect.bottom;
+
         // If not enough space below, position above instead
         if (bottomSpace < tooltipHeight + 40) {
           adjustedPosition = 'top';
-          top = rect.top + scrollTop - tooltipHeight - 20;
+          top = rect.top - tooltipHeight - 20;
         } else {
-          top = rect.bottom + scrollTop + 20;
+          top = rect.bottom + 20;
         }
         left = Math.max(20, Math.min(
-          rect.left + scrollLeft + rect.width / 2,
+          rect.left + rect.width / 2,
           viewportWidth - tooltipWidth / 2 - 20
         ));
       } else if (position === 'top') {
-        const topSpace = rect.top + scrollTop;
-        const bottomSpace = viewportHeight - (rect.bottom + scrollTop);
-        
+        const topSpace = rect.top;
+
         // If not enough space above, position below instead
         if (topSpace < tooltipHeight + 40) {
           adjustedPosition = 'bottom';
-          top = rect.bottom + scrollTop + 20;
+          top = rect.bottom + 20;
         } else {
-          top = rect.top + scrollTop - tooltipHeight - 20;
+          top = rect.top - tooltipHeight - 20;
         }
         left = Math.max(20, Math.min(
-          rect.left + scrollLeft + rect.width / 2,
+          rect.left + rect.width / 2,
           viewportWidth - tooltipWidth / 2 - 20
         ));
       } else if (position === 'right') {
         top = Math.max(20, Math.min(
-          rect.top + scrollTop + rect.height / 2,
+          rect.top + rect.height / 2,
           viewportHeight - tooltipHeight / 2 - 20
         ));
-        left = rect.right + scrollLeft + 20;
+        left = rect.right + 20;
       } else if (position === 'left') {
         top = Math.max(20, Math.min(
-          rect.top + scrollTop + rect.height / 2,
+          rect.top + rect.height / 2,
           viewportHeight - tooltipHeight / 2 - 20
         ));
-        left = rect.left + scrollLeft - tooltipWidth - 20;
+        left = rect.left - tooltipWidth - 20;
       }
 
       // Ensure tooltip stays within viewport
@@ -117,34 +104,23 @@ const OnboardingTour = ({
       setTooltipPosition({ top, left, adjustedPosition });
     };
 
-    // Initial update
-    updatePosition();
+    // Initial tooltip position
+    updateTooltipPosition();
 
-    // Update on scroll/resize
-    window.addEventListener('scroll', updatePosition, true);
-    window.addEventListener('resize', updatePosition);
+    // Update tooltip on resize
+    window.addEventListener('resize', updateTooltipPosition);
 
     // If scrollTo is true, scroll to element after a short delay to ensure it exists
     if (stepConfig.scrollTo) {
       setTimeout(() => {
-        const selector = stepConfig.target;
-        if (selector) {
-          let element = null;
-          if (typeof selector === 'string') {
-            element = document.querySelector(selector);
-          } else if (selector instanceof HTMLElement) {
-            element = selector;
-          }
-          if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 100);
     }
 
     return () => {
-      window.removeEventListener('scroll', updatePosition, true);
-      window.removeEventListener('resize', updatePosition);
+      // Remove spotlight class from element
+      element.classList.remove('tour-spotlight');
+      window.removeEventListener('resize', updateTooltipPosition);
     };
   }, [isActive, stepConfig, currentStep]);
 
@@ -158,32 +134,26 @@ const OnboardingTour = ({
   const tooltipStyle = {
     top: `${tooltipPosition.top}px`,
     left: `${tooltipPosition.left}px`,
-    transform: (tooltipPosition.adjustedPosition || stepConfig.position) === 'bottom' || (tooltipPosition.adjustedPosition || stepConfig.position) === 'top' 
-      ? 'translateX(-50%)' 
-      : (tooltipPosition.adjustedPosition || stepConfig.position) === 'right' 
-      ? 'translateY(-50%)' 
+    transform: (tooltipPosition.adjustedPosition || stepConfig.position) === 'bottom' || (tooltipPosition.adjustedPosition || stepConfig.position) === 'top'
+      ? 'translateX(-50%)'
+      : (tooltipPosition.adjustedPosition || stepConfig.position) === 'right'
+      ? 'translateY(-50%)'
       : 'translateY(-50%) translateX(-100%)'
   };
 
-  const highlightStyle = {
-    top: `${highlightBox.top - 15}px`,
-    left: `${highlightBox.left}px`,
-    width: `${highlightBox.width}px`,
-    height: `${highlightBox.height}px`
-  };
-
   return (
-    <div className="onboarding-tour-overlay" ref={overlayRef} onClick={handleOverlayClick}>
-      {/* Highlighted element */}
+    <>
+      {/* Dark overlay that covers the entire page */}
       {targetElement && (
-        <div 
-          className="tour-highlight" 
-          style={highlightStyle}
+        <div
+          ref={tourOverlayRef}
+          className="tour-overlay"
+          onClick={handleOverlayClick}
         />
       )}
 
       {/* Tooltip */}
-      <div 
+      <div
         ref={tooltipRef}
         className={`tour-tooltip tour-tooltip-${tooltipPosition.adjustedPosition || stepConfig.position || 'bottom'}`}
         style={tooltipStyle}
@@ -223,7 +193,7 @@ const OnboardingTour = ({
                 </button>
               )}
               
-              <button 
+              <button
                 className="tour-btn tour-btn-link"
                 onClick={onSkip}
               >
@@ -233,7 +203,7 @@ const OnboardingTour = ({
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
