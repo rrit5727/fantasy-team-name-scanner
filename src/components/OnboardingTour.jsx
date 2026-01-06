@@ -43,6 +43,14 @@ const OnboardingTour = ({
     // Add spotlight class directly to the target element
     element.classList.add('tour-spotlight');
 
+    // Boost parent fixed-position containers to prevent stacking context issues
+    const fixedParent = element.closest('[style*="position: fixed"], .section-header, [style*="position: absolute"]');
+    if (fixedParent) {
+      fixedParent.classList.add('tour-spotlight-parent');
+      // Store reference for cleanup
+      element._spotlightParent = fixedParent;
+    }
+
     // Calculate tooltip position based on step
     const updateTooltipPosition = () => {
       const rect = element.getBoundingClientRect();
@@ -128,8 +136,8 @@ const OnboardingTour = ({
         top = viewportHeight; // Will use bottom positioning in CSS
         left = viewportWidth / 2;
       }
-      // Steps 7-9: Pin to top of viewport
-      else if (currentStep >= 7) {
+      // Steps 8-9: Pin to top of viewport
+      else if (currentStep >= 8 && currentStep <= 9) {
         adjustedPosition = 'top-fixed';
         top = 0; // Will use top positioning in CSS
         left = viewportWidth / 2;
@@ -154,6 +162,11 @@ const OnboardingTour = ({
     return () => {
       // Remove spotlight class from element
       element.classList.remove('tour-spotlight');
+      // Remove parent class if it was added
+      if (element._spotlightParent) {
+        element._spotlightParent.classList.remove('tour-spotlight-parent');
+        delete element._spotlightParent;
+      }
       window.removeEventListener('resize', updateTooltipPosition);
     };
   }, [isActive, stepConfig, currentStep]);
