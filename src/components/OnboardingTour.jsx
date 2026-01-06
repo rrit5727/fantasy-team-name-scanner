@@ -43,63 +43,97 @@ const OnboardingTour = ({
     // Add spotlight class directly to the target element
     element.classList.add('tour-spotlight');
 
-    // Calculate tooltip position with viewport bounds checking
+    // Calculate tooltip position based on step
     const updateTooltipPosition = () => {
       const rect = element.getBoundingClientRect();
       const position = stepConfig.position || 'bottom';
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
-      const tooltipHeight = 200; // Approximate tooltip height
+      const tooltipHeight = 250; // Approximate tooltip height
       const tooltipWidth = 350; // Max tooltip width
+      const gap = 30; // Minimum gap between tooltip and element
       let top = 0;
       let left = 0;
       let adjustedPosition = position;
 
-      if (position === 'bottom') {
-        const bottomSpace = viewportHeight - rect.bottom;
+      // Steps 0-1: Position relative to element (original behavior)
+      if (currentStep <= 1) {
+        if (position === 'bottom') {
+          const bottomSpace = viewportHeight - rect.bottom;
 
-        // If not enough space below, position above instead
-        if (bottomSpace < tooltipHeight + 40) {
-          adjustedPosition = 'top';
-          top = rect.top - tooltipHeight - 20;
-        } else {
-          top = rect.bottom + 20;
-        }
-        left = Math.max(20, Math.min(
-          rect.left + rect.width / 2,
-          viewportWidth - tooltipWidth / 2 - 20
-        ));
-      } else if (position === 'top') {
-        const topSpace = rect.top;
+          // If not enough space below, position above instead
+          if (bottomSpace < tooltipHeight + gap + 20) {
+            adjustedPosition = 'top';
+            top = rect.top - tooltipHeight - gap;
+          } else {
+            top = rect.bottom + gap;
+          }
+          // Center horizontally on element, but keep within viewport
+          left = rect.left + rect.width / 2;
+        } else if (position === 'top') {
+          const topSpace = rect.top;
 
-        // If not enough space above, position below instead
-        if (topSpace < tooltipHeight + 40) {
-          adjustedPosition = 'bottom';
-          top = rect.bottom + 20;
-        } else {
-          top = rect.top - tooltipHeight - 20;
+          // If not enough space above, position below instead
+          if (topSpace < tooltipHeight + gap + 20) {
+            adjustedPosition = 'bottom';
+            top = rect.bottom + gap;
+          } else {
+            top = rect.top - tooltipHeight - gap;
+          }
+          // Center horizontally on element, but keep within viewport
+          left = rect.left + rect.width / 2;
+        } else if (position === 'right') {
+          const rightSpace = viewportWidth - rect.right;
+
+          // If not enough space on right, try left
+          if (rightSpace < tooltipWidth + gap + 20) {
+            adjustedPosition = 'left';
+            left = rect.left - tooltipWidth - gap;
+          } else {
+            left = rect.right + gap;
+          }
+          // Center vertically on element
+          top = rect.top + rect.height / 2;
+        } else if (position === 'left') {
+          const leftSpace = rect.left;
+
+          // If not enough space on left, try right
+          if (leftSpace < tooltipWidth + gap + 20) {
+            adjustedPosition = 'right';
+            left = rect.right + gap;
+          } else {
+            left = rect.left - tooltipWidth - gap;
+          }
+          // Center vertically on element
+          top = rect.top + rect.height / 2;
         }
-        left = Math.max(20, Math.min(
-          rect.left + rect.width / 2,
-          viewportWidth - tooltipWidth / 2 - 20
-        ));
-      } else if (position === 'right') {
-        top = Math.max(20, Math.min(
-          rect.top + rect.height / 2,
-          viewportHeight - tooltipHeight / 2 - 20
-        ));
-        left = rect.right + 20;
-      } else if (position === 'left') {
-        top = Math.max(20, Math.min(
-          rect.top + rect.height / 2,
-          viewportHeight - tooltipHeight / 2 - 20
-        ));
-        left = rect.left - tooltipWidth - 20;
+
+        // Ensure tooltip stays within viewport with padding
+        top = Math.max(20, Math.min(top, viewportHeight - tooltipHeight - 20));
+
+        // For horizontal positioning, keep tooltip within bounds
+        if (adjustedPosition === 'bottom' || adjustedPosition === 'top') {
+          // Ensure centered tooltip doesn't go off screen
+          const minLeft = 20 + tooltipWidth / 2;
+          const maxLeft = viewportWidth - tooltipWidth / 2 - 20;
+          left = Math.max(minLeft, Math.min(left, maxLeft));
+        } else {
+          // For left/right positioning
+          left = Math.max(20, Math.min(left, viewportWidth - tooltipWidth - 20));
+        }
       }
-
-      // Ensure tooltip stays within viewport
-      top = Math.max(20, Math.min(top, viewportHeight - tooltipHeight - 20));
-      left = Math.max(20, Math.min(left, viewportWidth - tooltipWidth - 20));
+      // Steps 2-7: Pin to bottom of viewport
+      else if (currentStep >= 2 && currentStep <= 7) {
+        adjustedPosition = 'bottom-fixed';
+        top = viewportHeight; // Will use bottom positioning in CSS
+        left = viewportWidth / 2;
+      }
+      // Steps 7-9: Pin to top of viewport
+      else if (currentStep >= 7) {
+        adjustedPosition = 'top-fixed';
+        top = 0; // Will use top positioning in CSS
+        left = viewportWidth / 2;
+      }
 
       setTooltipPosition({ top, left, adjustedPosition });
     };
@@ -132,9 +166,12 @@ const OnboardingTour = ({
   };
 
   const tooltipStyle = {
-    top: `${tooltipPosition.top}px`,
-    left: `${tooltipPosition.left}px`,
-    transform: (tooltipPosition.adjustedPosition || stepConfig.position) === 'bottom' || (tooltipPosition.adjustedPosition || stepConfig.position) === 'top'
+    bottom: tooltipPosition.adjustedPosition === 'bottom-fixed' ? '20px' : 'auto',
+    top: tooltipPosition.adjustedPosition === 'top-fixed' ? '20px' : tooltipPosition.adjustedPosition === 'bottom-fixed' ? 'auto' : `${tooltipPosition.top}px`,
+    left: (tooltipPosition.adjustedPosition === 'bottom-fixed' || tooltipPosition.adjustedPosition === 'top-fixed') ? '50%' : `${tooltipPosition.left}px`,
+    transform: (tooltipPosition.adjustedPosition === 'bottom-fixed' || tooltipPosition.adjustedPosition === 'top-fixed')
+      ? 'translateX(-50%)'
+      : (tooltipPosition.adjustedPosition || stepConfig.position) === 'bottom' || (tooltipPosition.adjustedPosition || stepConfig.position) === 'top'
       ? 'translateX(-50%)'
       : (tooltipPosition.adjustedPosition || stepConfig.position) === 'right'
       ? 'translateY(-50%)'
@@ -156,7 +193,7 @@ const OnboardingTour = ({
       <div
         ref={tooltipRef}
         className={`tour-tooltip tour-tooltip-${tooltipPosition.adjustedPosition || stepConfig.position || 'bottom'}`}
-        style={tooltipStyle}
+        style={(tooltipPosition.adjustedPosition === 'bottom-fixed' || tooltipPosition.adjustedPosition === 'top-fixed') ? {} : tooltipStyle}
       >
         <div className="tour-tooltip-content">
           <p className="tour-tooltip-text">{stepConfig.tooltip}</p>
