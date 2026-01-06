@@ -2173,34 +2173,31 @@ function TeamView({
     // Wait for team analysis to complete before showing tour steps
     if (!teamAnalysisComplete) return null;
 
-    // Step 2: Status indicators explanation (first player with status indicator)
+    // Step 2: Highlight player cards and indicators before calculating trades
     if (currentTourStep === 2) {
-      if (firstIndicatorPlayer) {
-        return {
-          id: 'status-indicators',
-          target: `[data-player-name="${firstIndicatorPlayer.name.replace(/"/g, '\\"')}"]`, // Escape quotes just in case
-          tooltip: 'These symbols show player status: ⚠️ Injured, 🚨 Very overvalued, 💵 Overvalued, ⛔ Not selected. Players with these indicators are candidates for trade-out.',
-          position: 'right',
-          waitForAction: false,
-          scrollTo: true // Auto-scroll to this player when tour reaches this step
-        };
-      }
-      // Fallback if somehow no suitable player is found
       return {
-        id: 'status-indicators',
-        target: '.player-card:first-of-type', // or '.position-row.position-hok .player-card:first-child'
-        tooltip: 'These symbols show player status: ⚠️ Injured, 🚨 Very overvalued, 💵 Overvalued, ⛔ Not selected. Players with these indicators are candidates for trade-out.',
+        id: 'indicator-highlights',
+        target: '.player-card:has(.injury-indicator), .player-card:has(.urgent-overvalued-indicator), .player-card:has(.lowupside-indicator), .player-card:has(.not-selected-indicator), .player-card:has(.junk-cheap-indicator)',
+        secondaryTargets: [
+          '.injury-indicator',
+          '.urgent-overvalued-indicator',
+          '.lowupside-indicator',
+          '.not-selected-indicator',
+          '.junk-cheap-indicator'
+        ],
+        tooltip: 'These highlighted player cards contain indicators showing players that may be candidates for trade-out. Look for injury warnings (⚠️), overvalued players (💵), and unselected players (⛔).',
         position: 'right',
-        waitForAction: false
+        waitForAction: false,
+        scrollTo: true
       };
     }
 
-    // Step 3: Recommend trade-outs button
+    // Step 3: Calculate trades button
     if (currentTourStep === 3) {
       return {
-        id: 'recommend-trade-outs',
+        id: 'calculate-trades-button',
         target: '.btn-calculate-trades, .btn-make-trade',
-        tooltip: 'Click this button to see which players the app recommends trading out based on injuries, value, and selection status.',
+        tooltip: 'Now click this button to see which players the app recommends trading out based on injuries, value, and selection status.',
         position: 'top',
         waitForAction: false
       };

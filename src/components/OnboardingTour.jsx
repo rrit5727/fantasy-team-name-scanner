@@ -44,6 +44,26 @@ const OnboardingTour = ({
     // Add spotlight class directly to the target element
     element.classList.add('tour-spotlight');
 
+    // Add secondary spotlight for indicator elements if specified
+    if (stepConfig.secondaryTargets) {
+      stepConfig.secondaryTargets.forEach(secondarySelector => {
+        const secondaryElements = document.querySelectorAll(secondarySelector);
+        secondaryElements.forEach(el => {
+          el.classList.add('tour-spotlight-secondary');
+        });
+      });
+    }
+
+    // Add dimmed spotlight for tertiary targets (player cards containing indicators)
+    if (stepConfig.tertiaryTargets) {
+      stepConfig.tertiaryTargets.forEach(tertiarySelector => {
+        const tertiaryElements = document.querySelectorAll(tertiarySelector);
+        tertiaryElements.forEach(el => {
+          el.classList.add('tour-spotlight-dimmed');
+        });
+      });
+    }
+
     // Calculate overlay parts that surround the target element
     const updateOverlayParts = () => {
       const rect = element.getBoundingClientRect();
@@ -195,6 +215,27 @@ const OnboardingTour = ({
     return () => {
       // Remove spotlight class from element
       element.classList.remove('tour-spotlight');
+
+      // Remove secondary spotlight classes
+      if (stepConfig.secondaryTargets) {
+        stepConfig.secondaryTargets.forEach(secondarySelector => {
+          const secondaryElements = document.querySelectorAll(secondarySelector);
+          secondaryElements.forEach(el => {
+            el.classList.remove('tour-spotlight-secondary');
+          });
+        });
+      }
+
+      // Remove tertiary spotlight classes
+      if (stepConfig.tertiaryTargets) {
+        stepConfig.tertiaryTargets.forEach(tertiarySelector => {
+          const tertiaryElements = document.querySelectorAll(tertiarySelector);
+          tertiaryElements.forEach(el => {
+            el.classList.remove('tour-spotlight-dimmed');
+          });
+        });
+      }
+
       window.removeEventListener('resize', updateTooltipPosition);
       window.removeEventListener('resize', updateOverlayParts);
       window.removeEventListener('scroll', updateOverlayParts);

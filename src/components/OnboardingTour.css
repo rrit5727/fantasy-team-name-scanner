@@ -34,6 +34,63 @@
   }
 }
 
+/* Secondary spotlight for indicator elements - more prominent */
+.tour-spotlight-secondary {
+  z-index: 10003 !important;
+}
+
+.tour-spotlight-secondary::after {
+  content: '' !important;
+  position: absolute !important;
+  top: -4px !important;
+  left: -4px !important;
+  right: -4px !important;
+  bottom: -4px !important;
+  z-index: 10004 !important;
+  background: rgba(255, 165, 0, 0.4) !important;
+  border: 3px solid #ffaa00 !important;
+  box-shadow: 0 0 25px rgba(255, 170, 0, 0.9) !important;
+  animation: tour-spotlight-secondary-pulse 1.5s ease-in-out infinite !important;
+  border-radius: 8px !important;
+  pointer-events: none !important;
+}
+
+/* Dimmed spotlight for player cards when indicators are highlighted */
+.tour-spotlight-dimmed {
+  position: relative !important;
+  z-index: 10001 !important;
+  isolation: isolate !important;
+  contain: none !important;
+  transform: translateZ(0) !important;
+}
+
+.tour-spotlight-dimmed::before {
+  content: '' !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 10002 !important;
+  background: rgba(0, 217, 163, 0.1) !important;
+  border: 2px solid rgba(0, 217, 163, 0.4) !important;
+  box-shadow: 0 0 15px rgba(0, 217, 163, 0.3) !important;
+  animation: tour-spotlight-pulse 2s ease-in-out infinite !important;
+  border-radius: inherit !important;
+  pointer-events: none !important;
+}
+
+@keyframes tour-spotlight-secondary-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(255, 170, 0, 0.8) !important;
+    border-color: #ffaa00 !important;
+  }
+  50% {
+    box-shadow: 0 0 35px rgba(255, 170, 0, 1) !important;
+    border-color: #ffdd00 !important;
+  }
+}
+
 /* Four-part overlay that surrounds the target element - no additional CSS needed */
 
 .tour-tooltip {
