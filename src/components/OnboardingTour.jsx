@@ -47,7 +47,14 @@ const OnboardingTour = ({
     // Add secondary spotlight for indicator elements if specified
     if (stepConfig.secondaryTargets) {
       stepConfig.secondaryTargets.forEach(secondarySelector => {
-        const secondaryElements = document.querySelectorAll(secondarySelector);
+        // If the selector starts with '.', find elements within the current target element
+        // Otherwise, find elements globally as before
+        let secondaryElements;
+        if (secondarySelector.startsWith('.')) {
+          secondaryElements = element.querySelectorAll(secondarySelector);
+        } else {
+          secondaryElements = document.querySelectorAll(secondarySelector);
+        }
         secondaryElements.forEach(el => {
           el.classList.add('tour-spotlight-secondary');
         });
@@ -219,7 +226,13 @@ const OnboardingTour = ({
       // Remove secondary spotlight classes
       if (stepConfig.secondaryTargets) {
         stepConfig.secondaryTargets.forEach(secondarySelector => {
-          const secondaryElements = document.querySelectorAll(secondarySelector);
+          // Use the same logic as adding - scope to target element if selector starts with '.'
+          let secondaryElements;
+          if (secondarySelector.startsWith('.')) {
+            secondaryElements = element.querySelectorAll(secondarySelector);
+          } else {
+            secondaryElements = document.querySelectorAll(secondarySelector);
+          }
           secondaryElements.forEach(el => {
             el.classList.remove('tour-spotlight-secondary');
           });
