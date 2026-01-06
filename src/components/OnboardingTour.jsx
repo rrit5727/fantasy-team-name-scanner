@@ -301,11 +301,11 @@ const OnboardingTour = ({
             
             <div className="tour-buttons">
               {currentStep > 0 && (
-                <button 
+                <button
                   className="tour-btn tour-btn-secondary"
                   onClick={onPrevious}
                 >
-                  Previous
+                  Prev
                 </button>
               )}
               
@@ -329,7 +329,7 @@ const OnboardingTour = ({
                 className="tour-btn tour-btn-link"
                 onClick={onSkip}
               >
-                Skip tour
+                Skip
               </button>
             </div>
           </div>

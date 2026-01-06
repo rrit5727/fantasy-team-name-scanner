@@ -528,6 +528,57 @@ function TeamView({
   const [positionRequirements, setPositionRequirements] = React.useState({});
   const [showPositionDropdown, setShowPositionDropdown] = React.useState(null); // {playerName, position}
 
+  // Find the first player with status indicators for tour step 2
+  const firstIndicatorPlayer = React.useMemo(() => {
+    if (!teamAnalysisComplete) return null;
+
+    // Replicate the same player grouping logic as in the render
+    const grouped = {};
+    POSITION_ORDER.forEach(pos => { grouped[pos] = []; });
+    const unassigned = [];
+
+    teamPlayers.forEach(player => {
+      const primaryPos = player.positions?.[0];
+      if (primaryPos && grouped[primaryPos] && grouped[primaryPos].length < POSITION_CONFIG[primaryPos].count) {
+        grouped[primaryPos].push(player);
+      } else {
+        unassigned.push(player);
+      }
+    });
+    POSITION_ORDER.forEach(pos => {
+      while (grouped[pos].length < POSITION_CONFIG[pos].count && unassigned.length > 0) {
+        grouped[pos].push(unassigned.shift());
+      }
+    });
+
+    // Check in priority order: HOK → MID → EDG → HLF
+    const targetPositions = ['HOK', 'MID', 'EDG', 'HLF'];
+    for (const pos of targetPositions) {
+      for (const player of grouped[pos] || []) {
+        if (player && (
+          injuredPlayers.includes(player.name) ||
+          urgentOvervaluedPlayers.includes(player.name) ||
+          overvaluedPlayers.includes(player.name) ||
+          notSelectedPlayers.includes(player.name) ||
+          junkCheapies.includes(player.name)
+        )) {
+          return player;
+        }
+      }
+    }
+
+    // Ultimate fallback: first player in HOK row
+    return grouped['HOK']?.[0] || null;
+  }, [
+    teamPlayers,
+    injuredPlayers,
+    urgentOvervaluedPlayers,
+    overvaluedPlayers,
+    notSelectedPlayers,
+    junkCheapies,
+    teamAnalysisComplete
+  ]);
+
   const renderPlayerCard = (player, position, index) => {
     if (!player) {
       return (
@@ -2122,30 +2173,22 @@ function TeamView({
     // Wait for team analysis to complete before showing tour steps
     if (!teamAnalysisComplete) return null;
 
-    // Step 2 (index 2): Status indicators explanation (first player with status indicator)
+    // Step 2: Status indicators explanation (first player with status indicator)
     if (currentTourStep === 2) {
-      // Find first player with a status indicator
-      const playerWithStatus = teamPlayers.find(p => 
-        injuredPlayers.some(ip => ip.name === p.name) ||
-        urgentOvervaluedPlayers.some(op => op.name === p.name) ||
-        overvaluedPlayers.some(op => op.name === p.name) ||
-        notSelectedPlayers.some(np => np.name === p.name)
-      );
-      
-      if (playerWithStatus) {
-        // Use data attribute approach - we'll add this to player cards
+      if (firstIndicatorPlayer) {
         return {
           id: 'status-indicators',
-          target: `[data-player-name="${playerWithStatus.name}"]`,
+          target: `[data-player-name="${firstIndicatorPlayer.name.replace(/"/g, '\\"')}"]`, // Escape quotes just in case
           tooltip: 'These symbols show player status: ⚠️ Injured, 🚨 Very overvalued, 💵 Overvalued, ⛔ Not selected. Players with these indicators are candidates for trade-out.',
           position: 'right',
-          waitForAction: false
+          waitForAction: false,
+          scrollTo: true // Auto-scroll to this player when tour reaches this step
         };
       }
-      // Fallback to first player card
+      // Fallback if somehow no suitable player is found
       return {
         id: 'status-indicators',
-        target: '.player-card:first-of-type',
+        target: '.player-card:first-of-type', // or '.position-row.position-hok .player-card:first-child'
         tooltip: 'These symbols show player status: ⚠️ Injured, 🚨 Very overvalued, 💵 Overvalued, ⛔ Not selected. Players with these indicators are candidates for trade-out.',
         position: 'right',
         waitForAction: false

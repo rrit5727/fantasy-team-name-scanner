@@ -83,7 +83,8 @@
 .tour-buttons {
   display: flex;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
 }
 
 .tour-btn {
@@ -94,7 +95,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   border: none;
-  flex: 1;
+  flex: 0 0 auto;
   min-width: 80px;
 }
 
@@ -127,6 +128,8 @@
   flex: 0 0 auto;
   min-width: auto;
   padding: 0.5rem 0.75rem;
+  width: auto;
+  white-space: nowrap;
 }
 
 .tour-btn-link:hover {
@@ -225,11 +228,12 @@
   }
 
   .tour-buttons {
-    flex-direction: column;
+    flex-direction: row;
   }
 
   .tour-btn {
-    width: 100%;
+    flex: 0 0 auto;
+    width: auto;
   }
 
   .tour-highlight {
