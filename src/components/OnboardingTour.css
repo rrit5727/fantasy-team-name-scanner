@@ -144,6 +144,7 @@
   right: auto !important;
   top: auto !important;
   transform: translateX(-50%) !important;
+  z-index: 10004 !important;
 }
 
 /* Top-fixed tooltip positioning */
@@ -154,6 +155,7 @@
   right: auto !important;
   bottom: auto !important;
   transform: translateX(-50%) !important;
+  z-index: 10004 !important;
 }
 
 /* Tooltip positioning arrows */
@@ -211,7 +213,7 @@
 
 /* Mobile optimizations */
 @media (max-width: 767px) {
-  .tour-tooltip {
+  .tour-tooltip:not(.tour-tooltip-bottom-fixed):not(.tour-tooltip-top-fixed) {
     max-width: calc(100vw - 2rem);
     min-width: 280px;
     left: 1rem !important;

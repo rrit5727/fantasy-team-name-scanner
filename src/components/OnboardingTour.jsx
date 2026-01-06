@@ -183,6 +183,7 @@ const OnboardingTour = ({
     window.addEventListener('resize', updateTooltipPosition);
     window.addEventListener('resize', updateOverlayParts);
     window.addEventListener('scroll', updateOverlayParts);
+    window.addEventListener('scroll', updateTooltipPosition);
 
     // If scrollTo is true, scroll to element after a short delay to ensure it exists
     if (stepConfig.scrollTo) {
@@ -197,6 +198,7 @@ const OnboardingTour = ({
       window.removeEventListener('resize', updateTooltipPosition);
       window.removeEventListener('resize', updateOverlayParts);
       window.removeEventListener('scroll', updateOverlayParts);
+      window.removeEventListener('scroll', updateTooltipPosition);
     };
   }, [isActive, stepConfig, currentStep]);
 

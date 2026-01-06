@@ -2245,7 +2245,7 @@ function TeamView({
     if (currentTourStep === 7 && showTradeInPage && tradeInRecommendations.length > 0) {
       return {
         id: 'trade-in-cards',
-        target: '.trade-player-item',
+        target: '.trade-option:first-of-type',
         tooltip: 'Trade-in recommendations appear in order of value/score (depending on your strategy). Each option covers the position requirements from your trade-outs.',
         position: 'bottom',
         waitForAction: false
@@ -2256,8 +2256,19 @@ function TeamView({
     if (currentTourStep === 8 && showTradeInPage && tradeInRecommendations.length > 0) {
       return {
         id: 'confirm-trade',
-        target: '.btn-confirm-option',
+        target: '.trade-option:first-of-type',
         tooltip: 'Select a trade-in option you like, then confirm to execute the trade and return to your team view.',
+        position: 'top',
+        waitForAction: false
+      };
+    }
+
+    // Step 9: Trade-in footer/salary info
+    if (currentTourStep === 9 && showTradeInPage && tradeInRecommendations.length > 0) {
+      return {
+        id: 'trade-in-footer',
+        target: '.trade-option:first-of-type',
+        tooltip: 'Review the total cost and remaining salary for each option before confirming.',
         position: 'top',
         waitForAction: false
       };
