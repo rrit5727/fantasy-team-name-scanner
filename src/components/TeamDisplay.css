@@ -331,6 +331,25 @@
   z-index: 10;
 }
 
+/* Ensure indicators appear above tour spotlight */
+.tour-spotlight .not-selected-indicator,
+.tour-spotlight .injury-indicator,
+.tour-spotlight .lowupside-indicator,
+.tour-spotlight .urgent-overvalued-indicator,
+.tour-spotlight .junk-cheap-indicator,
+.tour-spotlight .priority-indicator {
+  z-index: 10003 !important;
+}
+
+/* Ensure indicator tooltips appear above tour spotlight */
+.tour-spotlight .not-selected-indicator .tooltip,
+.tour-spotlight .injury-indicator .tooltip,
+.tour-spotlight .lowupside-indicator .tooltip,
+.tour-spotlight .urgent-overvalued-indicator .tooltip,
+.tour-spotlight .junk-cheap-indicator .tooltip {
+  z-index: 10004 !important;
+}
+
 .prohibition-icon {
   width: 20px;
   height: 20px;
