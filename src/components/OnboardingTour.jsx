@@ -13,6 +13,7 @@ const OnboardingTour = ({
 }) => {
   const [targetElement, setTargetElement] = useState(null);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0, adjustedPosition: 'bottom' });
+  const [overlayParts, setOverlayParts] = useState({ top: null, bottom: null, left: null, right: null });
   const tooltipRef = useRef(null);
   const tourOverlayRef = useRef(null);
 
@@ -43,13 +44,42 @@ const OnboardingTour = ({
     // Add spotlight class directly to the target element
     element.classList.add('tour-spotlight');
 
-    // Boost parent fixed-position containers to prevent stacking context issues
-    const fixedParent = element.closest('[style*="position: fixed"], .section-header, [style*="position: absolute"]');
-    if (fixedParent) {
-      fixedParent.classList.add('tour-spotlight-parent');
-      // Store reference for cleanup
-      element._spotlightParent = fixedParent;
-    }
+    // Calculate overlay parts that surround the target element
+    const updateOverlayParts = () => {
+      const rect = element.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      setOverlayParts({
+        top: {
+          left: 0,
+          top: 0,
+          width: viewportWidth,
+          height: rect.top
+        },
+        bottom: {
+          left: 0,
+          top: rect.bottom,
+          width: viewportWidth,
+          height: viewportHeight - rect.bottom
+        },
+        left: {
+          left: 0,
+          top: rect.top,
+          width: rect.left,
+          height: rect.height
+        },
+        right: {
+          left: rect.right,
+          top: rect.top,
+          width: viewportWidth - rect.right,
+          height: rect.height
+        }
+      });
+    };
+
+    // Initial overlay calculation
+    updateOverlayParts();
 
     // Calculate tooltip position based on step
     const updateTooltipPosition = () => {
@@ -149,8 +179,10 @@ const OnboardingTour = ({
     // Initial tooltip position
     updateTooltipPosition();
 
-    // Update tooltip on resize
+    // Update overlay parts and tooltip on resize and scroll
     window.addEventListener('resize', updateTooltipPosition);
+    window.addEventListener('resize', updateOverlayParts);
+    window.addEventListener('scroll', updateOverlayParts);
 
     // If scrollTo is true, scroll to element after a short delay to ensure it exists
     if (stepConfig.scrollTo) {
@@ -162,12 +194,9 @@ const OnboardingTour = ({
     return () => {
       // Remove spotlight class from element
       element.classList.remove('tour-spotlight');
-      // Remove parent class if it was added
-      if (element._spotlightParent) {
-        element._spotlightParent.classList.remove('tour-spotlight-parent');
-        delete element._spotlightParent;
-      }
       window.removeEventListener('resize', updateTooltipPosition);
+      window.removeEventListener('resize', updateOverlayParts);
+      window.removeEventListener('scroll', updateOverlayParts);
     };
   }, [isActive, stepConfig, currentStep]);
 
@@ -193,13 +222,66 @@ const OnboardingTour = ({
 
   return (
     <>
-      {/* Dark overlay that covers the entire page */}
-      {targetElement && (
-        <div
-          ref={tourOverlayRef}
-          className="tour-overlay"
-          onClick={handleOverlayClick}
-        />
+      {/* Four-part overlay that surrounds the target element */}
+      {targetElement && overlayParts.top && (
+        <>
+          <div
+            className="tour-overlay-part"
+            style={{
+              position: 'fixed',
+              left: `${overlayParts.top.left}px`,
+              top: `${overlayParts.top.top}px`,
+              width: `${overlayParts.top.width}px`,
+              height: `${overlayParts.top.height}px`,
+              background: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 9998,
+              pointerEvents: 'auto'
+            }}
+            onClick={handleOverlayClick}
+          />
+          <div
+            className="tour-overlay-part"
+            style={{
+              position: 'fixed',
+              left: `${overlayParts.bottom.left}px`,
+              top: `${overlayParts.bottom.top}px`,
+              width: `${overlayParts.bottom.width}px`,
+              height: `${overlayParts.bottom.height}px`,
+              background: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 9998,
+              pointerEvents: 'auto'
+            }}
+            onClick={handleOverlayClick}
+          />
+          <div
+            className="tour-overlay-part"
+            style={{
+              position: 'fixed',
+              left: `${overlayParts.left.left}px`,
+              top: `${overlayParts.left.top}px`,
+              width: `${overlayParts.left.width}px`,
+              height: `${overlayParts.left.height}px`,
+              background: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 9998,
+              pointerEvents: 'auto'
+            }}
+            onClick={handleOverlayClick}
+          />
+          <div
+            className="tour-overlay-part"
+            style={{
+              position: 'fixed',
+              left: `${overlayParts.right.left}px`,
+              top: `${overlayParts.right.top}px`,
+              width: `${overlayParts.right.width}px`,
+              height: `${overlayParts.right.height}px`,
+              background: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 9998,
+              pointerEvents: 'auto'
+            }}
+            onClick={handleOverlayClick}
+          />
+        </>
       )}
 
       {/* Tooltip */}

@@ -34,20 +34,7 @@
   }
 }
 
-/* Dark overlay that covers the entire page */
-.tour-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  z-index: 9998;
-  pointer-events: auto;
-}
-
-/* Ensure fixed-position parents don't trap spotlighted children */
-.section-header:has(.tour-spotlight),
-.tour-spotlight-parent {
-  z-index: 10000 !important;
-}
+/* Four-part overlay that surrounds the target element - no additional CSS needed */
 
 .tour-tooltip {
   position: fixed;
