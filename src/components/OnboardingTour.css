@@ -36,8 +36,21 @@
 
 /* Secondary spotlight for indicator elements - more prominent */
 .tour-spotlight-secondary {
-  position: relative !important;
   z-index: 10003 !important;
+}
+
+/* Override position for indicator elements to preserve their absolute positioning */
+.injury-indicator.tour-spotlight-secondary,
+.urgent-overvalued-indicator.tour-spotlight-secondary,
+.lowupside-indicator.tour-spotlight-secondary,
+.not-selected-indicator.tour-spotlight-secondary,
+.junk-cheap-indicator.tour-spotlight-secondary {
+  position: absolute !important; /* Keep original absolute positioning */
+}
+
+/* Specific styling for spans that need inline-block display */
+.tour-spotlight-secondary.option-diff-span {
+  position: relative !important;
   display: inline-block !important;
 }
 

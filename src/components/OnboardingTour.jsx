@@ -57,6 +57,10 @@ const OnboardingTour = ({
         }
         secondaryElements.forEach(el => {
           el.classList.add('tour-spotlight-secondary');
+          // Add specific class for option-diff spans
+          if (secondarySelector === '.option-diff') {
+            el.classList.add('option-diff-span');
+          }
         });
       });
     }
@@ -235,6 +239,10 @@ const OnboardingTour = ({
           }
           secondaryElements.forEach(el => {
             el.classList.remove('tour-spotlight-secondary');
+            // Remove specific class for option-diff spans
+            if (secondarySelector === '.option-diff') {
+              el.classList.remove('option-diff-span');
+            }
           });
         });
       }
