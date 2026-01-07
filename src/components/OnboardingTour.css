@@ -36,7 +36,9 @@
 
 /* Secondary spotlight for indicator elements - more prominent */
 .tour-spotlight-secondary {
+  position: relative !important;
   z-index: 10003 !important;
+  display: inline-block !important;
 }
 
 .tour-spotlight-secondary::after {

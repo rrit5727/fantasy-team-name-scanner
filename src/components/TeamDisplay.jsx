@@ -2243,6 +2243,9 @@ function TeamView({
       return {
         id: 'trade-in-cards',
         target: '.trade-option:first-of-type',
+        secondaryTargets: [
+          '.option-diff'
+        ],
         tooltip: 'Trade-in recommendations appear in order of value/score (depending on your strategy). Each option covers the position requirements from your trade-outs.',
         position: 'bottom',
         waitForAction: false
