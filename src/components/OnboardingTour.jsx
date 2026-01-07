@@ -191,14 +191,14 @@ const OnboardingTour = ({
           left = Math.max(20, Math.min(left, viewportWidth - tooltipWidth - 20));
         }
       }
-      // Steps 2-6: Pin to bottom of viewport
-      else if (currentStep >= 2 && currentStep <= 6) {
+      // Steps 2-10: Pin to bottom of viewport
+      else if (currentStep >= 2 && currentStep <= 10) {
         adjustedPosition = 'bottom-fixed';
         top = viewportHeight; // Will use bottom positioning in CSS
         left = viewportWidth / 2;
       }
-      // Steps 7-8: Pin to top of viewport
-      else if (currentStep >= 7 && currentStep <= 8) {
+      // Steps 11+: Pin to top of viewport (for trade-in page)
+      else if (currentStep >= 11) {
         adjustedPosition = 'top-fixed';
         top = 0; // Will use top positioning in CSS
         left = viewportWidth / 2;

@@ -938,9 +938,9 @@ function TeamView({
         setShowTradeInPage(true); // Go directly to trade-in page
         
         // Advance tour if active
-        if (isTourActive && currentTourStep === 6 && onTourNext) {
+        if (isTourActive && currentTourStep === 10 && onTourNext) {
           setTimeout(() => {
-            onTourNext(); // Advance to step 7 (trade-in page)
+            onTourNext(); // Advance to step 11 (trade-in page)
           }, 500);
         }
       } catch (err) {
@@ -1061,9 +1061,9 @@ function TeamView({
         setTradeInRecommendations(result.trade_in);
 
         // Advance tour if active
-        if (isTourActive && currentTourStep === 6 && onTourNext) {
+        if (isTourActive && currentTourStep === 10 && onTourNext) {
           setTimeout(() => {
-            onTourNext(); // Advance to step 7 (trade-in page)
+            onTourNext(); // Advance to step 11 (trade-in page)
           }, 500);
         }
 
@@ -1255,7 +1255,7 @@ function TeamView({
     }
     
     // Complete tour if active
-    if (isTourActive && currentTourStep >= 7 && onTourComplete) {
+    if (isTourActive && currentTourStep >= 11 && onTourComplete) {
       setTimeout(() => {
         onTourComplete();
       }, 500);
@@ -2230,16 +2230,63 @@ function TeamView({
     // Step 6: Calculate trade recs button (only if player selected)
     if (currentTourStep === 6 && selectedTradeOutPlayers.length > 0) {
       return {
-        id: 'calculate-trade-recs',
+        id: 'calculate-trade-recs-intro',
         target: '.btn-calculate-trades, .btn-make-trade',
-        tooltip: 'Once you\'ve selected players to trade out, click here to see trade-in recommendations that fit your salary cap and position needs.',
+        tooltip: 'Before proceeding, let\'s review the options that will help customize your trade recommendations. Click here when ready to explore them.',
         position: 'top',
         waitForAction: false
       };
     }
 
-    // Step 7: Trade-in cards (on trade-in page)
-    if (currentTourStep === 7 && showTradeInPage && tradeInRecommendations.length > 0) {
+    // Step 7: Cash input field
+    if (currentTourStep === 7) {
+      return {
+        id: 'cash-input',
+        target: '.cash-input-compact, #cashInBank',
+        tooltip: 'Enter your available cash here. This will be added to your salary cap for trading in players.',
+        position: 'right',
+        waitForAction: false,
+        scrollTo: true
+      };
+    }
+
+    // Step 8: Strategy dropdown
+    if (currentTourStep === 8) {
+      return {
+        id: 'strategy-select',
+        target: '.strategy-select-compact, #strategy',
+        tooltip: 'Select your trading strategy: Max Value prioritizes players with high upside (projected score gains), Max Base prioritizes players with the highest scores regardless of upside.',
+        position: 'right',
+        waitForAction: false,
+        scrollTo: true
+      };
+    }
+
+    // Step 9: Bye round toggle
+    if (currentTourStep === 9) {
+      return {
+        id: 'bye-round-toggle',
+        target: '.bye-round-btn-compact',
+        tooltip: 'Toggle this to prioritize players with favorable bye schedules, helping you maintain team coverage during bye rounds.',
+        position: 'right',
+        waitForAction: false,
+        scrollTo: true
+      };
+    }
+
+    // Step 10: Calculate trade recs button (after reviewing options)
+    if (currentTourStep === 10 && selectedTradeOutPlayers.length > 0) {
+      return {
+        id: 'calculate-trade-recs',
+        target: '.btn-calculate-trades, .btn-make-trade',
+        tooltip: 'Now that you\'ve configured your trade preferences, click here to see trade-in recommendations that fit your salary cap and position needs.',
+        position: 'top',
+        waitForAction: false
+      };
+    }
+
+    // Step 11: Trade-in cards (on trade-in page)
+    if (currentTourStep === 11 && showTradeInPage && tradeInRecommendations.length > 0) {
       return {
         id: 'trade-in-cards',
         target: '.trade-option:first-of-type',
@@ -2252,8 +2299,8 @@ function TeamView({
       };
     }
 
-    // Step 8: Confirm trade
-    if (currentTourStep === 8 && showTradeInPage && tradeInRecommendations.length > 0) {
+    // Step 12: Confirm trade
+    if (currentTourStep === 12 && showTradeInPage && tradeInRecommendations.length > 0) {
       return {
         id: 'confirm-trade',
         target: '.trade-option:first-of-type',
@@ -2263,8 +2310,8 @@ function TeamView({
       };
     }
 
-    // Step 9: Trade-in footer/salary info
-    if (currentTourStep === 9 && showTradeInPage && tradeInRecommendations.length > 0) {
+    // Step 13: Trade-in footer/salary info
+    if (currentTourStep === 13 && showTradeInPage && tradeInRecommendations.length > 0) {
       return {
         id: 'trade-in-footer',
         target: '.trade-option:first-of-type',
@@ -2278,7 +2325,7 @@ function TeamView({
   };
 
   const currentStepConfig = getTourStepConfig();
-  const totalTourSteps = 10; // 2 landing + 8 team view
+  const totalTourSteps = 14; // 2 landing + 12 team view
 
   // Handle preseason mode tour modal
   const [showPreseasonTourModal, setShowPreseasonTourModal] = React.useState(false);
