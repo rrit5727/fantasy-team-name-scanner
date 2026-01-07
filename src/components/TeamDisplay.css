@@ -1806,14 +1806,12 @@
   border-color: #00d9a3;
 }
 
-/* Trade-out/swaps panel section - fills space between header and content */
+/* Trade-out/swaps panel section - only as tall as content needs */
 .trade-out-pinned {
   background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
   border-bottom: 2px solid rgba(0, 166, 125, 0.3);
   padding: 0.5rem 1rem;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
 }
@@ -1823,10 +1821,9 @@
   border-radius: 10px;
   padding: 0.75rem;
   margin-bottom: 0;
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  min-height: 0;
 }
 
 .trade-out-pinned .trade-subtitle {
@@ -1836,8 +1833,11 @@
 }
 
 .trade-out-pinned .trade-swap-list {
-  flex: 1;
-  overflow-y: auto;
+  flex: 0 0 auto;
+}
+
+.trade-out-pinned .trade-player-list {
+  flex: 0 0 auto;
 }
 
 /* Trade-in scrollable content */
