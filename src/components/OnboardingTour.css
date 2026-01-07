@@ -399,6 +399,14 @@
   border-radius: 4px;
 }
 
+/* Compact element spotlight styling */
+.cash-input-compact.tour-spotlight,
+.strategy-select-compact.tour-spotlight,
+.bye-round-btn-compact.tour-spotlight {
+  background: linear-gradient(135deg, #00a67d 0%, #00d9a3 100%) !important;
+  color: black !important;
+}
+
 @media (max-width: 767px) {
   .preseason-tour-carousel {
     padding: 1.5rem;
