@@ -90,7 +90,6 @@ function App() {
     <div className="app">
       <header className="app-header">
         <h1>Team Name Scanner</h1>
-        <p className="subtitle">Upload screenshots in any order - auto-detects correct sequence</p>
         <button 
           className="btn-new-to-app"
           onClick={handleStartTour}
@@ -112,10 +111,6 @@ function App() {
           onTourComplete={handleTourComplete}
         />
       </main>
-
-      <footer className="app-footer">
-        <p>Upload screenshots from NRL Fantasy, SuperCoach, or similar apps</p>
-      </footer>
     </div>
   )
 }

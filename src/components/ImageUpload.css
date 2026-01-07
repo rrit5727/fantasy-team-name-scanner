@@ -1,55 +1,26 @@
 .image-upload-container {
   width: 100%;
   max-width: 500px;
-  margin: 0 auto;
-}
-
-.upload-instructions {
-  background: linear-gradient(135deg, rgba(0, 166, 125, 0.1) 0%, rgba(0, 166, 125, 0.05) 100%);
-  border-radius: 16px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-  border: 1px solid rgba(0, 166, 125, 0.2);
-}
-
-.instruction-step {
+  margin: 1rem auto 0;
+  flex: 1;
   display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0;
-  color: #c0d0cc;
-  font-size: 0.9rem;
-}
-
-.instruction-step:not(:last-child) {
-  border-bottom: 1px solid rgba(0, 166, 125, 0.1);
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.25rem;
-}
-
-.step-number {
-  width: 24px;
-  height: 24px;
-  background: linear-gradient(135deg, #00a67d, #00d9a3);
-  color: #0a1f1a;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.75rem;
-  flex-shrink: 0;
+  flex-direction: column;
 }
 
 .drop-zone {
   border: 3px dashed #00a67d;
   border-radius: 20px;
-  padding: 2.5rem 1.5rem;
+  padding: 2rem 1.5rem;
   cursor: pointer;
   transition: all 0.3s ease;
   background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
   position: relative;
   overflow: hidden;
+  min-height: 550px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
 }
 
 .drop-zone::before {
@@ -89,6 +60,11 @@
 .upload-prompt {
   text-align: center;
   color: #e0e0e0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 }
 
 .upload-icon {
@@ -102,6 +78,30 @@
   font-weight: 600;
   margin-bottom: 0.5rem;
   color: #00d9a3;
+}
+
+.screenshot-examples {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+}
+
+.example-screenshot {
+  width: 200px;
+  height: auto;
+  border-radius: 12px;
+  border: 2px solid rgba(0, 166, 125, 0.3);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.example-screenshot:hover {
+  border-color: #00d9a3;
+  transform: scale(1.05);
+  box-shadow: 0 4px 20px rgba(0, 166, 125, 0.3);
 }
 
 .upload-hint {
@@ -489,36 +489,33 @@ details[open] .debug-toggle::before {
 @media (max-width: 480px) {
   .drop-zone {
     padding: 2rem 1rem;
+    min-height: 350px;
   }
-  
-  .upload-icon {
-    font-size: 3rem;
+
+  .screenshot-examples {
+    gap: 0.75rem;
   }
-  
+
+  .example-screenshot {
+    width: 100px;
+  }
+
   .upload-text {
     font-size: 1.1rem;
   }
-  
+
   .results-section {
     padding: 1rem;
   }
-  
+
   .player-item {
     padding: 0.6rem 0.75rem;
   }
-  
-  .upload-instructions {
-    padding: 1rem;
-  }
-  
-  .instruction-step {
-    font-size: 0.85rem;
-  }
-  
+
   .player-name {
     font-size: 0.9rem;
   }
-  
+
   .player-actions {
     opacity: 1;
   }
@@ -527,7 +524,7 @@ details[open] .debug-toggle::before {
 /* Touch-friendly tap targets */
 @media (pointer: coarse) {
   .drop-zone {
-    min-height: 180px;
+    min-height: 450px;
   }
   
   .btn-download,
@@ -544,8 +541,19 @@ details[open] .debug-toggle::before {
     width: 36px;
     height: 36px;
   }
-  
+
   .player-actions {
     opacity: 1;
+  }
+}
+
+/* Desktop optimizations for larger screenshots */
+@media (min-width: 768px) {
+  .example-screenshot {
+    width: 220px;
+  }
+
+  .screenshot-examples {
+    gap: 2rem;
   }
 }
