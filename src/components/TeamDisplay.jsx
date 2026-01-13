@@ -148,7 +148,7 @@ function TeamDisplay({
   const renderPlayerCard = (player, position, index) => {
     if (!player) {
       return (
-        <div key={`empty-${position}-${index}`} className="player-card relative flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-card/30 border border-primary/10 opacity-50 w-[100px] h-[100px]">
+        <div key={`empty-${position}-${index}`} className="player-card relative flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-card/30 border border-primary/10 opacity-50 w-[75px] h-[75px]">
           <Badge className={cn(POSITION_CONFIG[position]?.color, POSITION_CONFIG[position]?.textColor, "px-2 py-1 text-xs font-bold")}>
             {position}
           </Badge>
@@ -180,7 +180,7 @@ function TeamDisplay({
     const isHighlightedForTrade = isPreseasonMode ? isPlayerInList(player, preseasonHighlighted) : isNormalModeHighlighted;
 
     const cardClasses = cn(
-      "player-card relative flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg transition-all duration-200 cursor-pointer w-[100px] h-[100px]",
+      "player-card relative flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg transition-all duration-200 cursor-pointer w-[75px] h-[75px]",
       "bg-card/50 border border-primary/20",
       "hover:bg-card/80 hover:border-primary/40 hover:scale-[1.02]",
       selectionLimitReached && !isSelected && "opacity-60 cursor-not-allowed hover:scale-100",
@@ -306,7 +306,7 @@ function TeamDisplay({
     }
 
     return (
-      <div key={position} className="flex flex-wrap justify-center gap-3 mb-3">
+      <div key={position} className="flex flex-nowrap justify-center gap-2 mb-3">
         {paddedPlayers.map((player, idx) => renderPlayerCard(player, position, idx))}
       </div>
     );
