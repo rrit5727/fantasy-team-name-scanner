@@ -1,6 +1,20 @@
-import { useState, useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { X, Check } from 'lucide-react';
 
-function TradeTypeSelector({ player, slotPosition, positionRequirements, onPositionRequirementSelect, onCancelPositionRequirement, onPositionRequirementChange }) {
+const POSITIONS = ['HOK', 'HLF', 'CTR', 'WFB', 'EDG', 'MID'];
+
+function TradeTypeSelector({ 
+  player, 
+  slotPosition, 
+  positionRequirements, 
+  onPositionRequirementSelect, 
+  onCancelPositionRequirement, 
+  onPositionRequirementChange 
+}) {
   const panelRef = useRef(null);
 
   // Handle outside click to cancel
@@ -34,49 +48,86 @@ function TradeTypeSelector({ player, slotPosition, positionRequirements, onPosit
     return !(positionRequirements[player.name] && positionRequirements[player.name].length > 0);
   };
 
+  const selectedPositions = positionRequirements[player.name] || [];
+
+  const handlePositionToggle = (position, checked) => {
+    if (onPositionRequirementChange) {
+      let newPositions;
+      if (checked) {
+        newPositions = [...selectedPositions, position];
+      } else {
+        newPositions = selectedPositions.filter(p => p !== position);
+      }
+      onPositionRequirementChange(player.name, newPositions);
+    }
+  };
+
   return (
-    <div className="position-selector-panel" ref={panelRef}>
-      <div className="position-selection-content">
-        <div className="position-selector-label-row">
-          <label htmlFor="positions">Select Positions for Swap:</label>
-          <div className="position-selector-buttons">
-            <button
-              className="btn-cancel-position-selector"
+    <Card 
+      ref={panelRef}
+      className="w-full max-w-sm border-primary/50 shadow-lg shadow-primary/20"
+    >
+      <CardContent className="p-4">
+        {/* Header with label and action buttons */}
+        <div className="flex items-center justify-between mb-4">
+          <Label className="text-sm font-semibold text-foreground">
+            Select Positions for Swap:
+          </Label>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
               onClick={handleCancel}
               title="Cancel position selection"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
             >
-              ✕
-            </button>
-            <button
-              className="btn-confirm-position-selector"
+              <X className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="default"
+              size="icon"
               onClick={handleConfirm}
               disabled={isConfirmDisabled()}
               title="Confirm position selection"
+              className="h-8 w-8"
             >
-              ✓
-            </button>
+              <Check className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-        <select
-          id="positions"
-          name="positions"
-          multiple
-          value={positionRequirements[player.name] || []}
-          onChange={(e) => {
-            const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-            if (onPositionRequirementChange) {
-              onPositionRequirementChange(player.name, selectedOptions);
-            }
-          }}
-        >
-          {['HOK','HLF','CTR','WFB','EDG','MID'].map(p => (
-            <option key={p} value={p}>
-              {p}
-            </option>
+
+        {/* Position checkboxes grid */}
+        <div className="grid grid-cols-3 gap-3">
+          {POSITIONS.map(position => (
+            <div 
+              key={position} 
+              className="flex items-center space-x-2"
+            >
+              <Checkbox
+                id={`position-${position}`}
+                checked={selectedPositions.includes(position)}
+                onCheckedChange={(checked) => handlePositionToggle(position, checked)}
+              />
+              <Label 
+                htmlFor={`position-${position}`}
+                className="text-sm font-medium cursor-pointer text-foreground hover:text-primary transition-colors"
+              >
+                {position}
+              </Label>
+            </div>
           ))}
-        </select>
-      </div>
-    </div>
+        </div>
+
+        {/* Selected count indicator */}
+        {selectedPositions.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-primary/20">
+            <p className="text-xs text-muted-foreground">
+              {selectedPositions.length} position{selectedPositions.length !== 1 ? 's' : ''} selected: {selectedPositions.join(', ')}
+            </p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

@@ -1,23 +1,22 @@
 import { useState, useEffect } from 'react'
 import ImageUpload from './components/ImageUpload'
 import TeamView from './components/TeamDisplay'
-import './App.css'
+import { Button } from '@/components/ui/button'
+import { Info } from 'lucide-react'
 
 function App() {
   const [confirmedTeam, setConfirmedTeam] = useState(null);
-  const [view, setView] = useState('scanner'); // 'scanner' or 'team'
+  const [view, setView] = useState('scanner');
   
   // Tour state management
   const [isTourActive, setIsTourActive] = useState(false);
   const [currentTourStep, setCurrentTourStep] = useState(0);
   const [tourCompleted, setTourCompleted] = useState(() => {
-    // Check localStorage for tour completion status
     const saved = localStorage.getItem('onboardingTourCompleted');
     return saved === 'true';
   });
 
   useEffect(() => {
-    // Save tour completion status to localStorage
     if (tourCompleted) {
       localStorage.setItem('onboardingTourCompleted', 'true');
     }
@@ -50,10 +49,7 @@ function App() {
     if (confirmed && players.length > 0) {
       setConfirmedTeam(players);
       setView('team');
-      // Advance tour to step 2 (status indicators) if tour is active
-      // Only advance if we're still on landing page steps (0-1)
       if (isTourActive && currentTourStep <= 1) {
-        // Small delay to ensure team view is rendered before showing tour
         setTimeout(() => {
           setCurrentTourStep(2);
         }, 300);
@@ -63,7 +59,6 @@ function App() {
 
   const handleBackToScanner = () => {
     setView('scanner');
-    // Reset tour step if going back to scanner
     if (isTourActive) {
       setCurrentTourStep(0);
     }
@@ -71,7 +66,7 @@ function App() {
 
   if (view === 'team' && confirmedTeam) {
     return (
-      <div className="app app-team-view">
+      <div className="app min-h-screen">
         <TeamView 
           players={confirmedTeam} 
           onBack={handleBackToScanner}
@@ -87,20 +82,26 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>Team Name Scanner</h1>
-        <button 
-          className="btn-new-to-app"
+    <div className="app min-h-screen flex flex-col">
+      <header className="app-header text-center py-6 px-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-1 tracking-tight">
+          Fantasy Trade Calculator
+        </h1>
+        <h3 className="text-lg sm:text-xl text-muted-foreground font-medium mb-4">
+          Team Scanner
+        </h3>
+        <Button 
+          variant="outline"
           onClick={handleStartTour}
           aria-label="Start onboarding tour"
+          className="border-primary/50 text-primary hover:bg-primary/10"
         >
-          <span className="btn-new-to-app-icon">ℹ️</span>
-          <span>New to the app?</span>
-        </button>
+          <Info className="w-4 h-4 mr-2" />
+          New to the app?
+        </Button>
       </header>
       
-      <main className="app-main">
+      <main className="app-main flex-1 flex flex-col px-4 pb-8">
         <ImageUpload 
           onPlayersExtracted={handlePlayersExtracted}
           isTourActive={isTourActive}

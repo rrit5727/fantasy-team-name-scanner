@@ -1,7 +1,17 @@
 import React from 'react';
-import './TeamDisplay.css';
 import TradeTypeSelector from './TradeTypeSelector';
 import OnboardingTour, { PreseasonTourModal } from './OnboardingTour';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import { ArrowLeft, AlertTriangle, DollarSign, TrendingDown, Ban, Trash2, Check, X, Loader2, RefreshCw } from 'lucide-react';
 
 // Helper function to format numbers with comma separators
 const formatNumberWithCommas = (num) => {
@@ -10,14 +20,14 @@ const formatNumberWithCommas = (num) => {
 
 // Position order for NRL Fantasy team display
 const POSITION_CONFIG = {
-  HOK: { label: 'HOK', count: 1, color: '#00d9a3' },
-  MID: { label: 'MID', count: 3, color: '#00d9a3' },
-  EDG: { label: 'EDG', count: 2, color: '#00d9a3' },
-  HLF: { label: 'HLF', count: 2, color: '#f5a623' },
-  CTR: { label: 'CTR', count: 2, color: '#00d9a3' },
-  WFB: { label: 'WFB', count: 3, color: '#00d9a3' },
-  INT: { label: 'INT', count: 4, color: '#d98cd9' },
-  EMG: { label: 'EMG', count: 4, color: '#e8927c' },
+  HOK: { label: 'HOK', count: 1, color: 'bg-primary', textColor: 'text-primary-foreground' },
+  MID: { label: 'MID', count: 3, color: 'bg-primary', textColor: 'text-primary-foreground' },
+  EDG: { label: 'EDG', count: 2, color: 'bg-primary', textColor: 'text-primary-foreground' },
+  HLF: { label: 'HLF', count: 2, color: 'bg-amber-500', textColor: 'text-amber-950' },
+  CTR: { label: 'CTR', count: 2, color: 'bg-primary', textColor: 'text-primary-foreground' },
+  WFB: { label: 'WFB', count: 3, color: 'bg-primary', textColor: 'text-primary-foreground' },
+  INT: { label: 'INT', count: 4, color: 'bg-purple-400', textColor: 'text-purple-950' },
+  EMG: { label: 'EMG', count: 4, color: 'bg-orange-400', textColor: 'text-orange-950' },
 };
 
 const POSITION_ORDER = ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB', 'INT', 'EMG'];
@@ -138,13 +148,11 @@ function TeamDisplay({
   const renderPlayerCard = (player, position, index) => {
     if (!player) {
       return (
-        <div key={`empty-${position}-${index}`} className="player-card empty">
-          <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
+        <div key={`empty-${position}-${index}`} className="player-card relative flex flex-col items-center justify-center gap-2 p-2 rounded-lg bg-card/30 border border-primary/10 opacity-50 w-[100px] h-[100px]">
+          <Badge className={cn(POSITION_CONFIG[position]?.color, POSITION_CONFIG[position]?.textColor, "px-2 py-1 text-xs font-bold")}>
             {position}
-          </div>
-          <div className="player-info">
-            <span className="empty-slot">Empty</span>
-          </div>
+          </Badge>
+          <span className="text-muted-foreground text-xs italic">Empty</span>
         </div>
       );
     }
@@ -165,51 +173,24 @@ function TeamDisplay({
     const isPreseasonHighlightedPlayer = preseasonHighlighted?.some(p => p.name === player.name);
     const preseasonPriority = preseasonPriorities?.[player.name];
 
-    // Determine CSS classes based on preseason mode state
-    let cardClasses = 'player-card';
+    // Determine card classes using Tailwind
+    const isSelected = !isPreseasonMode && selectedTradeOutPlayers.some(p => p.name === player.name);
+    const isTradedIn = isPreseasonMode && isPlayerInList(player, preseasonTradedIn);
+    const isPreseasonSelectedOut = isPreseasonMode && isPlayerInList(player, preseasonSelectedOut);
+    const isHighlightedForTrade = isPreseasonMode ? isPlayerInList(player, preseasonHighlighted) : isNormalModeHighlighted;
 
-    // Add selection limit class for hover effects
-    if (selectionLimitReached) {
-      cardClasses += ' selection-limit-reached';
-    }
-
-    if (isPreseasonMode) {
-      // Check if this player was traded in (replaces a traded out player)
-      if (isPlayerInList(player, preseasonTradedIn)) {
-        cardClasses += ' preseason-traded-in';
-      }
-      // Check if player is selected for trade out
-      else if (isPlayerInList(player, preseasonSelectedOut)) {
-        // Use different selected styles based on whether injured or overvalued
-        if (isInjured) {
-          cardClasses += ' preseason-selected-out-injured';
-        } else {
-          cardClasses += ' preseason-selected-out-lowupside';
-        }
-      }
-      // Check if player is highlighted as a trade-out recommendation
-      else if (isPlayerInList(player, preseasonHighlighted)) {
-        // Use different highlight styles based on whether injured or overvalued
-        if (isInjured) {
-          cardClasses += ' preseason-highlight-injured';
-        } else {
-          cardClasses += ' preseason-highlight-lowupside';
-        }
-      }
-    } else {
-      // Normal mode - check for highlighting and selection
-      const isSelected = selectedTradeOutPlayers.some(p => p.name === player.name);
-      if (isSelected) {
-        cardClasses += ' selected';
-      } else if (isNormalModeHighlighted) {
-        // Use different highlight styles based on player status
-        if (isInjured) {
-          cardClasses += ' preseason-highlight-injured';
-        } else {
-          cardClasses += ' preseason-highlight-lowupside';
-        }
-      }
-    }
+    const cardClasses = cn(
+      "player-card relative flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg transition-all duration-200 cursor-pointer w-[100px] h-[100px]",
+      "bg-card/50 border border-primary/20",
+      "hover:bg-card/80 hover:border-primary/40 hover:scale-[1.02]",
+      selectionLimitReached && !isSelected && "opacity-60 cursor-not-allowed hover:scale-100",
+      isSelected && "bg-primary/20 border-primary ring-2 ring-primary/50",
+      isTradedIn && "bg-green-500/20 border-green-500/50 ring-2 ring-green-500/30",
+      isPreseasonSelectedOut && isInjured && "bg-amber-500/20 border-amber-500/50 ring-2 ring-amber-500/30",
+      isPreseasonSelectedOut && !isInjured && "bg-red-500/20 border-red-500/50 ring-2 ring-red-500/30",
+      isHighlightedForTrade && !isSelected && !isPreseasonSelectedOut && isInjured && "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/50",
+      isHighlightedForTrade && !isSelected && !isPreseasonSelectedOut && !isInjured && "bg-red-500/10 border-red-500/40 ring-2 ring-red-500/50"
+    );
 
     const handleClick = () => {
       if (isPreseasonMode && onPreseasonClick) {
@@ -220,90 +201,97 @@ function TeamDisplay({
     };
 
     return (
-      <div
-        key={player.name}
-        className={cardClasses}
-        onClick={handleClick}
-        data-player-name={player.name}
-      >
-        {/* Priority indicator for normal mode trade recommendations */}
-        {normalModePriority && (
-          <div className="priority-indicator">
-            {normalModePriority}
-          </div>
-        )}
-        {/* Priority indicator for preseason mode trade recommendations */}
-        {isPreseasonMode && preseasonPriority && (
-          <div className="priority-indicator">
-            {preseasonPriority}
-          </div>
-        )}
-        {/* Injury indicator - warning triangle with exclamation mark */}
-        {isInjured && (
-          <div className="injury-indicator">
-            <svg viewBox="0 0 24 24" className="warning-icon">
-              {/* Warning triangle */}
-              <path d="M12 2L22 20H2L12 2Z" fill="#ff9800"/>
-              {/* Exclamation mark */}
-              <path d="M12 8V14" stroke="#000000" strokeWidth="2" strokeLinecap="round"/>
-              <circle cx="12" cy="17" r="1" fill="#000000"/>
-            </svg>
-            <div className="tooltip">player injured</div>
-          </div>
-        )}
-        {/* Urgent overvalued indicator - alarm emoji (Diff <= -7) */}
-        {isUrgentOvervalued && !isInjured && (
-          <div className="urgent-overvalued-indicator">
-            🚨
-            <div className="tooltip">Very overvalued: losing money</div>
-          </div>
-        )}
-        {/* Overvalued indicator - green banknote with red arrow (-7 < Diff <= -1) */}
-        {isOvervalued && !isInjured && !isUrgentOvervalued && (
-          <div className="lowupside-indicator">
-            <svg viewBox="0 0 24 24" className="lowupside-icon">
-              {/* Banknote (green) */}
-              <rect x="2" y="6" width="14" height="10" rx="1" fill="#4CAF50" stroke="#2E7D32" strokeWidth="0.5"/>
-              <circle cx="9" y="11" r="2.5" fill="#2E7D32"/>
-              <text x="9" y="12.5" textAnchor="middle" fontSize="4" fill="#fff" fontWeight="bold">$</text>
-              {/* Downward arrow (red) */}
-              <path d="M18 4 L18 16 L14 12 M18 16 L22 12" stroke="#e53935" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <div className="tooltip">overvalued</div>
-          </div>
-        )}
-        {/* Not selected indicator - prohibition symbol */}
-        {isNotSelected && !isInjured && !isAnyOvervalued && (
-          <div className="not-selected-indicator">
-            <svg viewBox="0 0 24 24" className="prohibition-icon">
-              {/* Circle */}
-              <circle cx="12" cy="12" r="10" fill="none" stroke="#e53935" strokeWidth="2"/>
-              {/* Diagonal line */}
-              <path d="M7 7L17 17" stroke="#e53935" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            <div className="tooltip">not selected</div>
-          </div>
-        )}
-        {/* Junk cheapies indicator - poo emoji */}
-        {isJunkCheap && !isInjured && !isAnyOvervalued && !isNotSelected && (
-          <div className="junk-cheap-indicator">
-            💩
-            <div className="tooltip">junk cheapie - trade out</div>
-          </div>
-        )}
-        <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
-          {position}
-        </div>
-        <div className="player-info">
-          <span className="player-name">{player.name}</span>
-          {player.positions && player.positions.length > 0 && (position === 'INT' || position === 'EMG') && (
-            <span className="player-position">{player.positions.join('/')}</span>
+      <TooltipProvider key={player.name}>
+        <div
+          className={cardClasses}
+          onClick={handleClick}
+          data-player-name={player.name}
+        >
+          {/* Priority indicator */}
+          {(normalModePriority || (isPreseasonMode && preseasonPriority)) && (
+            <div className="priority-indicator absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-gradient-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shadow-lg z-10">
+              {normalModePriority || preseasonPriority}
+            </div>
           )}
-        {player.price && (
-          <span className="player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
-        )}
+          
+          {/* Status indicators */}
+          <div className="absolute -top-1 -right-1 flex gap-0.5 z-10">
+            {isInjured && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="injury-indicator w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-lg">
+                    <AlertTriangle className="w-3 h-3 text-amber-950" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Player injured</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {isUrgentOvervalued && !isInjured && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="urgent-overvalued-indicator w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shadow-lg text-xs">
+                    🚨
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Very overvalued: losing money</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {isOvervalued && !isInjured && !isUrgentOvervalued && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="lowupside-indicator w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shadow-lg">
+                    <TrendingDown className="w-3 h-3 text-orange-950" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Overvalued</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {isNotSelected && !isInjured && !isAnyOvervalued && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="not-selected-indicator w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+                    <Ban className="w-3 h-3 text-white" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Not selected</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {isJunkCheap && !isInjured && !isAnyOvervalued && !isNotSelected && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="junk-cheap-indicator w-5 h-5 rounded-full bg-amber-700 flex items-center justify-center shadow-lg text-xs">
+                    💩
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Junk cheapie - trade out</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+          
+          <Badge className={cn(POSITION_CONFIG[position]?.color, POSITION_CONFIG[position]?.textColor, "px-1.5 py-0 text-[10px] font-bold")}>
+            {position}
+          </Badge>
+          <div className="text-center min-w-0 w-full px-1">
+            <span className="player-name block text-foreground font-medium text-xs leading-tight truncate">{player.name}</span>
+            {player.positions && player.positions.length > 0 && (position === 'INT' || position === 'EMG') && (
+              <span className="text-[10px] text-muted-foreground">{player.positions.join('/')}</span>
+            )}
+          </div>
+          {player.price && (
+            <span className="text-primary font-semibold text-xs">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
+          )}
         </div>
-      </div>
+      </TooltipProvider>
     );
   };
 
@@ -318,15 +306,15 @@ function TeamDisplay({
     }
 
     return (
-      <div key={position} className={`position-row position-${position.toLowerCase()}`}>
+      <div key={position} className="flex flex-wrap justify-center gap-3 mb-3">
         {paddedPlayers.map((player, idx) => renderPlayerCard(player, position, idx))}
       </div>
     );
   };
 
   return (
-    <div className="team-display">
-      <div className="team-field">
+    <div className="team-display space-y-1">
+      <div className="team-field bg-gradient-field rounded-xl p-3 sm:p-4">
         {POSITION_ORDER.map(pos => renderPositionRow(pos))}
       </div>
 
@@ -334,14 +322,14 @@ function TeamDisplay({
       {showPositionDropdown && (() => {
         const player = players.find(p => p.name === showPositionDropdown.playerName);
         return (
-          <div className="position-selector-slide-up">
+          <div className="fixed inset-x-0 bottom-0 z-50 p-4 animate-in slide-in-from-bottom duration-300">
             <TradeTypeSelector
-            player={player}
-            slotPosition={showPositionDropdown.slotPosition}
-            positionRequirements={positionRequirements}
-            onPositionRequirementSelect={onPositionRequirementSelect}
-            onCancelPositionRequirement={onCancelPositionRequirement}
-            onPositionRequirementChange={onPositionRequirementChange}
+              player={player}
+              slotPosition={showPositionDropdown.slotPosition}
+              positionRequirements={positionRequirements}
+              onPositionRequirementSelect={onPositionRequirementSelect}
+              onCancelPositionRequirement={onCancelPositionRequirement}
+              onPositionRequirementChange={onPositionRequirementChange}
             />
           </div>
         );
@@ -365,97 +353,121 @@ function TradePanel({
   showConfirmButton
 }) {
   return (
-    <div className="trade-panel">
-      <h4 className="trade-subtitle">{subtitle}</h4>
-      <div className="trade-player-list">
-        {players && players.length > 0 ? (
-          isTradeOut ? (
-            // Trade-out display
-            players.map((player, index) => (
-              <div 
-                key={player.name || index}
-                className={`trade-player-item ${
-                  selectedPlayer?.name === player.name || selectedPlayers?.some(p => p.name === player.name)
-                    ? 'selected'
-                    : ''
-                }`}
-                onClick={() => onSelect?.(player)}
-              >
-                <span className="trade-player-pos">
-                  {player.positions?.[0] || '—'}
-                </span>
-                <span className="trade-player-name">{player.name}</span>
-                {player.price && (
-                  <span className="trade-player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
-                )}
-                {player.reason && (
-                  <span className={`trade-player-reason ${player.reason}`}>
-                    {player.reason === 'injured' ? '⚠️ Injured' : `📉 ${player.diff?.toFixed(1)}`}
-                  </span>
-                )}
-              </div>
-            ))
-          ) : isTradeIn ? (
-            // Trade-in display (options with multiple players)
-            players.map((option, index) => (
-              <div 
-                key={index}
-                className={`trade-option ${selectedOptionIndex === index ? 'selected' : ''}`}
-                onClick={() => onSelect?.(option, index)}
-              >
-                <div className="trade-option-header">
-                  <span className="option-number">Option {index + 1}</span>
-                  {option.totalDiff && (
-                    <span className="option-diff">Upside: {option.totalDiff.toFixed(1)}</span>
-                  )}
-                  {option.totalProjection && (
-                    <span className="option-projection">Proj: {option.totalProjection.toFixed(1)}</span>
-                  )}
-                </div>
-                {option.players.map((player, pIndex) => (
-                  <div key={pIndex} className="trade-option-player">
-                    <span className="trade-player-pos">{player.position}</span>
-                    <span className="trade-player-name">{player.name}</span>
-                    <span className="trade-player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
-                  </div>
-                ))}
-                <div className="trade-option-footer">
-                  <span>Total: ${formatNumberWithCommas(Math.round(option.totalPrice / 1000))}k</span>
-                  <span>Remaining: ${formatNumberWithCommas(Math.round(option.salaryRemaining / 1000))}k</span>
-                </div>
-                {showConfirmButton && selectedOptionIndex === index && (
-                  <button
-                    className="btn-confirm-trade-option"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onConfirmOption?.();
-                    }}
+    <Card className="trade-panel border-primary/30 mt-4">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <CardTitle className="text-sm font-semibold text-primary uppercase tracking-wide">{subtitle}</CardTitle>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        <div className="space-y-2">
+            {players && players.length > 0 ? (
+              isTradeOut ? (
+                // Trade-out display
+                players.map((player, index) => {
+                  const isSelected = selectedPlayer?.name === player.name || selectedPlayers?.some(p => p.name === player.name);
+                  return (
+                    <div 
+                      key={player.name || index}
+                      className={cn(
+                        "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer",
+                        "bg-primary/5 hover:bg-primary/10",
+                        isSelected && "bg-primary/20 ring-1 ring-primary"
+                      )}
+                      onClick={() => onSelect?.(player)}
+                    >
+                      <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
+                        {player.positions?.[0] || '—'}
+                      </Badge>
+                      <span className="flex-1 text-sm text-foreground truncate">{player.name}</span>
+                      {player.price && (
+                        <span className="text-xs text-primary font-semibold shrink-0">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
+                      )}
+                      {player.reason && (
+                        <span className={cn(
+                          "text-xs px-1.5 py-0.5 rounded shrink-0",
+                          player.reason === 'injured' ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
+                        )}>
+                          {player.reason === 'injured' ? '⚠️' : `📉 ${player.diff?.toFixed(1)}`}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })
+              ) : isTradeIn ? (
+                // Trade-in display (options with multiple players)
+                players.map((option, index) => (
+                  <div 
+                    key={index}
+                    className={cn(
+                      "trade-option p-3 rounded-lg transition-all cursor-pointer border",
+                      "bg-card/50 border-primary/20 hover:border-primary/40",
+                      selectedOptionIndex === index && "bg-primary/10 border-primary ring-1 ring-primary/50"
+                    )}
+                    onClick={() => onSelect?.(option, index)}
                   >
-                    Confirm Trade
-                  </button>
-                )}
-              </div>
-            ))
-          ) : (
-            // Default display
-          players.map((player, index) => (
-            <div 
-              key={player.name || index}
-              className={`trade-player-item ${selectedPlayer?.name === player.name ? 'selected' : ''}`}
-              onClick={() => onSelect?.(player)}
-            >
-              <span className="trade-player-pos">
-                {player.positions?.[0] || '—'}
-              </span>
-              <span className="trade-player-name">{player.name}</span>
-            </div>
-          ))
-          )
-        ) : (
-          <p className="empty-message">{emptyMessage}</p>
-        )}
-      </div>
-    </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <Badge variant="secondary" className="text-xs">Option {index + 1}</Badge>
+                      <div className="flex gap-2">
+                        {option.totalDiff && (
+                          <span className="option-diff text-xs text-primary font-semibold">+{option.totalDiff.toFixed(1)}</span>
+                        )}
+                        {option.totalProjection && (
+                          <span className="text-xs text-muted-foreground">Proj: {option.totalProjection.toFixed(1)}</span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="space-y-1.5">
+                      {option.players.map((player, pIndex) => (
+                        <div key={pIndex} className="flex items-center gap-2 text-sm">
+                          <Badge variant="outline" className="px-1.5 py-0 text-xs shrink-0">{player.position}</Badge>
+                          <span className="flex-1 text-foreground truncate">{player.name}</span>
+                          <span className="text-xs text-primary shrink-0">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex justify-between mt-2 pt-2 border-t border-primary/10 text-xs text-muted-foreground">
+                      <span>Total: ${formatNumberWithCommas(Math.round(option.totalPrice / 1000))}k</span>
+                      <span>Remaining: ${formatNumberWithCommas(Math.round(option.salaryRemaining / 1000))}k</span>
+                    </div>
+                    {showConfirmButton && selectedOptionIndex === index && (
+                      <Button
+                        className="w-full mt-3"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onConfirmOption?.();
+                        }}
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        Confirm Trade
+                      </Button>
+                    )}
+                  </div>
+                ))
+              ) : (
+                // Default display
+                players.map((player, index) => (
+                  <div 
+                    key={player.name || index}
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer",
+                      "bg-primary/5 hover:bg-primary/10",
+                      selectedPlayer?.name === player.name && "bg-primary/20 ring-1 ring-primary"
+                    )}
+                    onClick={() => onSelect?.(player)}
+                  >
+                    <Badge variant="outline" className="px-2 py-0.5 text-xs">
+                      {player.positions?.[0] || '—'}
+                    </Badge>
+                    <span className="flex-1 text-sm text-foreground">{player.name}</span>
+                  </div>
+                ))
+              )
+            ) : (
+              <p className="text-center text-muted-foreground text-sm py-4">{emptyMessage}</p>
+            )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1800,182 +1812,187 @@ function TeamView({
     if (!showTradeModal) return null;
 
     return (
-      <div className="trade-modal-overlay" onClick={() => setShowTradeModal(false)}>
-        <div className="trade-modal-content" onClick={(e) => e.stopPropagation()}>
-          <div className="trade-modal-header">
-            <h3 className="sidebar-title">Trade Options</h3>
-            <button className="btn-close-modal" onClick={() => setShowTradeModal(false)}>×</button>
-          </div>
-
-          {/* Trade-out selections (only in normal mode) */}
-          {!isPreseasonMode && (
-          <TradePanel 
-            title="Trade Out"
-            subtitle="Trade-out Selections"
-            players={selectedTradeOutPlayers}
-            onSelect={handleTradeOut}
-            selectedPlayers={selectedTradeOutPlayers}
-            emptyMessage="Select highlighted players to add them here"
-            isTradeOut={true}
-          />
-          )}
-
-          {/* Preseason mode info */}
-          {isPreseasonMode && (
-            <div className="preseason-status highlight">
-              Trade-out recommendations will be highlighted on your team screen
-            </div>
-          )}
-
-          {/* Cash in Bank Input */}
-          <div className="cash-in-bank-section">
-            <label htmlFor="cashInBank">Cash in Bank ($)</label>
-            <input
-              id="cashInBank"
-              type="text"
-              value={cashInBankDisplay}
-              onChange={handleCashChange}
-              placeholder="$ 000 k"
-            />
-          </div>
-
-          {/* Strategy Selection */}
-          <div className="strategy-section">
-            <label htmlFor="strategy">Strategy</label>
-            <select 
-              id="strategy" 
-              value={selectedStrategy} 
-              onChange={(e) => setSelectedStrategy(e.target.value)}
-            >
-              <option value="1">Maximize Value (Diff)</option>
-              <option value="2">Maximize Base (Projection)</option>
-              <option value="3">Hybrid Approach</option>
-            </select>
-          </div>
-
-
-          {/* Bye round weighting toggle */}
-          <div className="toggle-section">
-            <div className="toggle-labels">
-              <label htmlFor="targetByeRoundMobile">Target Bye Round Players</label>
-              <span className="toggle-caption">Prioritise bye coverage</span>
-            </div>
-            <label className="toggle-switch">
-              <input
-                id="targetByeRoundMobile"
-                type="checkbox"
-                checked={targetByeRound}
-                onChange={(e) => setTargetByeRound(e.target.checked)}
+      <div className="trade-modal-overlay fixed inset-0 z-50 bg-black/80 flex items-end lg:hidden" onClick={() => setShowTradeModal(false)}>
+        <Card className="trade-modal-content w-full max-h-[85vh] overflow-y-auto rounded-t-2xl rounded-b-none" onClick={(e) => e.stopPropagation()}>
+          <CardHeader className="sticky top-0 bg-card z-10 flex flex-row items-center justify-between pb-4">
+            <CardTitle className="text-lg text-primary">Trade Options</CardTitle>
+            <Button variant="ghost" size="icon" onClick={() => setShowTradeModal(false)}>
+              <X className="h-5 w-5" />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4 pb-8">
+            {/* Trade-out selections (only in normal mode) */}
+            {!isPreseasonMode && (
+              <TradePanel 
+                title="Trade Out"
+                subtitle="Trade-out Selections"
+                players={selectedTradeOutPlayers}
+                onSelect={handleTradeOut}
+                selectedPlayers={selectedTradeOutPlayers}
+                emptyMessage="Select highlighted players to add them here"
+                isTradeOut={true}
               />
-              <span className="toggle-slider" />
-            </label>
-          </div>
+            )}
 
-          {/* Pre-season Mode Toggle (Mobile) */}
-          <div className={`preseason-mode-section ${isPreseasonMode ? 'active' : ''}`}>
-            <div className="preseason-mode-header toggle-section">
-              <div className="toggle-labels">
-                <label htmlFor="preseasonModeMobile">Pre-season Mode</label>
-                <span className="toggle-caption">Up to 6 trades</span>
+            {/* Preseason mode info */}
+            {isPreseasonMode && (
+              <Alert className="bg-primary/10 border-primary/30">
+                <AlertDescription className="text-primary">
+                  Trade-out recommendations will be highlighted on your team screen
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Cash in Bank Input */}
+            <div className="space-y-2">
+              <label htmlFor="cashInBankModal" className="text-sm font-medium text-foreground">Cash in Bank ($)</label>
+              <Input
+                id="cashInBankModal"
+                type="text"
+                value={cashInBankDisplay}
+                onChange={handleCashChange}
+                placeholder="$ 000 k"
+              />
+            </div>
+
+            {/* Strategy Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">Strategy</label>
+              <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Maximize Value (Diff)</SelectItem>
+                  <SelectItem value="2">Maximize Base (Projection)</SelectItem>
+                  <SelectItem value="3">Hybrid Approach</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bye round toggle */}
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <label className="text-sm font-medium text-foreground">Target Bye Round</label>
+                <p className="text-xs text-muted-foreground">Prioritise bye coverage</p>
               </div>
-              <label className="toggle-switch">
+              <label className="relative inline-flex items-center cursor-pointer">
                 <input
-                  id="preseasonModeMobile"
                   type="checkbox"
-                  checked={isPreseasonMode}
-                  onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                  checked={targetByeRound}
+                  onChange={(e) => setTargetByeRound(e.target.checked)}
+                  className="sr-only peer"
                 />
-                <span className="toggle-slider" />
+                <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
-            {/* Test Approach Toggle - only visible when preseason mode is on */}
-            {isPreseasonMode && (
-              <div className="test-approach-section toggle-section">
-                <div className="toggle-labels">
-                  <label htmlFor="testApproachMobile">Test Approach</label>
-                  <span className="toggle-caption">Price band matching (±$75k)</span>
+
+            {/* Pre-season Mode Toggle */}
+            <Card className={cn("p-3 border", isPreseasonMode ? "border-primary bg-primary/5" : "border-primary/20")}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Pre-season Mode</label>
+                  <p className="text-xs text-muted-foreground">Up to 6 trades</p>
                 </div>
-                <label className="toggle-switch">
+                <label className="relative inline-flex items-center cursor-pointer">
                   <input
-                    id="testApproachMobile"
                     type="checkbox"
-                    checked={preseasonTestApproach}
-                    onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                    checked={isPreseasonMode}
+                    onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                    className="sr-only peer"
                   />
-                  <span className="toggle-slider" />
+                  <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
+              
+              {isPreseasonMode && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-primary/20">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Test Approach</label>
+                    <p className="text-xs text-muted-foreground">Price band ±$75k</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={preseasonTestApproach}
+                      onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+              )}
+            </Card>
+
+            {/* Number of Trades (hidden in preseason mode) */}
+            {!isPreseasonMode && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Number of Trades</label>
+                <Input
+                  type="number"
+                  value={numTrades}
+                  onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+                  min={1}
+                  max={2}
+                />
+              </div>
             )}
-          </div>
 
+            {/* Action Button */}
+            {isPreseasonMode ? (
+              <Button 
+                className="w-full"
+                onClick={() => {
+                  handleHighlightOptions();
+                }}
+                disabled={isCalculating}
+              >
+                {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
+              </Button>
+            ) : (
+              <Button
+                className="w-full"
+                onClick={handleTradeWorkflow}
+                disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
+              >
+                {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {isCalculating ? 'Calculating...' :
+                 normalModePhase === 'recommend' ? 'Recommend players to trade out' :
+                 'Calculate trade recommendations'}
+              </Button>
+            )}
 
-          {/* Number of Trades (hidden in preseason mode) */}
-          {!isPreseasonMode && (
-          <div className="num-trades-section">
-            <label htmlFor="numTrades">Number of Trades</label>
-            <input
-              id="numTrades"
-              type="number"
-              value={numTrades}
-              onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
-              min="1"
-            max="2"
-            />
-          </div>
-          )}
-
-          {/* Button changes based on mode */}
-          {isPreseasonMode ? (
-            <button 
-              className="btn-highlight-options"
-              onClick={() => {
-                handleHighlightOptions();
-                // Modal will be closed in handleHighlightOptions
-              }}
-              disabled={isCalculating}
-            >
-              {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
-            </button>
-          ) : (
-          <button
-            className={`btn-calculate-trades ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1 ? 'disabled' : ''}`}
-            onClick={handleTradeWorkflow}
-            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
-          >
-            {isCalculating ? 'Calculating...' :
-             normalModePhase === 'recommend' ? 'Recommend players to trade out' :
-             'Calculate trade recommendations'}
-          </button>
-          )}
-
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-        </div>
+            {error && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   };
 
   // Render Trade-In Recommendations Page for Mobile (separate page from Trade Options)
   const renderTradeInPage = () => {
-    // Don't show normal trade-in page in preseason mode
     if (!showTradeInPage || isPreseasonMode) return null;
 
     return (
-      <div className="trade-in-page">
-        <div className="trade-in-page-header">
-          <button 
-            className="btn-header-action" 
+      <div className="trade-in-page fixed inset-0 z-40 bg-background flex flex-col lg:hidden">
+        <div className="trade-in-page-header sticky top-0 z-10 bg-card border-b border-primary/20 p-4">
+          <Button 
+            variant="outline"
             onClick={() => setShowTradeInPage(false)}
           >
-            ← Back to Team
-          </button>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back to Team
+          </Button>
         </div>
         
-        {/* Trade-out Recommendations - Pinned at top */}
-        <div className="trade-out-pinned">
+        {/* Trade-out Selections - Pinned at top */}
+        <div className="trade-out-pinned shrink-0 p-4 pb-0">
           <TradePanel 
             title="Trade Out"
             subtitle="Trade-out Selections"
@@ -1988,7 +2005,7 @@ function TeamView({
         </div>
         
         {/* Trade-in Recommendations - Scrollable */}
-        <div className="trade-in-page-content">
+        <div className="trade-in-page-content flex-1 overflow-y-auto p-4">
           <TradePanel 
             title="Trade In"
             subtitle="Trade-in Recommendations"
@@ -2025,35 +2042,36 @@ function TeamView({
 
     const allPositionsFilled = preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length;
 
-    // Calculate remaining = cash + traded-out salaries - selected trade-in costs
     const remaining = (cashInBank * 1000) +
       preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
       preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
 
     return (
-      <div className="trade-in-page">
-        <div className="trade-in-page-header">
-          <button 
-            className="btn-header-action" 
+      <div className="trade-in-page fixed inset-0 z-40 bg-background flex flex-col lg:hidden">
+        <div className="trade-in-page-header sticky top-0 z-10 bg-card border-b border-primary/20 p-4 flex items-center gap-4">
+          <Button 
+            variant="outline"
+            size="sm"
             onClick={() => {
               setShowPreseasonTradeIns(false);
               setPreseasonPhase('selecting-out');
             }}
           >
-            ← Back to Team
-          </button>
-          <div className={`preseason-salary-cap ${remaining > 0 ? 'has-budget' : ''}`}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Back
+          </Button>
+          <Badge variant={remaining > 0 ? "default" : "destructive"} className="px-3 py-1">
             Cash: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
-          </div>
-          <div className="preseason-status">
+          </Badge>
+          <Badge variant="secondary" className="px-3 py-1 ml-auto">
             {preseasonSelectedTradeIns.length}/{preseasonSelectedTradeOuts.length} selected
-          </div>
+          </Badge>
         </div>
         
-        {/* Trade swap rows - split bubble design */}
-        <div className="trade-out-pinned">
-          <div className="trade-panel">
-            <div className={`trade-swap-list ${preseasonSelectedTradeOuts.length > 1 ? 'multi-column' : ''}`}>
+        {/* Trade swap rows */}
+        <div className="trade-out-pinned shrink-0 p-4 pb-0">
+          <Card className="border-primary/30">
+            <CardContent className="p-4 space-y-3">
               {preseasonSelectedTradeOuts.map((tradeOutPlayer, index) => {
                 const tradeInPlayer = preseasonSelectedTradeIns.find(
                   p => p.swappedForPlayer === tradeOutPlayer.name
@@ -2063,103 +2081,124 @@ function TeamView({
                 return (
                   <div
                     key={tradeOutPlayer.name || index}
-                    className={`trade-swap-row ${hasTradeIn ? 'completed clickable' : ''}`}
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-lg transition-all",
+                      hasTradeIn && "cursor-pointer hover:bg-primary/10"
+                    )}
                     onClick={() => hasTradeIn && handleReversePreseasonSwap(tradeOutPlayer)}
-                    title={hasTradeIn ? 'Click to reverse this trade swap' : ''}
+                    title={hasTradeIn ? 'Click to reverse' : ''}
                   >
-                    {/* Left bubble - Trade Out Player */}
-                    <div className={`trade-swap-bubble trade-out-bubble ${hasTradeIn ? 'active' : ''}`}>
-                      <span className="trade-player-pos">
-                        {tradeOutPlayer.originalPosition || tradeOutPlayer.positions?.[0] || '—'}
-                      </span>
-                      <span className="trade-player-name">{tradeOutPlayer.name}</span>
-                      <span className="trade-player-price">
+                    {/* Trade Out Player */}
+                    <div className={cn(
+                      "flex-1 flex items-center gap-2 p-2 rounded-lg",
+                      "bg-red-500/10 border border-red-500/30",
+                      hasTradeIn && "opacity-50"
+                    )}>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {tradeOutPlayer.originalPosition || '—'}
+                      </Badge>
+                      <span className="text-sm truncate flex-1">{tradeOutPlayer.name}</span>
+                      <span className="text-xs text-red-400 shrink-0">
                         ${formatNumberWithCommas(Math.round(tradeOutPlayer.price / 1000))}k
                       </span>
                     </div>
                     
-                    {/* Swap arrows in center */}
-                    <div className={`trade-swap-arrows ${hasTradeIn ? 'active' : ''}`}>
-                      <span className="arrow-up">⇄</span>
-                      {hasTradeIn && <span className="reverse-hint">↶</span>}
+                    {/* Arrow */}
+                    <div className={cn(
+                      "text-lg px-1",
+                      hasTradeIn ? "text-primary" : "text-muted-foreground"
+                    )}>
+                      ⇄
                     </div>
                     
-                    {/* Right bubble - Trade In Player */}
-                    <div className={`trade-swap-bubble trade-in-bubble ${hasTradeIn ? 'active' : ''}`}>
+                    {/* Trade In Player */}
+                    <div className={cn(
+                      "flex-1 flex items-center gap-2 p-2 rounded-lg",
+                      hasTradeIn 
+                        ? "bg-green-500/10 border border-green-500/30" 
+                        : "bg-muted/50 border border-dashed border-muted-foreground/30"
+                    )}>
                       {hasTradeIn ? (
                         <>
-                          <span className="trade-player-pos">
-                            {tradeInPlayer.position || tradeInPlayer.positions?.[0] || '—'}
-                          </span>
-                          <span className="trade-player-name">{tradeInPlayer.name}</span>
-                          <span className="trade-player-price">
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {tradeInPlayer.position || '—'}
+                          </Badge>
+                          <span className="text-sm truncate flex-1">{tradeInPlayer.name}</span>
+                          <span className="text-xs text-green-400 shrink-0">
                             ${formatNumberWithCommas(Math.round(tradeInPlayer.price / 1000))}k
                           </span>
                         </>
                       ) : (
-                        <span className="trade-player-name empty">Select trade-in...</span>
+                        <span className="text-sm text-muted-foreground italic">Select trade-in...</span>
                       )}
                     </div>
                   </div>
                 );
               })}
-            </div>
-            
-            {/* Confirm Trades button - appears when all positions filled */}
-            {allPositionsFilled && (
-              <button 
-                className="btn-confirm-trades"
-                onClick={handleConfirmAllPreseasonTrades}
-              >
-                ✓ Confirm Trades
-              </button>
-            )}
-          </div>
+              
+              {allPositionsFilled && (
+                <Button 
+                  className="w-full mt-3"
+                  onClick={handleConfirmAllPreseasonTrades}
+                >
+                  <Check className="w-4 h-4 mr-2" />
+                  Confirm Trades
+                </Button>
+              )}
+            </CardContent>
+          </Card>
         </div>
         
-        {/* Trade-in options - Scrollable */}
-        <div className="trade-in-page-content">
-          <div className="trade-panel">
-            <h4 className="trade-subtitle">Trade-In Options</h4>
-            <div className="preseason-tradein-list">
-              {getFilteredTradeIns().length > 0 ? (
-                getFilteredTradeIns().map((player, index) => {
-                  // Calculate total available salary for this render = cash + traded-out salaries - selected trade-in costs
-                  const totalAvailableSalary = (cashInBank * 1000) +
-                    preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
-                    preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
-                  const isDisabled = player.price > totalAvailableSalary;
+        {/* Trade-in options */}
+        <div className="trade-in-page-content flex-1 overflow-y-auto p-4">
+          <Card className="border-primary/30">
+            <CardHeader className="pb-2 pt-4 px-4">
+              <CardTitle className="text-sm font-semibold text-primary uppercase tracking-wide">Trade-In Options</CardTitle>
+            </CardHeader>
+            <CardContent className="px-4 pb-4">
+              <div className="space-y-2">
+                {getFilteredTradeIns().length > 0 ? (
+                  getFilteredTradeIns().map((player, index) => {
+                    const totalAvailableSalary = (cashInBank * 1000) +
+                      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+                    const isDisabled = player.price > totalAvailableSalary;
+                    const isSelected = preseasonSelectedTradeIns.some(p => p.name === player.name);
 
-                  return (
-                    <div
-                      key={player.name || index}
-                      className={`preseason-tradein-item ${
-                        preseasonSelectedTradeIns.some(p => p.name === player.name) ? 'selected' : ''
-                      } ${isDisabled ? 'disabled' : ''}`}
-                      onClick={() => handlePreseasonTradeInSelect(player)}
-                    >
-                    <span className="trade-player-pos">
-                      {player.position || player.positions?.[0] || '—'}
-                    </span>
-                    <span className="trade-player-name">{player.name}</span>
-                    <span className="trade-player-price">
-                      ${formatNumberWithCommas(Math.round(player.price / 1000))}k
-                    </span>
-                      {player.diff && (
-                        <span className="trade-player-diff">+{player.diff.toFixed(1)}</span>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="empty-message">
-                  {allPositionsFilled
-                    ? 'All positions filled! Click "Confirm Trades" above.'
-                    : 'No trade-in options available for remaining positions'}
-                </p>
-              )}
-            </div>
-          </div>
+                    return (
+                      <div
+                        key={player.name || index}
+                        className={cn(
+                          "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer",
+                          "bg-primary/5 hover:bg-primary/10",
+                          isSelected && "bg-primary/20 ring-1 ring-primary",
+                          isDisabled && "opacity-50 cursor-not-allowed"
+                        )}
+                        onClick={() => !isDisabled && handlePreseasonTradeInSelect(player)}
+                      >
+                        <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
+                          {player.position || player.positions?.[0] || '—'}
+                        </Badge>
+                        <span className="flex-1 text-sm text-foreground truncate">{player.name}</span>
+                        <span className="text-xs text-primary font-semibold shrink-0">
+                          ${formatNumberWithCommas(Math.round(player.price / 1000))}k
+                        </span>
+                        {player.diff && (
+                          <span className="text-xs text-green-500 font-semibold">+{player.diff.toFixed(1)}</span>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-center text-muted-foreground text-sm py-4">
+                    {allPositionsFilled
+                      ? 'All positions filled! Click "Confirm Trades" above.'
+                      : 'No trade-in options available'}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -2367,110 +2406,120 @@ function TeamView({
         />
       )}
       
-      <div className={`team-view ${showTradeInPage || showPreseasonTradeIns ? 'hidden-mobile' : ''}`}>
-        <div className="team-view-main">
-          <div className="section-header">
-            <div className="header-title-row">
-              <h2>My Team</h2>
-              {/* Mobile: Show compact trade options directly in header row */}
-              <div className="header-trade-options mobile-only">
-                {/* Cash in bank input - always shown */}
-                <input
-                  className="cash-input-compact"
-                  type="text"
-                  value={cashInBankDisplay}
-                  onChange={handleCashChange}
-                  placeholder="$ Cash"
-                />
-                {/* Strategy dropdown - only in normal mode */}
-                {!isPreseasonMode && (
-                  <select
-                    className="strategy-select-compact"
-                    value={selectedStrategy}
-                    onChange={(e) => setSelectedStrategy(e.target.value)}
-                  >
-                    <option value="1">Max Value</option>
-                    <option value="2">Max Base</option>
-                    <option value="3">Hybrid</option>
-                  </select>
-                )}
-                {/* Target bye round button - always shown */}
-                <button
-                  className={`bye-round-btn-compact ${targetByeRound ? 'active' : ''}`}
-                  onClick={() => setTargetByeRound(!targetByeRound)}
-                  title="Target bye round players"
-                >
-                  Bye
-                </button>
-              </div>
-              {/* Show preseason salary cap when in preseason mode (desktop only now) */}
-              {isPreseasonMode && preseasonPhase !== 'idle' && (
-                <div className={`salary-cap-display desktop-only ${preseasonSalaryCap > 0 ? '' : 'warning'}`} style={preseasonSalaryCap > 0 ? {} : {borderColor: 'rgba(255,100,100,0.4)', color: '#ff6464'}}>
-                  {preseasonPhase === 'selecting-out' ? 'Cash in Bank' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
-                </div>
+      <div className={cn("team-view flex flex-col lg:flex-row gap-4 p-4", (showTradeInPage || showPreseasonTradeIns) && "hidden lg:flex")}>
+        <div className="team-view-main flex-1">
+          {/* Header Section */}
+          <div className="section-header mb-4 space-y-2">
+            {/* Row 1: My Team heading + controls */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-xl sm:text-2xl font-bold text-primary shrink-0">MY TEAM</h2>
+              
+              <Input
+                className="cash-input-compact w-20 sm:w-24 h-9 text-sm"
+                type="text"
+                value={cashInBankDisplay}
+                onChange={handleCashChange}
+                placeholder="$ Cash"
+              />
+              
+              {!isPreseasonMode && (
+                <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
+                  <SelectTrigger className="strategy-select-compact w-28 sm:w-32 h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="1">Max Value</SelectItem>
+                    <SelectItem value="2">Max Base</SelectItem>
+                    <SelectItem value="3">Hybrid</SelectItem>
+                  </SelectContent>
+                </Select>
               )}
-              {/* Show normal salary cap when not in preseason mode (desktop only) */}
+              
+              <Button
+                variant={targetByeRound ? "default" : "outline"}
+                size="sm"
+                className="bye-round-btn-compact h-9 px-3"
+                onClick={() => setTargetByeRound(!targetByeRound)}
+                title="Target bye round players"
+              >
+                Bye
+              </Button>
+              
+              {/* Desktop Salary cap display */}
+              {isPreseasonMode && preseasonPhase !== 'idle' && (
+                <Badge variant={preseasonSalaryCap > 0 ? "default" : "destructive"} className="hidden lg:flex text-sm px-3 py-1 ml-auto">
+                  {preseasonPhase === 'selecting-out' ? 'Cash in Bank' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                </Badge>
+              )}
               {!isPreseasonMode && salaryCapRemaining !== null && (
-                <div className="salary-cap-display desktop-only">
+                <Badge variant="outline" className="hidden lg:flex text-sm px-3 py-1 border-primary/50 text-primary ml-auto">
                   Salary Cap: ${formatNumberWithCommas(Math.round(salaryCapRemaining / 1000))}k
-                </div>
+                </Badge>
               )}
             </div>
-            <div className="header-buttons">
-              <button className="btn-back" onClick={onBack}>
-                ← Back to Scanner
-              </button>
-              {/* Mobile Preseason Mode Button */}
-              <div className="preseason-dropdown-wrapper mobile-only" ref={preseasonDropdownRef}>
-                <button
-                  className={`btn-preseason-mode ${isPreseasonMode ? 'active' : ''}`}
+            
+            {/* Row 2: Action buttons */}
+            <div className="header-buttons flex flex-wrap gap-2">
+              <Button variant="outline" onClick={onBack} className="shrink-0 h-9" size="sm">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Scanner
+              </Button>
+              
+              {/* Preseason Mode Button with dropdown */}
+              <div className="preseason-dropdown-wrapper relative" ref={preseasonDropdownRef}>
+                <Button
+                  variant={isPreseasonMode ? "default" : "outline"}
                   onClick={() => setShowPreseasonDropdown(!showPreseasonDropdown)}
+                  className="h-9"
+                  size="sm"
                 >
                   Pre-season
-                </button>
-                {/* Mobile Preseason Mode Dropdown - positioned below button */}
+                </Button>
+                
                 {showPreseasonDropdown && (
-                  <div className="preseason-mode-dropdown">
-                    <div className="preseason-mode-dropdown-content">
-                      <div className="preseason-mode-header toggle-section">
-                        <div className="toggle-labels">
-                          <label htmlFor="preseasonModeDropdown">Pre-season Mode</label>
-                          <span className="toggle-caption">Up to 6 trades</span>
+                  <Card className="preseason-mode-dropdown absolute top-full left-0 mt-2 z-50 w-64 shadow-lg">
+                    <CardContent className="p-4 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <label className="text-sm font-medium text-foreground">Pre-season Mode</label>
+                          <p className="text-xs text-muted-foreground">Up to 6 trades</p>
                         </div>
-                        <label className="toggle-switch">
+                        <label className="relative inline-flex items-center cursor-pointer">
                           <input
-                            id="preseasonModeDropdown"
                             type="checkbox"
                             checked={isPreseasonMode}
                             onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                            className="sr-only peer"
                           />
-                          <span className="toggle-slider" />
+                          <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                         </label>
                       </div>
-                      {/* Test Approach Toggle - only visible when preseason mode is on */}
+                      
                       {isPreseasonMode && (
-                        <div className="test-approach-section toggle-section">
-                          <div className="toggle-labels">
-                            <label htmlFor="testApproachDropdown">Test Approach</label>
-                            <span className="toggle-caption">Price band matching (±$75k)</span>
+                        <div className="flex items-center justify-between pt-2 border-t border-primary/20">
+                          <div>
+                            <label className="text-sm font-medium text-foreground">Test Approach</label>
+                            <p className="text-xs text-muted-foreground">Price band ±$75k</p>
                           </div>
-                          <label className="toggle-switch">
+                          <label className="relative inline-flex items-center cursor-pointer">
                             <input
-                              id="testApproachDropdown"
                               type="checkbox"
                               checked={preseasonTestApproach}
                               onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                              className="sr-only peer"
                             />
-                            <span className="toggle-slider" />
+                            <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                           </label>
                         </div>
                       )}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
-              <button
-                className={`btn-make-trade mobile-only ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0 ? 'disabled' : ''} ${isPreseasonMode && hasHighlightedPreseason && preseasonSelectedTradeOuts.length === 0 ? 'disabled' : ''}`}
+              
+              <Button
+                className="btn-make-trade flex-1 sm:flex-none h-9"
+                size="sm"
                 onClick={handleMakeATrade}
                 disabled={(normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0) || (isPreseasonMode && hasHighlightedPreseason && preseasonSelectedTradeOuts.length === 0)}
               >
@@ -2479,38 +2528,17 @@ function TeamView({
                   : normalModePhase === 'calculate'
                     ? 'Calc trade recs'
                     : 'Recommend trade-outs'}
-              </button>
+              </Button>
             </div>
           </div>
 
           {/* Loading screen while analyzing team */}
           {isAnalyzingTeam && !teamAnalysisComplete && (
-            <div className="team-loading-overlay">
-              <div className="team-loading-content">
-                <div className="interchange-loader">
-                  <svg viewBox="0 0 60 60" className="interchange-icon">
-                    {/* Arrow 1 - curving from top-right to bottom-left */}
-                    <path 
-                      className="arrow arrow-1" 
-                      d="M 45 15 Q 50 30, 35 40 L 38 35 M 35 40 L 40 43"
-                      fill="none" 
-                      strokeWidth="3" 
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    {/* Arrow 2 - curving from bottom-left to top-right */}
-                    <path 
-                      className="arrow arrow-2" 
-                      d="M 15 45 Q 10 30, 25 20 L 22 25 M 25 20 L 20 17"
-                      fill="none" 
-                      strokeWidth="3" 
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                </div>
-                <p className="loading-text">Analyzing team...</p>
-              </div>
+            <div className="team-loading-overlay fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+              <Card className="p-8 text-center">
+                <RefreshCw className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
+                <p className="text-lg font-medium text-foreground">Analyzing team...</p>
+              </Card>
             </div>
           )}
 
@@ -2544,253 +2572,264 @@ function TeamView({
 
         </div>
         
-        <div className="team-view-sidebar desktop-only">
-          <h3 className="sidebar-title">Trade Options</h3>
-          
-          {/* Cash in Bank Input */}
-          <div className="cash-in-bank-section">
-            <label htmlFor="cashInBank">Cash in Bank ($)</label>
-            <input
-              id="cashInBank"
-              type="text"
-              value={cashInBankDisplay}
-              onChange={handleCashChange}
-              placeholder="$ 000 k"
-            />
-          </div>
-
-          {/* Strategy Selection */}
-          <div className="strategy-section">
-            <label htmlFor="strategy">Strategy</label>
-            <select 
-              id="strategy" 
-              value={selectedStrategy} 
-              onChange={(e) => setSelectedStrategy(e.target.value)}
-            >
-              <option value="1">Maximize Value (Diff)</option>
-              <option value="2">Maximize Base (Projection)</option>
-              <option value="3">Hybrid Approach</option>
-            </select>
-          </div>
-
-
-          {/* Bye round weighting toggle */}
-          <div className="toggle-section">
-            <div className="toggle-labels">
-              <label htmlFor="targetByeRoundDesktop">Target Bye Round Players</label>
-              <span className="toggle-caption">Prioritise bye coverage</span>
-            </div>
-            <label className="toggle-switch">
-              <input
-                id="targetByeRoundDesktop"
-                type="checkbox"
-                checked={targetByeRound}
-                onChange={(e) => setTargetByeRound(e.target.checked)}
+        {/* Sidebar - Desktop only */}
+        <Card className="team-view-sidebar hidden lg:block w-80 shrink-0 border-primary/30">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg text-primary">Trade Options</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Cash in Bank Input */}
+            <div className="space-y-2">
+              <label htmlFor="cashInBank" className="text-sm font-medium text-foreground">Cash in Bank ($)</label>
+              <Input
+                id="cashInBank"
+                type="text"
+                value={cashInBankDisplay}
+                onChange={handleCashChange}
+                placeholder="$ 000 k"
               />
-              <span className="toggle-slider" />
-            </label>
-          </div>
+            </div>
 
-          {/* Pre-season Mode Toggle */}
-          <div className={`preseason-mode-section ${isPreseasonMode ? 'active' : ''}`}>
-            <div className="preseason-mode-header toggle-section">
-              <div className="toggle-labels">
-                <label htmlFor="preseasonModeDesktop">Pre-season Mode</label>
-                <span className="toggle-caption">Up to 6 trades</span>
+            {/* Strategy Selection */}
+            <div className="space-y-2">
+              <label htmlFor="strategy" className="text-sm font-medium text-foreground">Strategy</label>
+              <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Maximize Value (Diff)</SelectItem>
+                  <SelectItem value="2">Maximize Base (Projection)</SelectItem>
+                  <SelectItem value="3">Hybrid Approach</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bye round toggle */}
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <label className="text-sm font-medium text-foreground">Target Bye Round</label>
+                <p className="text-xs text-muted-foreground">Prioritise bye coverage</p>
               </div>
-              <label className="toggle-switch">
+              <label className="relative inline-flex items-center cursor-pointer">
                 <input
-                  id="preseasonModeDesktop"
                   type="checkbox"
-                  checked={isPreseasonMode}
-                  onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                  checked={targetByeRound}
+                  onChange={(e) => setTargetByeRound(e.target.checked)}
+                  className="sr-only peer"
                 />
-                <span className="toggle-slider" />
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
-            {/* Test Approach Toggle - only visible when preseason mode is on */}
-            {isPreseasonMode && (
-              <div className="test-approach-section toggle-section">
-                <div className="toggle-labels">
-                  <label htmlFor="testApproachDesktop">Test Approach</label>
-                  <span className="toggle-caption">Price band matching (±$75k)</span>
+
+            {/* Pre-season Mode Toggle */}
+            <Card className={cn("p-3 border", isPreseasonMode ? "border-primary bg-primary/5" : "border-primary/20")}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <label className="text-sm font-medium text-foreground">Pre-season Mode</label>
+                  <p className="text-xs text-muted-foreground">Up to 6 trades</p>
                 </div>
-                <label className="toggle-switch">
+                <label className="relative inline-flex items-center cursor-pointer">
                   <input
-                    id="testApproachDesktop"
                     type="checkbox"
-                    checked={preseasonTestApproach}
-                    onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                    checked={isPreseasonMode}
+                    onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                    className="sr-only peer"
                   />
-                  <span className="toggle-slider" />
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
                 </label>
               </div>
+              
+              {isPreseasonMode && (
+                <div className="flex items-center justify-between mt-3 pt-3 border-t border-primary/20">
+                  <div>
+                    <label className="text-sm font-medium text-foreground">Test Approach</label>
+                    <p className="text-xs text-muted-foreground">Price band ±$75k</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={preseasonTestApproach}
+                      onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                  </label>
+                </div>
+              )}
+            </Card>
+
+            {/* Number of Trades (hidden in preseason mode) */}
+            {!isPreseasonMode && (
+              <div className="space-y-2">
+                <label htmlFor="numTrades" className="text-sm font-medium text-foreground">Number of Trades</label>
+                <Input
+                  id="numTrades"
+                  type="number"
+                  value={numTrades}
+                  onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+                  min={1}
+                  max={2}
+                />
+              </div>
             )}
-          </div>
 
-
-          {/* Number of Trades (hidden in preseason mode) */}
-          {!isPreseasonMode && (
-          <div className="num-trades-section">
-            <label htmlFor="numTrades">Number of Trades</label>
-            <input
-              id="numTrades"
-              type="number"
-              value={numTrades}
-              onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
-              min="1"
-            max="2"
-            />
-          </div>
-          )}
-
-          {/* Button changes based on mode */}
-          {isPreseasonMode ? (
-            <>
-              {/* Preseason Mode Buttons */}
-              {preseasonPhase === 'idle' && (
-                <button 
-                  className="btn-highlight-options"
-                  onClick={handleHighlightOptions}
-                  disabled={isCalculating}
-                >
-                  {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
-                </button>
-              )}
-              
-              {preseasonPhase === 'selecting-out' && (
-                <>
-                  <div className="preseason-salary-cap">
-                    Cash in Bank: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
-                  </div>
-                  <div className="preseason-status selecting">
-                    {preseasonSelectedTradeOuts.length} player{preseasonSelectedTradeOuts.length !== 1 ? 's' : ''} selected for trade-out
-                  </div>
-                  <button 
-                    className="btn-confirm-trade-outs"
-                    onClick={handleConfirmPreseasonTradeOuts}
-                    disabled={isCalculating || preseasonSelectedTradeOuts.length === 0}
+            {/* Action Buttons based on mode */}
+            {isPreseasonMode ? (
+              <div className="space-y-3">
+                {preseasonPhase === 'idle' && (
+                  <Button 
+                    className="w-full"
+                    onClick={handleHighlightOptions}
+                    disabled={isCalculating}
                   >
-                    {isCalculating ? 'Loading Trade-Ins...' : 'Confirm Trade-Outs'}
-                  </button>
-                </>
-              )}
-              
-              {preseasonPhase === 'selecting-in' && (
-                <>
-                  {(() => {
-                    // Calculate remaining = cash + traded-out salaries - selected trade-in costs
-                    const remaining = (cashInBank * 1000) +
-                      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
-                      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
-
-                    return (
-                      <>
-                        <div className={`preseason-salary-cap ${remaining > 0 ? 'has-budget' : ''}`}>
-                          Remaining: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
-                        </div>
-                        <div className="preseason-status">
-                          {preseasonSelectedTradeIns.length}/{preseasonSelectedTradeOuts.length} selected
-                        </div>
-                      </>
-                    );
-                  })()}
-                </>
-              )}
-            </>
-          ) : (
-            /* Normal Mode - Calculate Button */
-          <button
-            className={`btn-calculate-trades ${normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1 ? 'disabled' : ''}`}
-            onClick={handleTradeWorkflow}
-            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
-          >
-            {isCalculating ? 'Calculating...' :
-             normalModePhase === 'recommend' ? 'Recommend players to trade out' :
-             'Calculate trade recommendations'}
-          </button>
-          )}
-
-          {error && (
-            <div className="error-message">
-              {error}
-            </div>
-          )}
-          
-          {/* Trade Panels - Normal mode only */}
-          {!isPreseasonMode && (
-            <>
-          <TradePanel
-            title="Trade Out"
-            subtitle="Trade-out Selections"
-            players={selectedTradeOutPlayers}
-            onSelect={handleTradeOut}
-            selectedPlayers={selectedTradeOutPlayers}
-            emptyMessage="Click on highlighted players to select them for trade-out"
-            isTradeOut={true}
-          />
-          
-          <TradePanel 
-            title="Trade In"
-            subtitle="Trade-in Recommendations"
-            players={tradeInRecommendations}
-            onSelect={handleTradeIn}
-            selectedOptionIndex={selectedTradeInIndex}
-            onConfirmOption={handleConfirmTrade}
-            showConfirmButton={true}
-            emptyMessage="Trade-out players will generate trade-in options"
-            isTradeIn={true}
-          />
-            </>
-          )}
-
-          {/* ABC */}
-          
-          {/* Pre-season Trade-In List */}
-          {isPreseasonMode && preseasonPhase === 'selecting-in' && (
-            <div className="trade-panel">
-              <h4 className="trade-subtitle">Trade-In Options</h4>
-              <div className="preseason-tradein-list">
-              {getFilteredTradeIns().length > 0 ? (
-                getFilteredTradeIns().map((player, index) => {
-                  // Calculate total available salary for this render = cash + traded-out salaries - selected trade-in costs
-                  const totalAvailableSalary = (cashInBank * 1000) +
-                    preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
-                    preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
-                  const isDisabled = player.price > totalAvailableSalary;
-
-                  return (
-                    <div
-                      key={player.name || index}
-                      className={`preseason-tradein-item ${
-                        preseasonSelectedTradeIns.some(p => p.name === player.name) ? 'selected' : ''
-                      } ${isDisabled ? 'disabled' : ''}`}
-                      onClick={() => handlePreseasonTradeInSelect(player)}
+                    {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
+                  </Button>
+                )}
+                
+                {preseasonPhase === 'selecting-out' && (
+                  <>
+                    <Badge variant="outline" className="w-full justify-center py-2 text-primary border-primary/50">
+                      Cash in Bank: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                    </Badge>
+                    <p className="text-sm text-center text-muted-foreground">
+                      {preseasonSelectedTradeOuts.length} player{preseasonSelectedTradeOuts.length !== 1 ? 's' : ''} selected
+                    </p>
+                    <Button 
+                      className="w-full"
+                      onClick={handleConfirmPreseasonTradeOuts}
+                      disabled={isCalculating || preseasonSelectedTradeOuts.length === 0}
                     >
-                      <span className="trade-player-pos">
-                        {player.position || player.positions?.[0] || '—'}
-                      </span>
-                      <span className="trade-player-name">{player.name}</span>
-                      <span className="trade-player-price">
-                        ${formatNumberWithCommas(Math.round(player.price / 1000))}k
-                      </span>
-                        {player.diff && (
-                          <span className="trade-player-diff">+{player.diff.toFixed(1)}</span>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="empty-message">
-                    {preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length
-                      ? 'All positions filled!'
-                      : 'No trade-in options available for remaining positions'}
-                  </p>
+                      {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      {isCalculating ? 'Loading Trade-Ins...' : 'Confirm Trade-Outs'}
+                    </Button>
+                  </>
+                )}
+                
+                {preseasonPhase === 'selecting-in' && (
+                  <>
+                    {(() => {
+                      const remaining = (cashInBank * 1000) +
+                        preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                        preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+                      return (
+                        <>
+                          <Badge variant={remaining > 0 ? "default" : "destructive"} className="w-full justify-center py-2">
+                            Remaining: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
+                          </Badge>
+                          <p className="text-sm text-center text-muted-foreground">
+                            {preseasonSelectedTradeIns.length}/{preseasonSelectedTradeOuts.length} selected
+                          </p>
+                        </>
+                      );
+                    })()}
+                  </>
                 )}
               </div>
-            </div>
-          )}
-        </div>
+            ) : (
+              <Button
+                className="btn-calculate-trades w-full"
+                onClick={handleTradeWorkflow}
+                disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
+              >
+                {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {isCalculating ? 'Calculating...' :
+                 normalModePhase === 'recommend' ? 'Recommend players to trade out' :
+                 'Calculate trade recommendations'}
+              </Button>
+            )}
+
+            {/* Error display */}
+            {error && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+            
+            {/* Trade Panels - Normal mode only */}
+            {!isPreseasonMode && (
+              <>
+                <TradePanel
+                  title="Trade Out"
+                  subtitle="Trade-out Selections"
+                  players={selectedTradeOutPlayers}
+                  onSelect={handleTradeOut}
+                  selectedPlayers={selectedTradeOutPlayers}
+                  emptyMessage="Click on highlighted players to select them for trade-out"
+                  isTradeOut={true}
+                />
+                
+                <TradePanel 
+                  title="Trade In"
+                  subtitle="Trade-in Recommendations"
+                  players={tradeInRecommendations}
+                  onSelect={handleTradeIn}
+                  selectedOptionIndex={selectedTradeInIndex}
+                  onConfirmOption={handleConfirmTrade}
+                  showConfirmButton={true}
+                  emptyMessage="Trade-out players will generate trade-in options"
+                  isTradeIn={true}
+                />
+              </>
+            )}
+            
+            {/* Pre-season Trade-In List */}
+            {isPreseasonMode && preseasonPhase === 'selecting-in' && (
+              <Card className="border-primary/30">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-sm font-semibold text-primary uppercase tracking-wide">Trade-In Options</CardTitle>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <ScrollArea className="max-h-[300px]">
+                    <div className="space-y-2">
+                      {getFilteredTradeIns().length > 0 ? (
+                        getFilteredTradeIns().map((player, index) => {
+                          const totalAvailableSalary = (cashInBank * 1000) +
+                            preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                            preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+                          const isDisabled = player.price > totalAvailableSalary;
+                          const isSelected = preseasonSelectedTradeIns.some(p => p.name === player.name);
+
+                          return (
+                            <div
+                              key={player.name || index}
+                              className={cn(
+                                "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer",
+                                "bg-primary/5 hover:bg-primary/10",
+                                isSelected && "bg-primary/20 ring-1 ring-primary",
+                                isDisabled && "opacity-50 cursor-not-allowed"
+                              )}
+                              onClick={() => !isDisabled && handlePreseasonTradeInSelect(player)}
+                            >
+                              <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
+                                {player.position || player.positions?.[0] || '—'}
+                              </Badge>
+                              <span className="flex-1 text-sm text-foreground truncate">{player.name}</span>
+                              <span className="text-xs text-primary font-semibold shrink-0">
+                                ${formatNumberWithCommas(Math.round(player.price / 1000))}k
+                              </span>
+                              {player.diff && (
+                                <span className="text-xs text-green-500 font-semibold">+{player.diff.toFixed(1)}</span>
+                              )}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-center text-muted-foreground text-sm py-4">
+                          {preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length
+                            ? 'All positions filled!'
+                            : 'No trade-in options available'}
+                        </p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </>
   );

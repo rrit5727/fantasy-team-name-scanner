@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button';
 import './OnboardingTour.css';
 
 const OnboardingTour = ({
@@ -47,8 +48,6 @@ const OnboardingTour = ({
     // Add secondary spotlight for indicator elements if specified
     if (stepConfig.secondaryTargets) {
       stepConfig.secondaryTargets.forEach(secondarySelector => {
-        // If the selector starts with '.', find elements within the current target element
-        // Otherwise, find elements globally as before
         let secondaryElements;
         if (secondarySelector.startsWith('.')) {
           secondaryElements = element.querySelectorAll(secondarySelector);
@@ -57,7 +56,6 @@ const OnboardingTour = ({
         }
         secondaryElements.forEach(el => {
           el.classList.add('tour-spotlight-secondary');
-          // Add specific class for option-diff spans
           if (secondarySelector === '.option-diff') {
             el.classList.add('option-diff-span');
           }
@@ -118,9 +116,9 @@ const OnboardingTour = ({
       const position = stepConfig.position || 'bottom';
       const viewportHeight = window.innerHeight;
       const viewportWidth = window.innerWidth;
-      const tooltipHeight = 250; // Approximate tooltip height
-      const tooltipWidth = 350; // Max tooltip width
-      const gap = 30; // Minimum gap between tooltip and element
+      const tooltipHeight = 250;
+      const tooltipWidth = 350;
+      const gap = 30;
       let top = 0;
       let left = 0;
       let adjustedPosition = position;
@@ -129,78 +127,62 @@ const OnboardingTour = ({
       if (currentStep <= 1) {
         if (position === 'bottom') {
           const bottomSpace = viewportHeight - rect.bottom;
-
-          // If not enough space below, position above instead
           if (bottomSpace < tooltipHeight + gap + 20) {
             adjustedPosition = 'top';
             top = rect.top - tooltipHeight - gap;
           } else {
             top = rect.bottom + gap;
           }
-          // Center horizontally on element, but keep within viewport
           left = rect.left + rect.width / 2;
         } else if (position === 'top') {
           const topSpace = rect.top;
-
-          // If not enough space above, position below instead
           if (topSpace < tooltipHeight + gap + 20) {
             adjustedPosition = 'bottom';
             top = rect.bottom + gap;
           } else {
             top = rect.top - tooltipHeight - gap;
           }
-          // Center horizontally on element, but keep within viewport
           left = rect.left + rect.width / 2;
         } else if (position === 'right') {
           const rightSpace = viewportWidth - rect.right;
-
-          // If not enough space on right, try left
           if (rightSpace < tooltipWidth + gap + 20) {
             adjustedPosition = 'left';
             left = rect.left - tooltipWidth - gap;
           } else {
             left = rect.right + gap;
           }
-          // Center vertically on element
           top = rect.top + rect.height / 2;
         } else if (position === 'left') {
           const leftSpace = rect.left;
-
-          // If not enough space on left, try right
           if (leftSpace < tooltipWidth + gap + 20) {
             adjustedPosition = 'right';
             left = rect.right + gap;
           } else {
             left = rect.left - tooltipWidth - gap;
           }
-          // Center vertically on element
           top = rect.top + rect.height / 2;
         }
 
-        // Ensure tooltip stays within viewport with padding
         top = Math.max(20, Math.min(top, viewportHeight - tooltipHeight - 20));
 
-        // For horizontal positioning, keep tooltip within bounds
         if (adjustedPosition === 'bottom' || adjustedPosition === 'top') {
-          // Ensure centered tooltip doesn't go off screen
           const minLeft = 20 + tooltipWidth / 2;
           const maxLeft = viewportWidth - tooltipWidth / 2 - 20;
           left = Math.max(minLeft, Math.min(left, maxLeft));
         } else {
-          // For left/right positioning
           left = Math.max(20, Math.min(left, viewportWidth - tooltipWidth - 20));
         }
       }
       // Steps 2-10: Pin to bottom of viewport
       else if (currentStep >= 2 && currentStep <= 10) {
         adjustedPosition = 'bottom-fixed';
-        top = viewportHeight; // Will use bottom positioning in CSS
+        top = viewportHeight;
         left = viewportWidth / 2;
       }
       // Steps 11+: Pin to top of viewport (for trade-in page)
       else if (currentStep >= 11) {
         adjustedPosition = 'top-fixed';
-        top = 0; // Will use top positioning in CSS
+        top = 0;
         left = viewportWidth / 2;
       }
 
@@ -230,7 +212,6 @@ const OnboardingTour = ({
       // Remove secondary spotlight classes
       if (stepConfig.secondaryTargets) {
         stepConfig.secondaryTargets.forEach(secondarySelector => {
-          // Use the same logic as adding - scope to target element if selector starts with '.'
           let secondaryElements;
           if (secondarySelector.startsWith('.')) {
             secondaryElements = element.querySelectorAll(secondarySelector);
@@ -239,7 +220,6 @@ const OnboardingTour = ({
           }
           secondaryElements.forEach(el => {
             el.classList.remove('tour-spotlight-secondary');
-            // Remove specific class for option-diff spans
             if (secondarySelector === '.option-diff') {
               el.classList.remove('option-diff-span');
             }
@@ -267,7 +247,6 @@ const OnboardingTour = ({
   if (!isActive || !stepConfig) return null;
 
   const handleOverlayClick = (e) => {
-    // Don't close on overlay click - require explicit skip/next
     e.stopPropagation();
   };
 
@@ -365,36 +344,39 @@ const OnboardingTour = ({
             
             <div className="tour-buttons">
               {currentStep > 0 && (
-                <button
-                  className="tour-btn tour-btn-secondary"
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={onPrevious}
                 >
                   Prev
-                </button>
+                </Button>
               )}
               
               {currentStep < totalSteps - 1 ? (
-                <button 
-                  className="tour-btn tour-btn-primary"
+                <Button 
+                  size="sm"
                   onClick={onNext}
                 >
                   Next
-                </button>
+                </Button>
               ) : (
-                <button 
-                  className="tour-btn tour-btn-primary"
+                <Button 
+                  size="sm"
                   onClick={onComplete}
                 >
                   Got it!
-                </button>
+                </Button>
               )}
               
-              <button
-                className="tour-btn tour-btn-link"
+              <Button
+                variant="link"
+                size="sm"
                 onClick={onSkip}
+                className="text-muted-foreground"
               >
                 Skip
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -449,28 +431,29 @@ export const PreseasonTourModal = ({ isOpen, onClose }) => {
         <div className="preseason-tour-carousel-controls">
           <div className="preseason-tour-carousel-nav">
             {currentSlide > 0 && (
-              <button 
-                className="tour-btn tour-btn-secondary"
+              <Button 
+                variant="outline"
+                size="sm"
                 onClick={handlePrevious}
               >
                 Previous
-              </button>
+              </Button>
             )}
             {currentSlide < slides.length - 1 && (
-              <button 
-                className="tour-btn tour-btn-primary"
+              <Button 
+                size="sm"
                 onClick={handleNext}
               >
                 Next
-              </button>
+              </Button>
             )}
             {currentSlide === slides.length - 1 && (
-              <button 
-                className="tour-btn tour-btn-primary"
+              <Button 
+                size="sm"
                 onClick={onClose}
               >
                 Got it!
-              </button>
+              </Button>
             )}
           </div>
 
@@ -491,4 +474,3 @@ export const PreseasonTourModal = ({ isOpen, onClose }) => {
 };
 
 export default OnboardingTour;
-

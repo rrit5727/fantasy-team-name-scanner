@@ -1,64 +1,90 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 160 33% 6%;
+    --foreground: 0 0% 88%;
+    --card: 160 33% 8%;
+    --card-foreground: 0 0% 88%;
+    --popover: 160 33% 8%;
+    --popover-foreground: 0 0% 88%;
+    --primary: 160 100% 43%;
+    --primary-foreground: 160 33% 8%;
+    --secondary: 160 40% 17%;
+    --secondary-foreground: 0 0% 88%;
+    --muted: 160 40% 11%;
+    --muted-foreground: 160 10% 57%;
+    --accent: 39 100% 50%;
+    --accent-foreground: 160 33% 8%;
+    --destructive: 0 100% 70%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 160 40% 20%;
+    --input: 160 40% 20%;
+    --ring: 160 100% 43%;
+    --radius: 0.75rem;
+  }
 }
 
-:root {
-  --primary: #00d9a3;
-  --primary-dark: #00a67d;
-  --bg-dark: #0a1612;
-  --bg-card: #0d1f1a;
-  --text-light: #e0e0e0;
-  --text-muted: #8a9a96;
-}
+@layer base {
+  * {
+    @apply border-border;
+  }
 
-html {
-  font-size: 16px;
-  -webkit-text-size-adjust: 100%;
-}
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
 
-body {
-  margin: 0;
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(180deg, #0a1612 0%, #0d1f1a 50%, #0a1612 100%);
-  background-attachment: fixed;
-  color: var(--text-light);
-  line-height: 1.5;
-  min-height: 100vh;
-}
+  html {
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
 
-/* Subtle grid pattern overlay */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: 
-    radial-gradient(circle at 25% 25%, rgba(0, 166, 125, 0.03) 0%, transparent 50%),
-    radial-gradient(circle at 75% 75%, rgba(0, 217, 163, 0.02) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: -1;
-}
+  body {
+    @apply bg-background text-foreground;
+    margin: 0;
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: linear-gradient(180deg, #0a1612 0%, #0d1f1a 50%, #0a1612 100%);
+    background-attachment: fixed;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
 
-#root {
-  min-height: 100vh;
-}
+  /* Subtle grid pattern overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(0, 166, 125, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(0, 217, 163, 0.02) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+  }
 
-h1, h2, h3, h4, h5, h6 {
-  margin: 0;
-  font-weight: 700;
-}
+  #root {
+    min-height: 100vh;
+  }
 
-p {
-  margin: 0;
-}
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: 700;
+  }
 
-button {
-  font-family: inherit;
+  p {
+    margin: 0;
+  }
+
+  button {
+    font-family: inherit;
+  }
 }
 
 /* Custom selection color */
@@ -76,11 +102,26 @@ button {
 
 /* Focus visible styles */
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid hsl(var(--primary));
   outline-offset: 2px;
 }
 
 /* Remove tap highlight on mobile */
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Custom gradient utilities */
+@layer utilities {
+  .bg-gradient-dark {
+    background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  }
+  
+  .bg-gradient-field {
+    background: linear-gradient(180deg, #1a3d35 0%, #0d2e26 50%, #0a1f1a 100%);
+  }
+  
+  .bg-gradient-primary {
+    background: linear-gradient(135deg, #00a67d 0%, #00d9a3 100%);
+  }
 }
