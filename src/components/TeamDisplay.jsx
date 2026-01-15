@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, AlertTriangle, DollarSign, TrendingDown, Ban, Trash2, Check, X, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, DollarSign, TrendingDown, Ban, Trash2, Check, X, Loader2, RefreshCw, ChevronDown } from 'lucide-react';
 
 // Helper function to format numbers with comma separators
 const formatNumberWithCommas = (num) => {
@@ -540,7 +540,9 @@ function TeamView({
 
   // Mobile preseason mode dropdown state
   const [showPreseasonDropdown, setShowPreseasonDropdown] = React.useState(false);
+  const [showStrategyDropdown, setShowStrategyDropdown] = React.useState(false);
   const preseasonDropdownRef = React.useRef(null);
+  const strategyDropdownRef = React.useRef(null);
 
   // Position requirements for INT/EMG players
   const [positionRequirements, setPositionRequirements] = React.useState({});
@@ -853,6 +855,23 @@ function TeamView({
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showPreseasonDropdown]);
+
+  // Handle click outside strategy dropdown to close it
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (strategyDropdownRef.current && !strategyDropdownRef.current.contains(event.target)) {
+        setShowStrategyDropdown(false);
+      }
+    };
+
+    if (showStrategyDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showStrategyDropdown]);
 
   // Reset preseason state when mode is toggled off
   React.useEffect(() => {
@@ -1876,7 +1895,7 @@ function TeamView({
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="item-aligned">
                   <SelectItem value="1">Maximize Value (Diff)</SelectItem>
                   <SelectItem value="2">Maximize Base (Projection)</SelectItem>
                   <SelectItem value="3">Hybrid Approach</SelectItem>
@@ -2437,16 +2456,38 @@ function TeamView({
               />
               
               {!isPreseasonMode && (
-                <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
-                  <SelectTrigger className="strategy-select-compact w-28 sm:w-32 h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Max Value</SelectItem>
-                    <SelectItem value="2">Max Base</SelectItem>
-                    <SelectItem value="3">Hybrid</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="relative" ref={strategyDropdownRef}>
+                  <Button
+                    variant="outline"
+                    className="strategy-select-compact w-28 sm:w-32 h-9 justify-between"
+                    onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
+                  >
+                    {selectedStrategy === '1' ? 'Max Value' : selectedStrategy === '2' ? 'Max Base' : selectedStrategy === '3' ? 'Hybrid' : 'Max Value'}
+                    <ChevronDown className="h-4 w-4 opacity-70" />
+                  </Button>
+                  {showStrategyDropdown && (
+                    <div className="absolute top-full left-0 mt-1 w-28 sm:w-32 bg-card border border-primary/30 rounded-md shadow-md z-50">
+                      <div
+                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
+                        onClick={() => { setSelectedStrategy('1'); setShowStrategyDropdown(false); }}
+                      >
+                        Max Value
+                      </div>
+                      <div
+                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
+                        onClick={() => { setSelectedStrategy('2'); setShowStrategyDropdown(false); }}
+                      >
+                        Max Base
+                      </div>
+                      <div
+                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
+                        onClick={() => { setSelectedStrategy('3'); setShowStrategyDropdown(false); }}
+                      >
+                        Hybrid
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
               
               <Button
@@ -2610,7 +2651,7 @@ function TeamView({
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="item-aligned">
                   <SelectItem value="1">Maximize Value (Diff)</SelectItem>
                   <SelectItem value="2">Maximize Base (Projection)</SelectItem>
                   <SelectItem value="3">Hybrid Approach</SelectItem>
