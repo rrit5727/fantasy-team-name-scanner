@@ -1,4 +1,5 @@
 import React from 'react';
+import { flushSync } from 'react-dom';
 import TradeTypeSelector from './TradeTypeSelector';
 import OnboardingTour, { PreseasonTourModal } from './OnboardingTour';
 import { Button } from '@/components/ui/button';
@@ -145,6 +146,9 @@ function TeamDisplay({
     );
   };
 
+  // Note: Removed useCallback to fix stale closure issue causing delayed visual updates
+  // when selecting/deselecting players. The memoization was capturing old references
+  // to selectedTradeOutPlayers, causing a one-interaction delay in UI updates.
   const renderPlayerCard = (player, position, index) => {
     if (!player) {
       return (
@@ -184,12 +188,12 @@ function TeamDisplay({
       "bg-card/50 border border-primary/20",
       "hover:bg-card/80 hover:border-primary/40 hover:scale-[1.02]",
       selectionLimitReached && !isSelected && "opacity-60 cursor-not-allowed hover:scale-100",
-      isSelected && "bg-primary/20 border-primary ring-2 ring-primary/50",
+      isSelected && "bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/50",
       isTradedIn && "bg-green-500/20 border-green-500/50 ring-2 ring-green-500/30",
       isPreseasonSelectedOut && isInjured && "bg-amber-500/20 border-amber-500/50 ring-2 ring-amber-500/30",
       isPreseasonSelectedOut && !isInjured && "bg-red-500/20 border-red-500/50 ring-2 ring-red-500/30",
       isHighlightedForTrade && !isSelected && !isPreseasonSelectedOut && isInjured && "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/50",
-      isHighlightedForTrade && !isSelected && !isPreseasonSelectedOut && !isInjured && "bg-red-500/10 border-red-500/40 ring-2 ring-red-500/50"
+      isHighlightedForTrade && !isSelected && !isPreseasonSelectedOut && !isInjured && "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/50"
     );
 
     const handleClick = () => {
@@ -201,20 +205,22 @@ function TeamDisplay({
     };
 
     return (
-      <TooltipProvider key={player.name}>
-        <div
-          className={cardClasses}
-          onClick={handleClick}
-          data-player-name={player.name}
-        >
-          {/* Priority indicator */}
-          {(normalModePriority || (isPreseasonMode && preseasonPriority)) && (
-            <div className="priority-indicator absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-gradient-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shadow-lg z-10">
-              {normalModePriority || preseasonPriority}
-            </div>
-          )}
-          
-          {/* Status indicators */}
+      <div
+        key={`${player.name}-${isSelected}`}
+        className={cardClasses}
+        onClick={handleClick}
+        data-player-name={player.name}
+        data-is-selected={isSelected}
+      >
+        {/* Priority indicator */}
+        {(normalModePriority || (isPreseasonMode && preseasonPriority)) && (
+          <div className="priority-indicator absolute -top-1.5 -left-1.5 w-5 h-5 rounded-full bg-gradient-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shadow-lg z-10">
+            {normalModePriority || preseasonPriority}
+          </div>
+        )}
+        
+        {/* Status indicators */}
+        <TooltipProvider>
           <div className="absolute -top-1 -right-1 flex gap-0.5 z-10">
             {isInjured && (
               <Tooltip>
@@ -277,21 +283,21 @@ function TeamDisplay({
               </Tooltip>
             )}
           </div>
-          
-          <Badge className={cn(POSITION_CONFIG[position]?.color, POSITION_CONFIG[position]?.textColor, "px-1.5 py-0 text-[10px] font-bold")}>
-            {position}
-          </Badge>
-          <div className="text-center min-w-0 w-full px-1">
-            <span className="player-name block text-foreground font-medium text-xs leading-tight truncate">{player.name}</span>
-            {player.positions && player.positions.length > 0 && (position === 'INT' || position === 'EMG') && (
-              <span className="text-[10px] text-muted-foreground">{player.positions.join('/')}</span>
-            )}
-          </div>
-          {player.price && (
-            <span className="text-primary font-semibold text-xs">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
+        </TooltipProvider>
+        
+        <Badge className={cn(POSITION_CONFIG[position]?.color, POSITION_CONFIG[position]?.textColor, "px-1.5 py-0 text-[10px] font-bold")}>
+          {position}
+        </Badge>
+        <div className="text-center min-w-0 w-full px-1">
+          <span className="player-name block text-foreground font-medium text-xs leading-tight truncate">{player.name}</span>
+          {player.positions && player.positions.length > 0 && (position === 'INT' || position === 'EMG') && (
+            <span className="text-[10px] text-muted-foreground">{player.positions.join('/')}</span>
           )}
         </div>
-      </TooltipProvider>
+        {player.price && (
+          <span className="text-primary font-semibold text-xs">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
+        )}
+      </div>
     );
   };
 
@@ -1094,6 +1100,8 @@ function TeamView({
   };
 
 
+  // Using flushSync to force immediate synchronous state updates and re-renders
+  // This ensures the UI updates immediately when a player is selected/deselected
   const handleTradeOut = (player, position) => {
     if (!player) return;
 
@@ -1103,9 +1111,12 @@ function TeamView({
     }
 
     const exists = selectedTradeOutPlayers.some(p => p.name === player.name);
+    
     if (exists) {
-      // Allow deselection even if at limit
-      setSelectedTradeOutPlayers(prev => prev.filter(p => p.name !== player.name));
+      // Allow deselection even if at limit - use flushSync for immediate UI update
+      flushSync(() => {
+        setSelectedTradeOutPlayers(prev => prev.filter(p => p.name !== player.name));
+      });
       // Clear position requirements for deselected player
       setPositionRequirements(prev => {
         const newReqs = { ...prev };
@@ -1125,11 +1136,14 @@ function TeamView({
         return;
       }
       // For positional players, add directly with automatic position requirement
-      setSelectedTradeOutPlayers(prev => [...prev, {
-        ...player,
-        originalPosition: position,
-        trade_in_positions: [position]  // Positional players require same position replacement
-      }]);
+      // Use flushSync for immediate UI update
+      flushSync(() => {
+        setSelectedTradeOutPlayers(prev => [...prev, {
+          ...player,
+          originalPosition: position,
+          trade_in_positions: [position]  // Positional players require same position replacement
+        }]);
+      });
     }
     // If not exists and at limit, do nothing
   };
@@ -2411,7 +2425,7 @@ function TeamView({
           {/* Header Section */}
           <div className="section-header mb-4 space-y-2">
             {/* Row 1: My Team heading + controls */}
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <h2 className="text-xl sm:text-2xl font-bold text-primary shrink-0">MY TEAM</h2>
               
               <Input
@@ -2459,10 +2473,9 @@ function TeamView({
             </div>
             
             {/* Row 2: Action buttons */}
-            <div className="header-buttons flex flex-wrap gap-2">
+            <div className="header-buttons flex flex-nowrap gap-2 overflow-x-auto">
               <Button variant="outline" onClick={onBack} className="shrink-0 h-9" size="sm">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Scanner
+                ← scanner
               </Button>
               
               {/* Preseason Mode Button with dropdown */}
