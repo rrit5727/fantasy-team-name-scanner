@@ -187,11 +187,10 @@ function TeamDisplay({
       "player-card relative flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg transition-all duration-200 cursor-pointer w-[75px] h-[75px]",
       "bg-card/50 border border-primary/20",
       "hover:bg-card/80 hover:border-primary/40 hover:scale-[1.02]",
-      selectionLimitReached && !isSelected && "opacity-60 cursor-not-allowed hover:scale-100",
-      isSelected && "bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/50",
+      selectionLimitReached && !isSelected && !isPreseasonSelectedOut && "opacity-60 cursor-not-allowed hover:scale-100",
+      // Both normal mode selected AND preseason selected use the same bright teal styling
+      (isSelected || isPreseasonSelectedOut) && "bg-emerald-500/20 border-emerald-500 ring-2 ring-emerald-500/50",
       isTradedIn && "bg-green-500/20 border-green-500/50 ring-2 ring-green-500/30",
-      isPreseasonSelectedOut && isInjured && "bg-amber-500/20 border-amber-500/50 ring-2 ring-amber-500/30",
-      isPreseasonSelectedOut && !isInjured && "bg-red-500/20 border-red-500/50 ring-2 ring-red-500/30",
       isHighlightedForTrade && !isSelected && !isPreseasonSelectedOut && isInjured && "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/50",
       isHighlightedForTrade && !isSelected && !isPreseasonSelectedOut && !isInjured && "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/50"
     );
@@ -206,11 +205,11 @@ function TeamDisplay({
 
     return (
       <div
-        key={`${player.name}-${isSelected}`}
+        key={`${player.name}-${isSelected}-${isPreseasonSelectedOut}`}
         className={cardClasses}
         onClick={handleClick}
         data-player-name={player.name}
-        data-is-selected={isSelected}
+        data-is-selected={isSelected || isPreseasonSelectedOut}
       >
         {/* Priority indicator */}
         {(normalModePriority || (isPreseasonMode && preseasonPriority)) && (
@@ -1405,6 +1404,7 @@ function TeamView({
   };
 
   // Handle clicking on a player in preseason mode (team display)
+  // Using flushSync for immediate UI updates (same fix as handleTradeOut)
   const handlePreseasonPlayerClick = (player, position) => {
     if (!player) return;
 
@@ -1417,7 +1417,10 @@ function TeamView({
       const exists = preseasonSelectedTradeOuts.some(p => p.name === player.name);
       if (exists) {
         // Deselect - reduce salary cap and clear position requirements
-        setPreseasonSelectedTradeOuts(prev => prev.filter(p => p.name !== player.name));
+        // Use flushSync for immediate UI update
+        flushSync(() => {
+          setPreseasonSelectedTradeOuts(prev => prev.filter(p => p.name !== player.name));
+        });
         setPositionRequirements(prev => {
           const newReqs = { ...prev };
           delete newReqs[player.name];
@@ -1436,11 +1439,14 @@ function TeamView({
         }
 
         // For positional players, add directly with automatic position requirement
-        setPreseasonSelectedTradeOuts(prev => [...prev, {
-          ...player,
-          originalPosition: position,
-          trade_in_positions: [position]  // Positional players require same position replacement
-        }]);
+        // Use flushSync for immediate UI update
+        flushSync(() => {
+          setPreseasonSelectedTradeOuts(prev => [...prev, {
+            ...player,
+            originalPosition: position,
+            trade_in_positions: [position]  // Positional players require same position replacement
+          }]);
+        });
       }
     }
     // During selecting-in phase - user might click a traded-in player to reverse
@@ -2514,7 +2520,7 @@ function TeamView({
             </div>
             
             {/* Row 2: Action buttons */}
-            <div className="header-buttons flex flex-nowrap gap-2 overflow-x-auto">
+            <div className="header-buttons flex flex-nowrap gap-2 overflow-visible">
               <Button variant="outline" onClick={onBack} className="shrink-0 h-9" size="sm">
                 ← scanner
               </Button>
@@ -2531,7 +2537,7 @@ function TeamView({
                 </Button>
                 
                 {showPreseasonDropdown && (
-                  <Card className="preseason-mode-dropdown absolute top-full left-0 mt-2 z-50 w-64 shadow-lg">
+                  <Card className="preseason-mode-dropdown absolute top-full left-0 mt-2 z-[100] w-64 shadow-lg">
                     <CardContent className="p-4 space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
