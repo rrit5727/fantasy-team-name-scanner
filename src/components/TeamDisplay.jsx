@@ -2420,7 +2420,7 @@ function TeamView({
         />
       )}
       
-      <div className={cn("team-view flex flex-col lg:flex-row gap-4 p-4", (showTradeInPage || showPreseasonTradeIns) && "hidden lg:flex")}>
+      <div className={cn("team-view flex flex-col lg:flex-row gap-4 p-2", (showTradeInPage || showPreseasonTradeIns) && "hidden lg:flex")}>
         <div className="team-view-main flex-1">
           {/* Header Section */}
           <div className="section-header mb-4 space-y-2">
