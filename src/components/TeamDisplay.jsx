@@ -289,9 +289,6 @@ function TeamDisplay({
         </Badge>
         <div className="text-center min-w-0 w-full px-1">
           <span className="player-name block text-foreground font-medium text-xs leading-tight truncate">{player.name}</span>
-          {player.positions && player.positions.length > 0 && (position === 'INT' || position === 'EMG') && (
-            <span className="text-[10px] text-muted-foreground">{player.positions.join('/')}</span>
-          )}
         </div>
         {player.price && (
           <span className="text-primary font-semibold text-xs">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
@@ -303,7 +300,7 @@ function TeamDisplay({
   const renderPositionRow = (position) => {
     const config = POSITION_CONFIG[position];
     const posPlayers = groupedPlayers[position] || [];
-    
+
     // Pad array to expected count
     const paddedPlayers = [...posPlayers];
     while (paddedPlayers.length < config.count) {
@@ -762,9 +759,6 @@ function TeamView({
         </div>
         <div className="player-info">
           <span className="player-name">{player.name}</span>
-          {player.positions && player.positions.length > 0 && (position === 'INT' || position === 'EMG') && (
-            <span className="player-position">{player.positions.join('/')}</span>
-          )}
         {player.price && (
           <span className="player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
         )}
