@@ -19,6 +19,20 @@ const formatNumberWithCommas = (num) => {
   return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 };
 
+// Helper function to format full names to initial + surname format
+const formatPlayerName = (fullName) => {
+  if (!fullName || typeof fullName !== 'string') return fullName;
+
+  const parts = fullName.trim().split(' ');
+  if (parts.length < 2) return fullName;
+
+  const firstName = parts[0];
+  const lastName = parts.slice(1).join(' ');
+
+  // Return "F. Lastname" format
+  return `${firstName.charAt(0).toUpperCase()}. ${lastName}`;
+};
+
 // Position order for NRL Fantasy team display
 const POSITION_CONFIG = {
   HOK: { label: 'HOK', count: 1, color: 'bg-primary', textColor: 'text-primary-foreground' },
@@ -288,7 +302,7 @@ function TeamDisplay({
           {position}
         </Badge>
         <div className="text-center min-w-0 w-full px-1">
-          <span className="player-name block text-foreground font-medium text-xs leading-tight truncate">{player.name}</span>
+          <span className="player-name block text-foreground font-medium text-xs leading-tight truncate">{formatPlayerName(player.name)}</span>
         </div>
         {player.price && (
           <span className="text-primary font-semibold text-xs">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
@@ -379,7 +393,7 @@ function TradePanel({
                       <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
                         {player.positions?.[0] || '—'}
                       </Badge>
-                      <span className="flex-1 text-sm text-foreground truncate">{player.name}</span>
+                      <span className="flex-1 text-sm text-foreground truncate">{formatPlayerName(player.name)}</span>
                       {player.price && (
                         <span className="text-xs text-primary font-semibold shrink-0">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
                       )}
@@ -421,7 +435,7 @@ function TradePanel({
                       {option.players.map((player, pIndex) => (
                         <div key={pIndex} className="flex items-center gap-2 text-sm">
                           <Badge variant="outline" className="px-1.5 py-0 text-xs shrink-0">{player.position}</Badge>
-                          <span className="flex-1 text-foreground truncate">{player.name}</span>
+                          <span className="flex-1 text-foreground truncate">{formatPlayerName(player.name)}</span>
                           <span className="text-xs text-primary shrink-0">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
                         </div>
                       ))}
@@ -460,7 +474,7 @@ function TradePanel({
                     <Badge variant="outline" className="px-2 py-0.5 text-xs">
                       {player.positions?.[0] || '—'}
                     </Badge>
-                    <span className="flex-1 text-sm text-foreground">{player.name}</span>
+                    <span className="flex-1 text-sm text-foreground">{formatPlayerName(player.name)}</span>
                   </div>
                 ))
               )
@@ -756,7 +770,7 @@ function TeamView({
           {position}
         </div>
         <div className="player-info">
-          <span className="player-name">{player.name}</span>
+          <span className="player-name">{formatPlayerName(player.name)}</span>
         {player.price && (
           <span className="player-price">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
         )}
@@ -2129,7 +2143,7 @@ function TeamView({
                     )}>
                       {hasTradeIn ? (
                         <>
-                          <span className="text-sm truncate flex-1" title={tradeInPlayer.name}>{tradeInPlayer.name}</span>
+                          <span className="text-sm truncate flex-1" title={tradeInPlayer.name}>{formatPlayerName(tradeInPlayer.name)}</span>
                           <span className="text-xs text-green-400 shrink-0 ml-auto">
                             ${formatNumberWithCommas(Math.round(tradeInPlayer.price / 1000))}k
                           </span>
@@ -2188,7 +2202,7 @@ function TeamView({
                         <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
                           {player.position || player.positions?.[0] || '—'}
                         </Badge>
-                        <span className="flex-1 text-sm text-foreground truncate">{player.name}</span>
+                        <span className="flex-1 text-sm text-foreground truncate">{formatPlayerName(player.name)}</span>
                         <span className="text-xs text-primary font-semibold shrink-0">
                           ${formatNumberWithCommas(Math.round(player.price / 1000))}k
                         </span>
@@ -2800,7 +2814,7 @@ function TeamView({
                               <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
                                 {player.position || player.positions?.[0] || '—'}
                               </Badge>
-                              <span className="flex-1 text-sm text-foreground truncate">{player.name}</span>
+                              <span className="flex-1 text-sm text-foreground truncate">{formatPlayerName(player.name)}</span>
                               <span className="text-xs text-primary font-semibold shrink-0">
                                 ${formatNumberWithCommas(Math.round(player.price / 1000))}k
                               </span>
