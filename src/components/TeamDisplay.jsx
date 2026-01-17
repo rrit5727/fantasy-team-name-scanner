@@ -534,10 +534,8 @@ function TeamView({
   const [isAnalyzingTeam, setIsAnalyzingTeam] = React.useState(true);
   const [teamAnalysisComplete, setTeamAnalysisComplete] = React.useState(false);
 
-  // Mobile preseason mode dropdown state
-  const [showPreseasonDropdown, setShowPreseasonDropdown] = React.useState(false);
+  // Mobile strategy dropdown state
   const [showStrategyDropdown, setShowStrategyDropdown] = React.useState(false);
-  const preseasonDropdownRef = React.useRef(null);
   const strategyDropdownRef = React.useRef(null);
 
   // Position requirements for INT/EMG players
@@ -832,23 +830,6 @@ function TeamView({
     analyzeTeam();
   }, [teamPlayers]);
 
-  // Handle click outside preseason dropdown to close it
-  React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (preseasonDropdownRef.current && !preseasonDropdownRef.current.contains(event.target)) {
-        setShowPreseasonDropdown(false);
-      }
-    };
-
-    if (showPreseasonDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showPreseasonDropdown]);
-
   // Handle click outside strategy dropdown to close it
   React.useEffect(() => {
     const handleClickOutside = (event) => {
@@ -883,7 +864,6 @@ function TeamView({
       setPreseasonPriorities({});
       setPositionRequirements({});
       setShowPositionDropdown(null);
-      setShowPreseasonDropdown(false); // Close dropdown when toggling off
     } else {
       // Clear normal mode highlights when entering preseason mode
       setNormalModeHighlighted([]);
@@ -2519,57 +2499,21 @@ function TeamView({
                 ← scanner
               </Button>
               
-              {/* Preseason Mode Button with dropdown */}
-              <div className="preseason-dropdown-wrapper relative" ref={preseasonDropdownRef}>
-                <Button
-                  variant={isPreseasonMode ? "default" : "outline"}
-                  onClick={() => setShowPreseasonDropdown(!showPreseasonDropdown)}
-                  className="h-9"
-                  size="sm"
-                >
-                  Pre-season
-                </Button>
-                
-                {showPreseasonDropdown && (
-                  <Card className="preseason-mode-dropdown absolute top-full left-0 mt-2 z-[100] w-64 shadow-lg">
-                    <CardContent className="p-4 space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <label className="text-sm font-medium text-foreground">Pre-season Mode</label>
-                          <p className="text-xs text-muted-foreground">Up to 6 trades</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={isPreseasonMode}
-                            onChange={(e) => setIsPreseasonMode(e.target.checked)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                        </label>
-                      </div>
-                      
-                      {isPreseasonMode && (
-                        <div className="flex items-center justify-between pt-2 border-t border-primary/20">
-                          <div>
-                            <label className="text-sm font-medium text-foreground">Test Approach</label>
-                            <p className="text-xs text-muted-foreground">Price band ±$75k</p>
-                          </div>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={preseasonTestApproach}
-                              onChange={(e) => setPreseasonTestApproach(e.target.checked)}
-                              className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                          </label>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+              {/* Preseason Mode Button */}
+              <Button
+                variant={isPreseasonMode ? "default" : "outline"}
+                onClick={() => {
+                  const newState = !isPreseasonMode;
+                  setIsPreseasonMode(newState);
+                  if (newState) {
+                    setPreseasonTestApproach(true);
+                  }
+                }}
+                className="h-9"
+                size="sm"
+              >
+                Pre-season
+              </Button>
               
               <Button
                 className="btn-make-trade flex-1 sm:flex-none h-9"
