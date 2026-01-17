@@ -2104,8 +2104,7 @@ function TeamView({
                     {/* Trade Out Player */}
                     <div className={cn(
                       "flex items-center gap-2 p-2 rounded-lg min-h-[40px] w-[150px]",
-                      "bg-red-500/10 border border-red-500/30",
-                      hasTradeIn && "opacity-50"
+                      "bg-red-500/10 border border-red-500/30"
                     )}>
                       <span className="text-sm truncate flex-1" title={tradeOutPlayer.name}>{tradeOutPlayer.name}</span>
                       <span className="text-xs text-red-400 shrink-0 ml-auto">
