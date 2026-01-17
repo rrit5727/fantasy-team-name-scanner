@@ -2082,9 +2082,9 @@ function TeamView({
         </div>
         
         {/* Trade swap rows */}
-        <div className="trade-out-pinned shrink-0 p-4 pb-0">
+        <div className="trade-out-pinned shrink-0 p-2 pb-0">
           <Card className="border-primary/30">
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="p-2 space-y-3">
               {preseasonSelectedTradeOuts.map((tradeOutPlayer, index) => {
                 const tradeInPlayer = preseasonSelectedTradeIns.find(
                   p => p.swappedForPlayer === tradeOutPlayer.name
@@ -2095,7 +2095,7 @@ function TeamView({
                   <div
                     key={tradeOutPlayer.name || index}
                     className={cn(
-                      "flex items-center gap-2 p-2 rounded-lg transition-all",
+                      "grid grid-cols-[150px_auto_150px] items-center gap-2 p-2 rounded-lg transition-all",
                       hasTradeIn && "cursor-pointer hover:bg-primary/10"
                     )}
                     onClick={() => hasTradeIn && handleReversePreseasonSwap(tradeOutPlayer)}
@@ -2103,46 +2103,43 @@ function TeamView({
                   >
                     {/* Trade Out Player */}
                     <div className={cn(
-                      "flex-1 flex items-center gap-2 p-2 rounded-lg",
+                      "flex items-center gap-2 p-2 rounded-lg min-h-[40px] w-[150px]",
                       "bg-red-500/10 border border-red-500/30",
                       hasTradeIn && "opacity-50"
                     )}>
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {tradeOutPlayer.originalPosition || '—'}
-                      </Badge>
-                      <span className="text-sm truncate flex-1">{tradeOutPlayer.name}</span>
-                      <span className="text-xs text-red-400 shrink-0">
+                      <span className="text-sm truncate flex-1" title={tradeOutPlayer.name}>{tradeOutPlayer.name}</span>
+                      <span className="text-xs text-red-400 shrink-0 ml-auto">
                         ${formatNumberWithCommas(Math.round(tradeOutPlayer.price / 1000))}k
                       </span>
                     </div>
-                    
+
                     {/* Arrow */}
                     <div className={cn(
-                      "text-lg px-1",
+                      "text-lg flex items-center justify-center",
                       hasTradeIn ? "text-primary" : "text-muted-foreground"
                     )}>
                       ⇄
                     </div>
-                    
+
                     {/* Trade In Player */}
                     <div className={cn(
-                      "flex-1 flex items-center gap-2 p-2 rounded-lg",
-                      hasTradeIn 
-                        ? "bg-green-500/10 border border-green-500/30" 
+                      "flex items-center gap-2 p-2 rounded-lg min-h-[40px] w-[150px]",
+                      hasTradeIn
+                        ? "bg-green-500/10 border border-green-500/30"
                         : "bg-muted/50 border border-dashed border-muted-foreground/30"
                     )}>
                       {hasTradeIn ? (
                         <>
-                          <Badge variant="outline" className="text-xs shrink-0">
-                            {tradeInPlayer.position || '—'}
-                          </Badge>
-                          <span className="text-sm truncate flex-1">{tradeInPlayer.name}</span>
-                          <span className="text-xs text-green-400 shrink-0">
+                          <span className="text-sm truncate flex-1" title={tradeInPlayer.name}>{tradeInPlayer.name}</span>
+                          <span className="text-xs text-green-400 shrink-0 ml-auto">
                             ${formatNumberWithCommas(Math.round(tradeInPlayer.price / 1000))}k
                           </span>
                         </>
                       ) : (
-                        <span className="text-sm text-muted-foreground italic">Select trade-in...</span>
+                        <div className="flex items-center gap-2 w-full min-h-[24px]">
+                          <span className="text-sm text-muted-foreground italic truncate flex-1">Select trade-in...</span>
+                          <span className="text-xs text-muted-foreground shrink-0 ml-auto opacity-0">$0k</span>
+                        </div>
                       )}
                     </div>
                   </div>
