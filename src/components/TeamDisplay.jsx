@@ -2084,7 +2084,7 @@ function TeamView({
         {/* Trade swap rows */}
         <div className="trade-out-pinned shrink-0 p-2 pb-0">
           <Card className="border-primary/30">
-            <CardContent className="p-2 space-y-0">
+            <CardContent className="p-2 space-y-2">
               {preseasonSelectedTradeOuts.map((tradeOutPlayer, index) => {
                 const tradeInPlayer = preseasonSelectedTradeIns.find(
                   p => p.swappedForPlayer === tradeOutPlayer.name
@@ -2095,7 +2095,7 @@ function TeamView({
                   <div
                     key={tradeOutPlayer.name || index}
                     className={cn(
-                      "grid grid-cols-[150px_auto_150px] items-center gap-2 p-2 rounded-lg transition-all",
+                      "grid grid-cols-[150px_auto_150px] items-center gap-2 rounded-lg transition-all",
                       hasTradeIn && "cursor-pointer hover:bg-primary/10"
                     )}
                     onClick={() => hasTradeIn && handleReversePreseasonSwap(tradeOutPlayer)}
