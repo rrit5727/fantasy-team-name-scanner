@@ -292,6 +292,182 @@ export async function checkBackendHealth() {
   }
 }
 
+// Cache for player validation list
+let playerValidationCache = null;
+let playerValidationCacheTime = 0;
+const VALIDATION_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Fetch the list of valid player names for OCR validation
+ * Returns cached data if available and not expired
+ * @returns {Promise<Array>} Array of player objects with fullName, abbreviatedName, surname, initial
+ */
+export async function fetchPlayerValidationList() {
+  try {
+    // Return cached data if still valid
+    const now = Date.now();
+    if (playerValidationCache && (now - playerValidationCacheTime) < VALIDATION_CACHE_TTL) {
+      console.log('Using cached player validation list');
+      return playerValidationCache;
+    }
+
+    console.log('Fetching fresh player validation list...');
+    const response = await fetch(`${API_BASE_URL}/get_player_validation_list`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      console.error('Error fetching player validation list:', response.status);
+      return playerValidationCache || []; // Return stale cache if available
+    }
+
+    const data = await response.json();
+    playerValidationCache = data;
+    playerValidationCacheTime = now;
+    console.log(`Cached ${data.length} players for OCR validation`);
+    
+    return data;
+  } catch (error) {
+    console.error('Error fetching player validation list:', error);
+    return playerValidationCache || []; // Return stale cache if available
+  }
+}
+
+/**
+ * Validate an OCR-extracted player name against the database
+ * Uses fuzzy matching to handle OCR errors
+ * @param {string} extractedName - Name extracted from OCR (e.g., "A. Fonua-Blake")
+ * @param {Array} validPlayers - Array from fetchPlayerValidationList()
+ * @returns {Object|null} Matched player object or null if no match
+ */
+export function validatePlayerName(extractedName, validPlayers) {
+  if (!extractedName || !validPlayers || validPlayers.length === 0) {
+    return null;
+  }
+
+  // Parse the extracted name (expected format: "I. Surname")
+  const parts = extractedName.split('. ');
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const [initial, surname] = parts;
+  const normalizedInitial = initial.toLowerCase().trim();
+  const normalizedSurname = surname.toLowerCase().trim();
+
+  // Exact match first
+  const exactMatch = validPlayers.find(p => 
+    p.initial === normalizedInitial && p.surname === normalizedSurname
+  );
+  if (exactMatch) {
+    return { ...exactMatch, matchType: 'exact' };
+  }
+
+  // Fuzzy surname match with same initial (handles minor OCR errors)
+  const fuzzyMatches = validPlayers.filter(p => {
+    if (p.initial !== normalizedInitial) return false;
+    
+    // Calculate Levenshtein-like similarity
+    const similarity = calculateSimilarity(p.surname, normalizedSurname);
+    return similarity >= 0.85; // 85% similarity threshold
+  });
+
+  if (fuzzyMatches.length === 1) {
+    return { ...fuzzyMatches[0], matchType: 'fuzzy' };
+  }
+
+  // No match found - this is likely a false positive (UI text, team name, etc.)
+  return null;
+}
+
+/**
+ * Calculate string similarity (0-1) between two strings
+ * Uses a simple character-based approach optimized for surname matching
+ */
+function calculateSimilarity(str1, str2) {
+  if (str1 === str2) return 1;
+  if (!str1 || !str2) return 0;
+
+  const longer = str1.length > str2.length ? str1 : str2;
+  const shorter = str1.length > str2.length ? str2 : str1;
+
+  const longerLength = longer.length;
+  if (longerLength === 0) return 1;
+
+  // Calculate edit distance
+  const editDistance = levenshteinDistance(str1, str2);
+  return (longerLength - editDistance) / longerLength;
+}
+
+/**
+ * Levenshtein distance between two strings
+ */
+function levenshteinDistance(str1, str2) {
+  const matrix = [];
+
+  for (let i = 0; i <= str2.length; i++) {
+    matrix[i] = [i];
+  }
+  for (let j = 0; j <= str1.length; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= str2.length; i++) {
+    for (let j = 1; j <= str1.length; j++) {
+      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j - 1] + 1, // substitution
+          matrix[i][j - 1] + 1,     // insertion
+          matrix[i - 1][j] + 1      // deletion
+        );
+      }
+    }
+  }
+
+  return matrix[str2.length][str1.length];
+}
+
+/**
+ * Validate a list of OCR-extracted players against the database
+ * Returns only valid players (those that match real players in the database)
+ * @param {Array} extractedPlayers - Array of player objects from OCR
+ * @param {Array} validPlayers - Array from fetchPlayerValidationList()
+ * @returns {Array} Array of validated player objects with matched database names
+ */
+export function validateExtractedPlayers(extractedPlayers, validPlayers) {
+  if (!extractedPlayers || extractedPlayers.length === 0) {
+    return [];
+  }
+
+  const validatedPlayers = [];
+  const rejectedNames = [];
+
+  for (const player of extractedPlayers) {
+    const match = validatePlayerName(player.name, validPlayers);
+    
+    if (match) {
+      validatedPlayers.push({
+        ...player,
+        // Use the abbreviated name from database for consistency
+        name: match.abbreviatedName,
+        fullName: match.fullName,
+        matchType: match.matchType
+      });
+    } else {
+      rejectedNames.push(player.name);
+    }
+  }
+
+  if (rejectedNames.length > 0) {
+    console.log('OCR validation rejected (not real players):', rejectedNames);
+  }
+  console.log(`OCR validation: ${validatedPlayers.length} valid, ${rejectedNames.length} rejected`);
+
+  return validatedPlayers;
+}
+
 /**
  * Look up player prices from the database
  * Used for Format 2 screenshots where prices aren't visible in the OCR text

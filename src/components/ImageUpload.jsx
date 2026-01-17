@@ -1,6 +1,6 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Tesseract from 'tesseract.js';
-import { lookupPlayerPrices } from '../services/tradeApi';
+import { lookupPlayerPrices, fetchPlayerValidationList, validateExtractedPlayers } from '../services/tradeApi';
 import OnboardingTour from './OnboardingTour';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,7 +32,22 @@ function ImageUpload({
   const [rawText, setRawText] = useState('');
   const [error, setError] = useState(null);
   const [screenshotData, setScreenshotData] = useState([]);
+  const [validPlayerList, setValidPlayerList] = useState([]);
   const fileInputRef = useRef(null);
+
+  // Fetch the player validation list on mount (for OCR validation)
+  useEffect(() => {
+    const loadValidPlayers = async () => {
+      try {
+        const players = await fetchPlayerValidationList();
+        setValidPlayerList(players);
+        console.log(`Loaded ${players.length} players for OCR validation`);
+      } catch (err) {
+        console.error('Failed to load player validation list:', err);
+      }
+    };
+    loadValidPlayers();
+  }, []);
 
   // Detect which screenshot format is being used
   const detectScreenshotFormat = (rawText) => {
@@ -404,9 +419,42 @@ function ImageUpload({
       }
 
       const allData = [...screenshotData, ...newScreenshotData];
-      const mergedPlayers = mergeAndOrderPlayers(allData);
+      let mergedPlayers = mergeAndOrderPlayers(allData);
       
-      console.log('Final merged players:', mergedPlayers);
+      console.log('Final merged players (before validation):', mergedPlayers);
+      
+      // Validate extracted players against the database to filter out false positives
+      // (e.g., "D. Arkhorseo" from team name, "S. Core" from "SCORE", "V. Erall" from "OVERALL")
+      let currentValidList = validPlayerList;
+      
+      // If validation list isn't loaded yet, try to fetch it now
+      if (currentValidList.length === 0) {
+        console.log('Validation list not loaded yet, fetching now...');
+        try {
+          currentValidList = await fetchPlayerValidationList();
+          setValidPlayerList(currentValidList);
+        } catch (err) {
+          console.warn('Failed to fetch validation list:', err);
+        }
+      }
+      
+      if (currentValidList.length > 0) {
+        console.log(`Validating ${mergedPlayers.length} players against ${currentValidList.length} known players...`);
+        const validatedPlayers = validateExtractedPlayers(mergedPlayers, currentValidList);
+        const rejectedCount = mergedPlayers.length - validatedPlayers.length;
+        console.log(`OCR validation: ${validatedPlayers.length} valid, ${rejectedCount} rejected`);
+        if (rejectedCount > 0) {
+          const rejectedNames = mergedPlayers
+            .filter(p => !validatedPlayers.some(v => v.name === p.name))
+            .map(p => p.name);
+          console.log('Rejected as false positives:', rejectedNames);
+        }
+        mergedPlayers = validatedPlayers;
+      } else {
+        console.warn('⚠️ Player validation list not available - cannot filter false positives');
+      }
+      
+      console.log('Final merged players (after validation):', mergedPlayers);
       
       const hasMissingPrices = mergedPlayers.some(p => !p.price || p.price === 0);
       
@@ -440,7 +488,7 @@ function ImageUpload({
       setProgress(0);
       setCurrentImage(0);
     }
-  }, [onPlayersExtracted, screenshotData]);
+  }, [onPlayersExtracted, screenshotData, validPlayerList]);
 
   const handleDragOver = useCallback((e) => {
     e.preventDefault();
