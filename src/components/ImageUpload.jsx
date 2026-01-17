@@ -695,19 +695,19 @@ function ImageUpload({
             </div>
             
             {/* Player List */}
-            <ScrollArea className="max-h-[400px]">
-              <ul className="space-y-2">
+            <ScrollArea className="h-[400px] w-full rounded-md border">
+              <ul className="space-y-2 p-4">
                 {extractedPlayers.map((player, index) => (
-                  <li 
-                    key={index} 
+                  <li
+                    key={index}
                     className="flex items-center p-3 bg-primary/5 rounded-lg transition-colors hover:bg-primary/10 group"
                   >
                     <Badge className="w-7 h-7 rounded-lg flex items-center justify-center mr-3 shrink-0 text-xs">
                       {index + 1}
                     </Badge>
                     <span className="text-primary text-xs font-bold min-w-[50px] text-center mr-3 shrink-0">
-                      {player.positions && player.positions.length > 0 
-                        ? player.positions.join(', ') 
+                      {player.positions && player.positions.length > 0
+                        ? player.positions.join(', ')
                         : '—'}
                     </span>
                     <span className="text-foreground font-medium flex-1">
