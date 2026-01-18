@@ -111,6 +111,69 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Icon tooltips */
+.tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #0a1f1a 0%, #0d2e26 100%);
+  border: 2px solid rgba(0, 217, 163, 0.8);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease-in-out;
+  pointer-events: none;
+  margin-bottom: 12px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.tooltip.show {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 6px solid rgba(0, 217, 163, 0.3);
+}
+
+/* Icon indicator containers */
+.injury-indicator,
+.urgent-overvalued-indicator,
+.lowupside-indicator,
+.not-selected-indicator,
+.junk-cheap-indicator {
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+
+.injury-indicator:hover,
+.urgent-overvalued-indicator:hover,
+.lowupside-indicator:hover,
+.not-selected-indicator:hover,
+.junk-cheap-indicator:hover {
+  transform: scale(1.1);
+}
+
 /* Custom gradient utilities */
 @layer utilities {
   .bg-gradient-dark {

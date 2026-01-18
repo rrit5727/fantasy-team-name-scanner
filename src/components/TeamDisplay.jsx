@@ -86,6 +86,19 @@ function TeamDisplay({
   onCancelPositionRequirement,
   onPositionRequirementChange
 }) {
+  // State to track which tooltip is currently open (click-to-show)
+  const [openTooltip, setOpenTooltip] = React.useState(null);
+
+  // Toggle tooltip on click
+  const handleTooltipClick = (tooltipId, e) => {
+    e.stopPropagation();
+    setOpenTooltip(prev => prev === tooltipId ? null : tooltipId);
+  };
+
+  // Close tooltip when clicking elsewhere
+  const handleContainerClick = () => {
+    setOpenTooltip(null);
+  };
   // Group players by their primary position
   const groupedPlayers = {};
   POSITION_ORDER.forEach(pos => {
@@ -232,71 +245,89 @@ function TeamDisplay({
           </div>
         )}
         
-        {/* Status indicators */}
-        <TooltipProvider>
-          <div className="absolute -top-1 -right-1 flex gap-0.5 z-10">
-            {isInjured && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="injury-indicator w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-lg">
-                    <AlertTriangle className="w-3 h-3 text-amber-950" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Player injured</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {isUrgentOvervalued && !isInjured && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="urgent-overvalued-indicator w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shadow-lg text-xs">
-                    🚨
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Very overvalued: losing money</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {isOvervalued && !isInjured && !isUrgentOvervalued && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="lowupside-indicator w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shadow-lg">
-                    <TrendingDown className="w-3 h-3 text-orange-950" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Overvalued</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {isNotSelected && !isInjured && !isAnyOvervalued && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="not-selected-indicator w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
-                    <Ban className="w-3 h-3 text-white" />
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Not selected</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {isJunkCheap && !isInjured && !isAnyOvervalued && !isNotSelected && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="junk-cheap-indicator w-5 h-5 rounded-full bg-amber-700 flex items-center justify-center shadow-lg text-xs">
-                    💩
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Junk cheapie - trade out</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
-        </TooltipProvider>
+        {/* Status indicators - click to show tooltip */}
+        <div className="absolute -top-1 -right-1 flex gap-0.5 z-10">
+          {isInjured && (
+            <div className="relative">
+              <div 
+                className="injury-indicator w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform"
+                onClick={(e) => handleTooltipClick(`${player.name}-injured`, e)}
+              >
+                <AlertTriangle className="w-3 h-3 text-amber-950" />
+              </div>
+              {openTooltip === `${player.name}-injured` && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-card border border-primary/30 rounded-md shadow-lg text-xs text-card-foreground whitespace-nowrap z-50">
+                  Player injured
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary/30" />
+                </div>
+              )}
+            </div>
+          )}
+          {isUrgentOvervalued && !isInjured && (
+            <div className="relative">
+              <div 
+                className="urgent-overvalued-indicator w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shadow-lg text-xs cursor-pointer hover:scale-110 transition-transform"
+                onClick={(e) => handleTooltipClick(`${player.name}-urgent`, e)}
+              >
+                🚨
+              </div>
+              {openTooltip === `${player.name}-urgent` && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-card border border-primary/30 rounded-md shadow-lg text-xs text-card-foreground whitespace-nowrap z-50">
+                  Very overvalued: losing money
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary/30" />
+                </div>
+              )}
+            </div>
+          )}
+          {isOvervalued && !isInjured && !isUrgentOvervalued && (
+            <div className="relative">
+              <div 
+                className="lowupside-indicator w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform"
+                onClick={(e) => handleTooltipClick(`${player.name}-overvalued`, e)}
+              >
+                <TrendingDown className="w-3 h-3 text-orange-950" />
+              </div>
+              {openTooltip === `${player.name}-overvalued` && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-card border border-primary/30 rounded-md shadow-lg text-xs text-card-foreground whitespace-nowrap z-50">
+                  Overvalued
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary/30" />
+                </div>
+              )}
+            </div>
+          )}
+          {isNotSelected && !isInjured && !isAnyOvervalued && (
+            <div className="relative">
+              <div 
+                className="not-selected-indicator w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform"
+                onClick={(e) => handleTooltipClick(`${player.name}-notselected`, e)}
+              >
+                <Ban className="w-3 h-3 text-white" />
+              </div>
+              {openTooltip === `${player.name}-notselected` && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-card border border-primary/30 rounded-md shadow-lg text-xs text-card-foreground whitespace-nowrap z-50">
+                  Not selected
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary/30" />
+                </div>
+              )}
+            </div>
+          )}
+          {isJunkCheap && !isInjured && !isAnyOvervalued && !isNotSelected && (
+            <div className="relative">
+              <div 
+                className="junk-cheap-indicator w-5 h-5 rounded-full bg-amber-700 flex items-center justify-center shadow-lg text-xs cursor-pointer hover:scale-110 transition-transform"
+                onClick={(e) => handleTooltipClick(`${player.name}-junk`, e)}
+              >
+                💩
+              </div>
+              {openTooltip === `${player.name}-junk` && (
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-card border border-primary/30 rounded-md shadow-lg text-xs text-card-foreground whitespace-nowrap z-50">
+                  Junk cheapie - trade out
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary/30" />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         
         <Badge className={cn(POSITION_CONFIG[position]?.color, POSITION_CONFIG[position]?.textColor, "px-1.5 py-0 text-[10px] font-bold")}>
           {position}
@@ -329,7 +360,7 @@ function TeamDisplay({
   };
 
   return (
-    <div className="team-display space-y-1">
+    <div className="team-display space-y-1" onClick={handleContainerClick}>
       <div className="team-field bg-gradient-field rounded-xl p-3 sm:p-4">
         {POSITION_ORDER.map(pos => renderPositionRow(pos))}
       </div>
@@ -552,9 +583,36 @@ function TeamView({
   const [showStrategyDropdown, setShowStrategyDropdown] = React.useState(false);
   const strategyDropdownRef = React.useRef(null);
 
+  // Icon tooltip visibility state
+  const [visibleTooltips, setVisibleTooltips] = React.useState(new Set());
+
   // Position requirements for INT/EMG players
   const [positionRequirements, setPositionRequirements] = React.useState({});
   const [showPositionDropdown, setShowPositionDropdown] = React.useState(null); // {playerName, position}
+
+  // Icon tooltip functions
+  const showTooltip = (playerName, tooltipType) => {
+    const tooltipId = `${playerName}-${tooltipType}`;
+    setVisibleTooltips(prev => new Set([...prev, tooltipId]));
+  };
+
+  const hideTooltip = (playerName, tooltipType) => {
+    const tooltipId = `${playerName}-${tooltipType}`;
+    setVisibleTooltips(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(tooltipId);
+      return newSet;
+    });
+  };
+
+  const hideAllTooltips = () => {
+    setVisibleTooltips(new Set());
+  };
+
+  const isTooltipVisible = (playerName, tooltipType) => {
+    const tooltipId = `${playerName}-${tooltipType}`;
+    return visibleTooltips.has(tooltipId);
+  };
 
   // Find the first player with status indicators for tour step 2
   const firstIndicatorPlayer = React.useMemo(() => {
@@ -700,6 +758,7 @@ function TeamView({
         className={cardClasses}
         onClick={handleClick}
         data-player-name={player.name}
+        style={{ pointerEvents: 'auto' }}
       >
         {/* Priority indicator for normal mode trade recommendations */}
         {normalModePriority && (
@@ -715,7 +774,16 @@ function TeamView({
         )}
         {/* Injury indicator - warning triangle with exclamation mark */}
         {isInjured && (
-          <div className="injury-indicator">
+          <div
+            className="injury-indicator"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Injury indicator clicked for:', player.name);
+              isTooltipVisible(player.name, 'injury') ? hideTooltip(player.name, 'injury') : showTooltip(player.name, 'injury');
+            }}
+            style={{ pointerEvents: 'auto' }}
+          >
             <svg viewBox="0 0 24 24" className="warning-icon">
               {/* Warning triangle */}
               <path d="M12 2L22 20H2L12 2Z" fill="#ff9800"/>
@@ -723,19 +791,37 @@ function TeamView({
               <path d="M12 8V14" stroke="#000000" strokeWidth="2" strokeLinecap="round"/>
               <circle cx="12" cy="17" r="1" fill="#000000"/>
             </svg>
-            <div className="tooltip">player injured</div>
+            <div className={`tooltip ${isTooltipVisible(player.name, 'injury') ? 'show' : ''}`}>player injured</div>
           </div>
         )}
         {/* Urgent overvalued indicator - alarm emoji (Diff <= -7) */}
         {isUrgentOvervalued && !isInjured && (
-          <div className="urgent-overvalued-indicator">
-            🚨
-            <div className="tooltip">Very overvalued: losing money</div>
+          <div
+            className="urgent-overvalued-indicator"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Urgent overvalued indicator clicked for:', player.name);
+              isTooltipVisible(player.name, 'urgent-overvalued') ? hideTooltip(player.name, 'urgent-overvalued') : showTooltip(player.name, 'urgent-overvalued');
+            }}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <span>🚨</span>
+            <div className={`tooltip ${isTooltipVisible(player.name, 'urgent-overvalued') ? 'show' : ''}`}>Very overvalued: losing money</div>
           </div>
         )}
         {/* Overvalued indicator - green banknote with red arrow (-7 < Diff <= -1) */}
         {isOvervalued && !isInjured && !isUrgentOvervalued && (
-          <div className="lowupside-indicator">
+          <div
+            className="lowupside-indicator"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Overvalued indicator clicked for:', player.name);
+              isTooltipVisible(player.name, 'overvalued') ? hideTooltip(player.name, 'overvalued') : showTooltip(player.name, 'overvalued');
+            }}
+            style={{ pointerEvents: 'auto' }}
+          >
             <svg viewBox="0 0 24 24" className="lowupside-icon">
               {/* Banknote (green) */}
               <rect x="2" y="6" width="14" height="10" rx="1" fill="#4CAF50" stroke="#2E7D32" strokeWidth="0.5"/>
@@ -744,26 +830,44 @@ function TeamView({
               {/* Downward arrow (red) */}
               <path d="M18 4 L18 16 L14 12 M18 16 L22 12" stroke="#e53935" strokeWidth="2.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <div className="tooltip">overvalued</div>
+            <div className={`tooltip ${isTooltipVisible(player.name, 'overvalued') ? 'show' : ''}`}>overvalued</div>
           </div>
         )}
         {/* Not selected indicator - prohibition symbol */}
         {isNotSelected && !isInjured && !isAnyOvervalued && (
-          <div className="not-selected-indicator">
+          <div
+            className="not-selected-indicator"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Not selected indicator clicked for:', player.name);
+              isTooltipVisible(player.name, 'not-selected') ? hideTooltip(player.name, 'not-selected') : showTooltip(player.name, 'not-selected');
+            }}
+            style={{ pointerEvents: 'auto' }}
+          >
             <svg viewBox="0 0 24 24" className="prohibition-icon">
               {/* Circle */}
               <circle cx="12" cy="12" r="10" fill="none" stroke="#e53935" strokeWidth="2"/>
               {/* Diagonal line */}
               <path d="M7 7L17 17" stroke="#e53935" strokeWidth="2" strokeLinecap="round"/>
             </svg>
-            <div className="tooltip">not selected</div>
+            <div className={`tooltip ${isTooltipVisible(player.name, 'not-selected') ? 'show' : ''}`}>not selected</div>
           </div>
         )}
         {/* Junk cheapies indicator - poo emoji */}
         {isJunkCheap && !isInjured && !isAnyOvervalued && !isNotSelected && (
-          <div className="junk-cheap-indicator">
-            💩
-            <div className="tooltip">junk cheapie - trade out</div>
+          <div
+            className="junk-cheap-indicator"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log('Junk cheapie indicator clicked for:', player.name);
+              isTooltipVisible(player.name, 'junk-cheap') ? hideTooltip(player.name, 'junk-cheap') : showTooltip(player.name, 'junk-cheap');
+            }}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <span>💩</span>
+            <div className={`tooltip ${isTooltipVisible(player.name, 'junk-cheap') ? 'show' : ''}`}>junk cheapie - trade out</div>
           </div>
         )}
         <div className="position-badge" style={{ background: POSITION_CONFIG[position]?.color }}>
@@ -2429,7 +2533,10 @@ function TeamView({
         />
       )}
       
-      <div className={cn("team-view flex flex-col lg:flex-row gap-4 p-2", (showTradeInPage || showPreseasonTradeIns) && "hidden lg:flex")}>
+      <div
+        className={cn("team-view flex flex-col lg:flex-row gap-4 p-2", (showTradeInPage || showPreseasonTradeIns) && "hidden lg:flex")}
+        onClick={hideAllTooltips}
+      >
         <div className="team-view-main flex-1">
           {/* Header Section */}
           <div className="section-header mb-4 space-y-2">
