@@ -585,8 +585,11 @@ function ImageUpload({
     }
   ];
 
+  // Only show step 1 (confirm button) when the button actually exists (players extracted)
   const currentStepConfig = isTourActive && currentTourStep < 2 
-    ? tourSteps[currentTourStep] 
+    ? (currentTourStep === 1 && extractedPlayers.length === 0 
+        ? null  // Don't show step 1 tooltip until confirm button appears
+        : tourSteps[currentTourStep])
     : null;
 
   const handleFileChangeWithTour = (e) => {
