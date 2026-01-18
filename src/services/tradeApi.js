@@ -2,8 +2,8 @@
  * API service for trade recommendations
  */
 
-// API base URL - adjust this based on your Flask server configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5002';
+// API base URL - use empty string in production (relative URLs), localhost in development
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://127.0.0.1:5002' : '');
 
 /**
  * Calculate trade recommendations based on the user's team

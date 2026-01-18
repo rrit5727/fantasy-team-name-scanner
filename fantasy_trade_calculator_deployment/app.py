@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_caching import Cache
 from flask_cors import CORS
 from nrl_trade_calculator import calculate_trade_options, load_data, is_player_locked
@@ -17,12 +17,20 @@ from datetime import datetime, timedelta
 dotenv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
 load_dotenv(dotenv_path)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static', static_url_path='/static')
 
-# Enable CORS for React frontend
+# Enable CORS for React frontend (local development and production)
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:5174", "http://127.0.0.1:5174"],
+        "origins": [
+            "http://localhost:5173", 
+            "http://127.0.0.1:5173", 
+            "http://localhost:5174", 
+            "http://127.0.0.1:5174",
+            "https://fantasytradecalc.com",
+            "https://www.fantasytradecalc.com",
+            "https://nrl-trade-calculator.herokuapp.com"
+        ],
         "methods": ["GET", "POST", "OPTIONS"],
         "allow_headers": ["Content-Type"]
     }
@@ -77,8 +85,24 @@ def prepare_trade_option(option: Dict[str, Any]) -> Dict[str, Any]:
 
 @app.route('/')
 def index():
+    """Serve the React frontend"""
+    return send_from_directory('static/react', 'index.html')
+
+@app.route('/legacy')
+def legacy_index():
+    """Legacy route - serves the old jQuery-based frontend"""
     hotjar_id = os.getenv('HOTJAR_ID')
     return render_template('index.html', hotjar_id=hotjar_id)
+
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    """Serve React static assets (JS, CSS, images)"""
+    return send_from_directory('static/react/assets', filename)
+
+@app.route('/vite.svg')
+def serve_vite_icon():
+    """Serve the Vite favicon"""
+    return send_from_directory('static/react', 'vite.svg')
 
 @app.route('/check_player_lockout', methods=['POST'])
 def check_player_lockout():
