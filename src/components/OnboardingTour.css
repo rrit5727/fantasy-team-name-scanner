@@ -8,6 +8,18 @@
   transform: translateZ(0) !important;
 }
 
+/* Special spotlight for trade-type-selector - don't override position */
+.trade-type-selector.tour-spotlight {
+  position: relative !important;
+  z-index: 10001 !important;
+}
+
+/* Also spotlight the parent container when trade-type-selector is spotlit */
+.trade-type-selector.tour-spotlight,
+.tour-spotlight-container {
+  z-index: 10001 !important;
+}
+
 /* Use pseudo-element for the spotlight effect to break stacking context */
 .tour-spotlight::before {
   content: '' !important;
@@ -181,6 +193,17 @@
   z-index: 10004 !important;
 }
 
+/* Center-fixed tooltip positioning */
+.tour-tooltip-center-fixed {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 10004 !important;
+}
+
 /* Tooltip positioning arrows */
 .tour-tooltip-bottom::before {
   content: '';
@@ -236,12 +259,17 @@
 
 /* Mobile optimizations */
 @media (max-width: 767px) {
-  .tour-tooltip:not(.tour-tooltip-bottom-fixed):not(.tour-tooltip-top-fixed) {
+  .tour-tooltip:not(.tour-tooltip-bottom-fixed):not(.tour-tooltip-top-fixed):not(.tour-tooltip-center-fixed) {
     max-width: calc(100vw - 2rem);
     min-width: 280px;
     left: 1rem !important;
     right: 1rem !important;
     transform: none !important;
+  }
+  
+  .tour-tooltip-center-fixed {
+    max-width: calc(100vw - 2rem);
+    min-width: 280px;
   }
 
   .tour-tooltip-content {

@@ -13,23 +13,10 @@ function TradeTypeSelector({
   positionRequirements, 
   onPositionRequirementSelect, 
   onCancelPositionRequirement, 
-  onPositionRequirementChange 
+  onPositionRequirementChange,
+  preventClose = false // Prevent closing on outside click (used during tour)
 }) {
   const panelRef = useRef(null);
-
-  // Handle outside click to cancel
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
-        handleCancel();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const handleConfirm = () => {
     const selectedPositions = positionRequirements[player.name] || [];
@@ -43,6 +30,22 @@ function TradeTypeSelector({
       onCancelPositionRequirement(player);
     }
   };
+
+  // Handle outside click to cancel (disabled during tour)
+  useEffect(() => {
+    if (preventClose) return; // Don't add outside click handler during tour
+    
+    const handleClickOutside = (event) => {
+      if (panelRef.current && !panelRef.current.contains(event.target)) {
+        handleCancel();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [preventClose, onCancelPositionRequirement, player]);
 
   const isConfirmDisabled = () => {
     return !(positionRequirements[player.name] && positionRequirements[player.name].length > 0);
@@ -65,7 +68,7 @@ function TradeTypeSelector({
   return (
     <Card 
       ref={panelRef}
-      className="w-full max-w-sm border-primary/50 shadow-lg shadow-primary/20"
+      className={`trade-type-selector w-full max-w-sm shadow-lg ${preventClose ? 'border-[3px] border-[#00d9a3] shadow-[0_0_30px_rgba(0,217,163,0.6)] !bg-card' : 'border-primary/50 shadow-primary/20'}`}
     >
       <CardContent className="p-4">
         {/* Header with label and action buttons */}

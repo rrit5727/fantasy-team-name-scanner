@@ -824,7 +824,7 @@ function ImageUpload({
         <OnboardingTour
           isActive={isTourActive && currentStepConfig !== null}
           currentStep={currentTourStep}
-          totalSteps={10}
+          totalSteps={16}
           onNext={onTourNext}
           onPrevious={onTourPrevious}
           onSkip={onTourSkip}

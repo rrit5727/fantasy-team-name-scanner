@@ -84,7 +84,10 @@ function TeamDisplay({
   positionRequirements = {},
   onPositionRequirementSelect,
   onCancelPositionRequirement,
-  onPositionRequirementChange
+  onPositionRequirementChange,
+  // Tour props
+  isTourActive = false,
+  currentTourStep = 0
 }) {
   // State to track which tooltip is currently open (click-to-show)
   const [openTooltip, setOpenTooltip] = React.useState(null);
@@ -368,8 +371,12 @@ function TeamDisplay({
       {/* Trade Type Selector Slide-up Panel */}
       {showPositionDropdown && (() => {
         const player = players.find(p => p.name === showPositionDropdown.playerName);
+        const isTourStep7 = isTourActive && currentTourStep === 7;
         return (
-          <div className="fixed inset-x-0 bottom-0 z-50 p-4 animate-in slide-in-from-bottom duration-300">
+          <div className={cn(
+            "fixed inset-x-0 bottom-0 p-4 animate-in slide-in-from-bottom duration-300",
+            isTourStep7 ? "z-[10001]" : "z-50"
+          )}>
             <TradeTypeSelector
               player={player}
               slotPosition={showPositionDropdown.slotPosition}
@@ -377,6 +384,7 @@ function TeamDisplay({
               onPositionRequirementSelect={onPositionRequirementSelect}
               onCancelPositionRequirement={onCancelPositionRequirement}
               onPositionRequirementChange={onPositionRequirementChange}
+              preventClose={isTourStep7}
             />
           </div>
         );
@@ -655,6 +663,57 @@ function TeamView({
 
     // Ultimate fallback: first player in HOK row
     return grouped['HOK']?.[0] || null;
+  }, [
+    teamPlayers,
+    injuredPlayers,
+    urgentOvervaluedPlayers,
+    overvaluedPlayers,
+    notSelectedPlayers,
+    junkCheapies,
+    teamAnalysisComplete
+  ]);
+
+  // Find first INT/EMG player with an indicator (for tour step explaining position selection)
+  const firstIntEmgIndicatorPlayer = React.useMemo(() => {
+    if (!teamAnalysisComplete) return null;
+
+    // Replicate the same player grouping logic as in the render
+    const grouped = {};
+    POSITION_ORDER.forEach(pos => { grouped[pos] = []; });
+    const unassigned = [];
+
+    teamPlayers.forEach(player => {
+      const primaryPos = player.positions?.[0];
+      if (primaryPos && grouped[primaryPos] && grouped[primaryPos].length < POSITION_CONFIG[primaryPos].count) {
+        grouped[primaryPos].push(player);
+      } else {
+        unassigned.push(player);
+      }
+    });
+    POSITION_ORDER.forEach(pos => {
+      while (grouped[pos].length < POSITION_CONFIG[pos].count && unassigned.length > 0) {
+        grouped[pos].push(unassigned.shift());
+      }
+    });
+
+    // Check INT and EMG positions for players with indicators
+    const intEmgPositions = ['INT', 'EMG'];
+    for (const pos of intEmgPositions) {
+      for (const player of grouped[pos] || []) {
+        if (player && (
+          injuredPlayers.includes(player.name) ||
+          urgentOvervaluedPlayers.includes(player.name) ||
+          overvaluedPlayers.includes(player.name) ||
+          notSelectedPlayers.includes(player.name) ||
+          junkCheapies.includes(player.name)
+        )) {
+          return player;
+        }
+      }
+    }
+
+    // Fallback: first player in INT row
+    return grouped['INT']?.[0] || null;
   }, [
     teamPlayers,
     injuredPlayers,
@@ -2393,19 +2452,44 @@ function TeamView({
       };
     }
 
-    // Step 6: Calculate trade recs button (only if player selected)
+    // Step 6: INT/EMG position selection explanation (after a player is selected)
     if (currentTourStep === 6 && selectedTradeOutPlayers.length > 0) {
       return {
-        id: 'calculate-trade-recs-intro',
-        target: '.btn-calculate-trades, .btn-make-trade',
-        tooltip: 'Before proceeding, let\'s review the options that will help customize your trade recommendations. Click here when ready to explore them.',
-        position: 'top',
+        id: 'int-emg-position-intro',
+        target: firstIntEmgIndicatorPlayer ? `[data-player-name="${firstIntEmgIndicatorPlayer.name}"]` : '.player-card[data-player-name]:nth-child(1)',
+        tooltip: 'When selecting an INT or EMG player for trade-out, you\'ll need to choose which position(s) you want recommendations for. This helps the app find suitable replacements that fit your team needs.',
+        position: 'center',
+        waitForAction: false,
+        scrollTo: true
+      };
+    }
+
+    // Step 7: Position selector panel explanation
+    if (currentTourStep === 7 && selectedTradeOutPlayers.length > 0) {
+      return {
+        id: 'position-selector-panel',
+        target: '.trade-type-selector, [class*="TradeTypeSelector"], .w-full.max-w-sm.border-primary\\/50',
+        fallbackTarget: firstIntEmgIndicatorPlayer ? `[data-player-name="${firstIntEmgIndicatorPlayer.name}"]` : '.player-card[data-player-name]:nth-child(1)',
+        tooltip: 'Selecting more than one position means recommendations will be taken from those positions. Selecting all positions recommends players from all positions.',
+        position: 'center',
         waitForAction: false
       };
     }
 
-    // Step 7: Cash input field
-    if (currentTourStep === 7) {
+    // Step 8: Calculate trade recs button (only if player selected)
+    if (currentTourStep === 8 && selectedTradeOutPlayers.length > 0) {
+      return {
+        id: 'calculate-trade-recs-intro',
+        target: '.btn-calculate-trades, .btn-make-trade',
+        tooltip: 'Before proceeding, let\'s review the options that will help customize your trade recommendations. Click here when ready to explore them.',
+        position: 'center',
+        waitForAction: false,
+        scrollTo: true
+      };
+    }
+
+    // Step 9: Cash input field
+    if (currentTourStep === 9) {
       return {
         id: 'cash-input',
         target: '.cash-input-compact, #cashInBank',
@@ -2416,8 +2500,8 @@ function TeamView({
       };
     }
 
-    // Step 8: Strategy dropdown
-    if (currentTourStep === 8) {
+    // Step 10: Strategy dropdown
+    if (currentTourStep === 10) {
       return {
         id: 'strategy-select',
         target: '.strategy-select-compact, #strategy',
@@ -2428,8 +2512,8 @@ function TeamView({
       };
     }
 
-    // Step 9: Bye round toggle
-    if (currentTourStep === 9) {
+    // Step 11: Bye round toggle
+    if (currentTourStep === 11) {
       return {
         id: 'bye-round-toggle',
         target: '.bye-round-btn-compact',
@@ -2440,8 +2524,8 @@ function TeamView({
       };
     }
 
-    // Step 10: Calculate trade recs button (after reviewing options)
-    if (currentTourStep === 10 && selectedTradeOutPlayers.length > 0) {
+    // Step 12: Calculate trade recs button (after reviewing options)
+    if (currentTourStep === 12 && selectedTradeOutPlayers.length > 0) {
       return {
         id: 'calculate-trade-recs',
         target: '.btn-calculate-trades, .btn-make-trade',
@@ -2451,8 +2535,8 @@ function TeamView({
       };
     }
 
-    // Step 11: Trade-in cards (on trade-in page)
-    if (currentTourStep === 11 && showTradeInPage && tradeInRecommendations.length > 0) {
+    // Step 13: Trade-in cards (on trade-in page)
+    if (currentTourStep === 13 && showTradeInPage && tradeInRecommendations.length > 0) {
       return {
         id: 'trade-in-cards',
         target: '.trade-option:first-of-type',
@@ -2465,8 +2549,8 @@ function TeamView({
       };
     }
 
-    // Step 12: Confirm trade
-    if (currentTourStep === 12 && showTradeInPage && tradeInRecommendations.length > 0) {
+    // Step 14: Confirm trade
+    if (currentTourStep === 14 && showTradeInPage && tradeInRecommendations.length > 0) {
       return {
         id: 'confirm-trade',
         target: '.trade-option:first-of-type',
@@ -2476,8 +2560,8 @@ function TeamView({
       };
     }
 
-    // Step 13: Trade-in footer/salary info
-    if (currentTourStep === 13 && showTradeInPage && tradeInRecommendations.length > 0) {
+    // Step 15: Trade-in footer/salary info
+    if (currentTourStep === 15 && showTradeInPage && tradeInRecommendations.length > 0) {
       return {
         id: 'trade-in-footer',
         target: '.trade-option:first-of-type',
@@ -2491,7 +2575,52 @@ function TeamView({
   };
 
   const currentStepConfig = getTourStepConfig();
-  const totalTourSteps = 14; // 2 landing + 12 team view
+  const totalTourSteps = 16; // 2 landing + 14 team view
+
+  // Force position dropdown to appear during tour step 7 (position selector explanation)
+  React.useEffect(() => {
+    if (isTourActive && currentTourStep === 7 && selectedTradeOutPlayers.length > 0) {
+      // Find the first INT/EMG player to use for the dropdown
+      const targetPlayer = firstIntEmgIndicatorPlayer;
+      if (targetPlayer) {
+        // Determine if player is in INT or EMG position
+        const grouped = {};
+        POSITION_ORDER.forEach(pos => { grouped[pos] = []; });
+        const unassigned = [];
+        teamPlayers.forEach(player => {
+          const primaryPos = player.positions?.[0];
+          if (primaryPos && grouped[primaryPos] && grouped[primaryPos].length < POSITION_CONFIG[primaryPos].count) {
+            grouped[primaryPos].push(player);
+          } else {
+            unassigned.push(player);
+          }
+        });
+        POSITION_ORDER.forEach(pos => {
+          while (grouped[pos].length < POSITION_CONFIG[pos].count && unassigned.length > 0) {
+            grouped[pos].push(unassigned.shift());
+          }
+        });
+        
+        // Check if player is in INT or EMG
+        const isInInt = grouped['INT']?.some(p => p?.name === targetPlayer.name);
+        const isInEmg = grouped['EMG']?.some(p => p?.name === targetPlayer.name);
+        const slotPosition = isInInt ? 'INT' : isInEmg ? 'EMG' : 'INT';
+        
+        // Force open the position dropdown
+        setShowPositionDropdown({ playerName: targetPlayer.name, slotPosition });
+      }
+    }
+  }, [isTourActive, currentTourStep, selectedTradeOutPlayers.length, firstIntEmgIndicatorPlayer, teamPlayers]);
+
+  // Close position dropdown when leaving tour step 7
+  React.useEffect(() => {
+    if (isTourActive && currentTourStep !== 7 && showPositionDropdown) {
+      // Only close if we're moving away from step 7
+      if (currentTourStep > 7 || currentTourStep < 7) {
+        setShowPositionDropdown(null);
+      }
+    }
+  }, [isTourActive, currentTourStep]);
 
   // Handle preseason mode tour modal
   const [showPreseasonTourModal, setShowPreseasonTourModal] = React.useState(false);
@@ -2682,6 +2811,8 @@ function TeamView({
             onPositionRequirementSelect={handlePositionRequirementSelect}
             onCancelPositionRequirement={handleCancelPositionRequirement}
             onPositionRequirementChange={handlePositionRequirementChange}
+            isTourActive={isTourActive}
+            currentTourStep={currentTourStep}
           />
           )}
 

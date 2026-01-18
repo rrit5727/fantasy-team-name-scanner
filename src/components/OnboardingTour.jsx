@@ -35,6 +35,16 @@ const OnboardingTour = ({
       element = selector;
     }
 
+    // If element not found and fallbackTarget is specified, try that
+    if (!element && stepConfig.fallbackTarget) {
+      const fallbackSelector = stepConfig.fallbackTarget;
+      if (typeof fallbackSelector === 'string') {
+        element = document.querySelector(fallbackSelector);
+      } else if (fallbackSelector instanceof HTMLElement) {
+        element = fallbackSelector;
+      }
+    }
+
     if (!element) {
       setTargetElement(null);
       return;
@@ -173,14 +183,20 @@ const OnboardingTour = ({
           left = Math.max(20, Math.min(left, viewportWidth - tooltipWidth - 20));
         }
       }
-      // Steps 2-10: Pin to bottom of viewport
-      else if (currentStep >= 2 && currentStep <= 10) {
+      // Check if step explicitly requests center positioning
+      else if (position === 'center') {
+        adjustedPosition = 'center-fixed';
+        top = viewportHeight / 2;
+        left = viewportWidth / 2;
+      }
+      // Steps 2-12: Pin to bottom of viewport (adjusted for new steps)
+      else if (currentStep >= 2 && currentStep <= 12) {
         adjustedPosition = 'bottom-fixed';
         top = viewportHeight;
         left = viewportWidth / 2;
       }
-      // Steps 11+: Pin to top of viewport (for trade-in page)
-      else if (currentStep >= 11) {
+      // Steps 13+: Pin to top of viewport (for trade-in page)
+      else if (currentStep >= 13) {
         adjustedPosition = 'top-fixed';
         top = 0;
         left = viewportWidth / 2;
@@ -331,7 +347,7 @@ const OnboardingTour = ({
       <div
         ref={tooltipRef}
         className={`tour-tooltip tour-tooltip-${tooltipPosition.adjustedPosition || stepConfig.position || 'bottom'}`}
-        style={(tooltipPosition.adjustedPosition === 'bottom-fixed' || tooltipPosition.adjustedPosition === 'top-fixed') ? {} : tooltipStyle}
+        style={(tooltipPosition.adjustedPosition === 'bottom-fixed' || tooltipPosition.adjustedPosition === 'top-fixed' || tooltipPosition.adjustedPosition === 'center-fixed') ? {} : tooltipStyle}
       >
         <div className="tour-tooltip-content">
           <p className="tour-tooltip-text">{stepConfig.tooltip}</p>
