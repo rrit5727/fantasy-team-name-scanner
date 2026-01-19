@@ -347,13 +347,17 @@ def generate_trade_options(
     traded_out_positions = None,  # Can be List[str] (old format) or List[Dict] (new format)
     num_players_needed: int = 2,
     target_bye_round: bool = False,
-    test_approach: bool = False
+    test_approach: bool = False,
+    band_approach: bool = False,
+    trade_out_prices: List[int] = None  # Required for band_approach: prices of traded out players
 ) -> List[Dict]:
     """
     Generate trade combinations based on selected optimization strategy while ensuring
     position requirements are met for both like-for-like and positional swap trades.
     
     test_approach: If True, maximizes Diff while also minimizing salary cap remaining
+    band_approach: If True, uses price bands (±$75k) around trade-out prices to filter candidates
+    trade_out_prices: List of prices for each traded-out player (used with band_approach)
     """
     valid_combinations = []
     used_players = set()
@@ -592,6 +596,207 @@ def generate_trade_options(
         
         # Player doesn't meet any level requirements
         return None
+    
+    # Band approach: filter candidates by price bands and generate combinations differently
+    # Key principle: Prioritize combinations from higher price bands (closer to trade-out prices)
+    # to minimize leftover salary cap, while still maximizing diff within each band tier
+    # EXCEPTION: "Extreme value" players (diff >= 15) are "must haves" and bypass band restrictions
+    if band_approach and trade_out_prices and len(trade_out_prices) >= num_players_needed:
+        BAND_MARGIN = 75000
+        DIFF_THRESHOLD = 5  # Minimum diff to be considered
+        EXTREME_VALUE_THRESHOLD = 15  # Players with diff >= this bypass band restrictions
+        LOW_PRICE_THRESHOLD = 300000  # Players below this price need higher diff to be extreme value
+        LOW_PRICE_EXTREME_THRESHOLD = 20  # Players < $300k need > 20 pts diff to be extreme value
+        MAX_BANDS = 6  # How many bands to search (0 = ±75k, 1 = next lower, etc.)
+        EXTREME_BAND_INDEX = -1  # Special band index for extreme value players (highest priority)
+        
+        print(f"\n=== BAND APPROACH: Generating trade combinations ===")
+        print(f"Trade-out prices: {trade_out_prices}")
+        print(f"Num players needed: {num_players_needed}")
+        print(f"Extreme value threshold: {EXTREME_VALUE_THRESHOLD} pts (players >= ${LOW_PRICE_THRESHOLD:,} need >= {EXTREME_VALUE_THRESHOLD} pts; players < ${LOW_PRICE_THRESHOLD:,} need > {LOW_PRICE_EXTREME_THRESHOLD} pts)")
+        print(f"Traded out positions (raw): {traded_out_positions}")
+        print(f"Total available players: {len(players)}")
+        
+        # Debug: show position mapping sample
+        sample_players = list(position_mapping.items())[:5]
+        print(f"Position mapping sample: {sample_players}")
+        
+        # For each trade-out player slot, collect candidates organized by band
+        # slot_bands[slot_idx][band_idx] = list of candidates in that band
+        # Band index -1 (EXTREME_BAND_INDEX) is reserved for extreme value players
+        slot_bands = []
+        
+        for slot_idx, trade_out_price in enumerate(trade_out_prices):
+            # Get position requirements for this slot if available
+            slot_positions = None
+            if traded_out_positions and isinstance(traded_out_positions[0], dict):
+                if slot_idx < len(traded_out_positions):
+                    req_pos = traded_out_positions[slot_idx].get('required_positions', [])
+                    if req_pos:
+                        slot_positions = req_pos
+            
+            print(f"  Slot {slot_idx}: price=${trade_out_price:,}, required_positions={slot_positions}")
+            
+            # First, identify extreme value players (these bypass band restrictions)
+            # Exception: Players under $300k need > 20 pts diff to qualify as extreme value
+            extreme_value_candidates = []
+            seen_players = set()
+            
+            for player in players:
+                # Determine if player qualifies as extreme value
+                is_extreme_value = False
+                if player['Price'] < LOW_PRICE_THRESHOLD:
+                    # Cheap players need > 20 pts diff to be extreme value
+                    is_extreme_value = player['Diff'] > LOW_PRICE_EXTREME_THRESHOLD
+                else:
+                    # Regular players need >= 15 pts diff
+                    is_extreme_value = player['Diff'] >= EXTREME_VALUE_THRESHOLD
+                
+                if is_extreme_value:
+                    if player['Price'] > salary_freed:
+                        continue
+                    # Check position requirements if specified
+                    if slot_positions:
+                        player_positions = position_mapping.get(player['Player'], [])
+                        if not any(pos in slot_positions for pos in player_positions):
+                            continue
+                    player_with_band = {**player, 'band_index': EXTREME_BAND_INDEX}
+                    extreme_value_candidates.append(player_with_band)
+                    seen_players.add(player['Player'])
+            
+            extreme_value_candidates.sort(key=lambda x: x['Diff'], reverse=True)
+            if extreme_value_candidates:
+                print(f"  Slot {slot_idx} EXTREME VALUE: {len(extreme_value_candidates)} 'must have' players (diff >= {EXTREME_VALUE_THRESHOLD})")
+                for ev in extreme_value_candidates[:3]:
+                    print(f"    - {ev['Player']}: +{ev['Diff']:.1f} @ ${ev['Price']:,}")
+            else:
+                # Debug: show why no extreme value candidates
+                extreme_candidates_no_pos_filter = [p for p in players if p['Diff'] >= EXTREME_VALUE_THRESHOLD and p['Price'] <= salary_freed]
+                print(f"  Slot {slot_idx} EXTREME VALUE: 0 candidates (found {len(extreme_candidates_no_pos_filter)} before position filter)")
+            
+            # Collect candidates for each regular band
+            bands_for_slot = [extreme_value_candidates]  # Index 0 = extreme value players
+            
+            for band_idx in range(MAX_BANDS):
+                if band_idx == 0:
+                    min_price = trade_out_price - BAND_MARGIN
+                    max_price = trade_out_price + BAND_MARGIN
+                else:
+                    # Lower bands: cascade down from center price
+                    min_price = trade_out_price - (BAND_MARGIN * (band_idx + 1))
+                    max_price = trade_out_price - (BAND_MARGIN * band_idx)
+                
+                # Filter players in this price band with diff >= threshold
+                band_candidates = []
+                for player in players:
+                    if player['Player'] in seen_players:
+                        continue
+                    if player['Price'] < min_price or player['Price'] > max_price:
+                        continue
+                    if player['Diff'] < DIFF_THRESHOLD:
+                        continue
+                    # Check position requirements if specified
+                    if slot_positions:
+                        player_positions = position_mapping.get(player['Player'], [])
+                        if not any(pos in slot_positions for pos in player_positions):
+                            continue
+                    # Add band_index to player for later sorting
+                    player_with_band = {**player, 'band_index': band_idx}
+                    band_candidates.append(player_with_band)
+                    seen_players.add(player['Player'])
+                
+                # Sort candidates in this band by diff descending
+                band_candidates.sort(key=lambda x: x['Diff'], reverse=True)
+                bands_for_slot.append(band_candidates)
+                
+                if band_candidates:
+                    print(f"  Slot {slot_idx} band {band_idx} (${min_price:,}-${max_price:,}): {len(band_candidates)} candidates, top: {band_candidates[0]['Player']} (+{band_candidates[0]['Diff']:.1f})")
+            
+            slot_bands.append(bands_for_slot)
+            
+            # Summary for this slot
+            total_candidates = sum(len(band) for band in bands_for_slot)
+            print(f"  Slot {slot_idx} TOTAL: {total_candidates} candidates across all bands")
+        
+        # Generate combinations, prioritizing:
+        # 1. Combinations with extreme value players (band_index = -1)
+        # 2. Then by band_score (sum of band indices) - lower is better
+        # Structure: slot_bands[slot_idx][0] = extreme value, [1] = band 0, [2] = band 1, etc.
+        all_combinations = []
+        seen_combos = set()
+        
+        # Total number of band lists per slot (1 extreme + MAX_BANDS regular)
+        TOTAL_BAND_LISTS = MAX_BANDS + 1
+        
+        if num_players_needed == 1:
+            # Single player trades - iterate through bands in order (extreme first, then regular bands)
+            for list_idx in range(TOTAL_BAND_LISTS):
+                for player in slot_bands[0][list_idx]:
+                    if player['Price'] <= salary_freed and is_valid_trade_combo([player]):
+                        combo = create_combination([player], player['Price'], salary_freed)
+                        combo['band_score'] = player['band_index']
+                        combo_key = player['Player']
+                        if combo_key not in seen_combos:
+                            all_combinations.append(combo)
+                            seen_combos.add(combo_key)
+                            
+        elif num_players_needed == 2:
+            # Two player trades - generate all valid combinations
+            # We'll sort by band_score after, with extreme value players getting priority
+            for list1_idx in range(TOTAL_BAND_LISTS):
+                for list2_idx in range(TOTAL_BAND_LISTS):
+                    # Get candidates from these lists
+                    slot0_candidates = slot_bands[0][list1_idx]
+                    slot1_candidates = slot_bands[1][list2_idx]
+                    
+                    # Form combinations from these bands
+                    for first_player in slot0_candidates:
+                        for second_player in slot1_candidates:
+                            if second_player['Player'] == first_player['Player']:
+                                continue
+                            
+                            # Check if combination meets position requirements
+                            if not is_valid_trade_combo([first_player, second_player]):
+                                continue
+                            
+                            total_price = first_player['Price'] + second_player['Price']
+                            if total_price <= salary_freed:
+                                combo_key = tuple(sorted([first_player['Player'], second_player['Player']]))
+                                if combo_key not in seen_combos:
+                                    combo = create_combination([first_player, second_player], total_price, salary_freed)
+                                    # band_score: extreme value = -1, so combos with extreme players get lower scores
+                                    combo['band_score'] = first_player['band_index'] + second_player['band_index']
+                                    all_combinations.append(combo)
+                                    seen_combos.add(combo_key)
+        
+        # Sort combinations: first by band_score ascending (prefer higher price bands),
+        # then by total_diff descending (maximize value within same band tier)
+        all_combinations.sort(key=lambda x: (x.get('band_score', 0), -x['total_diff']))
+        
+        # Now apply used_players logic to select diverse options
+        # Each player should only appear in ONE returned option
+        valid_combinations = []
+        used_players_band = set()
+        
+        for combo in all_combinations:
+            player_names = [p['name'] for p in combo['players']]
+            if any(name in used_players_band for name in player_names):
+                continue
+            
+            valid_combinations.append(combo)
+            for name in player_names:
+                used_players_band.add(name)
+            
+            if len(valid_combinations) >= max_options:
+                break
+        
+        print(f"  Band approach generated {len(valid_combinations)} combinations from {len(all_combinations)} total")
+        if valid_combinations:
+            print(f"  Top result: band_score={valid_combinations[0].get('band_score', 'N/A')}, diff={valid_combinations[0]['total_diff']:.1f}, remaining=${valid_combinations[0]['salary_remaining']:,}")
+            return valid_combinations
+        else:
+            print("  WARNING: Band approach returned no results, falling back to regular approach...")
+            # Fall through to regular approach below
     
     # Sort players based on strategy
     # If target_bye_round is enabled, players are already sorted by bye weighting, so skip re-sorting
@@ -944,6 +1149,31 @@ def calculate_trade_options(
 
     # Generate trade options based on the selected strategy
     test_approach = (strategy == '4')
+    band_approach = (strategy == '5')
+    
+    # Extract trade-out prices for band approach
+    trade_out_prices = []
+    if band_approach:
+        if isinstance(full_traded_out_players[0], dict):
+            for player_dict in full_traded_out_players:
+                player_name = player_dict['name']
+                price = player_dict.get('price')
+                if price is None:
+                    player_data = consolidated_data[consolidated_data['Player'] == player_name].sort_values('Round', ascending=False)
+                    if not player_data.empty:
+                        price = int(player_data.iloc[0]['Price'])
+                    else:
+                        price = 0
+                trade_out_prices.append(int(price) if price else 0)
+        else:
+            for player_name in full_traded_out_players:
+                player_data = consolidated_data[consolidated_data['Player'] == player_name].sort_values('Round', ascending=False)
+                if not player_data.empty:
+                    trade_out_prices.append(int(player_data.iloc[0]['Price']))
+                else:
+                    trade_out_prices.append(0)
+        print(f"Trade-out prices for band approach: {trade_out_prices}")
+    
     options = generate_trade_options(
         available_players,
         salary_freed,
@@ -953,7 +1183,9 @@ def calculate_trade_options(
         traded_out_positions,
         num_players_needed,
         target_bye_round,
-        test_approach
+        test_approach,
+        band_approach,
+        trade_out_prices if band_approach else None
     )
     
     return options[:max_options]

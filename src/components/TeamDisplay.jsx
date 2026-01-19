@@ -509,6 +509,9 @@ function TradePanel({
                           <Badge variant="outline" className="px-1.5 py-0 text-xs shrink-0">{player.position}</Badge>
                           <span className="flex-1 text-foreground truncate">{formatPlayerName(player.name)}</span>
                           <span className="text-xs text-primary shrink-0">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
+                          {player.diff !== undefined && (
+                            <span className="text-xs text-green-500 font-semibold shrink-0">+{player.diff.toFixed(1)}</span>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -2092,6 +2095,7 @@ function TeamView({
                   <SelectItem value="2">Maximize Base (Projection)</SelectItem>
                   <SelectItem value="3">Hybrid Approach</SelectItem>
                   <SelectItem value="4">Test Approach</SelectItem>
+                  <SelectItem value="5">Band</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2724,7 +2728,7 @@ function TeamView({
                     className="strategy-select-compact w-28 sm:w-32 h-9 justify-between"
                     onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
                   >
-                    {selectedStrategy === '1' ? 'Max Value' : selectedStrategy === '2' ? 'Max Base' : selectedStrategy === '3' ? 'Hybrid' : selectedStrategy === '4' ? 'Test Approach' : 'Max Value'}
+                    {selectedStrategy === '1' ? 'Max Value' : selectedStrategy === '2' ? 'Max Base' : selectedStrategy === '3' ? 'Hybrid' : selectedStrategy === '4' ? 'Test' : selectedStrategy === '5' ? 'Band' : 'Max Value'}
                     <ChevronDown className="h-4 w-4 opacity-70" />
                   </Button>
                   {showStrategyDropdown && (
@@ -2751,7 +2755,13 @@ function TeamView({
                         className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
                         onClick={() => { setSelectedStrategy('4'); setShowStrategyDropdown(false); }}
                       >
-                        Test Approach
+                        Test
+                      </div>
+                      <div
+                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
+                        onClick={() => { setSelectedStrategy('5'); setShowStrategyDropdown(false); }}
+                      >
+                        Band
                       </div>
                     </div>
                   )}
@@ -2890,6 +2900,7 @@ function TeamView({
                   <SelectItem value="2">Maximize Base (Projection)</SelectItem>
                   <SelectItem value="3">Hybrid Approach</SelectItem>
                   <SelectItem value="4">Test Approach</SelectItem>
+                  <SelectItem value="5">Band</SelectItem>
                 </SelectContent>
               </Select>
             </div>

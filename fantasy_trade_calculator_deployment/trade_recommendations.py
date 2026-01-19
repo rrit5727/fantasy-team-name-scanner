@@ -705,6 +705,21 @@ def calculate_combined_trade_recommendations(
         non_injured_players = latest_data['Player'].unique().tolist()
     team_list = non_injured_players
     
+    # Build list of players to exclude from trade-in recommendations
+    # Include: user's team players (they can't trade in someone already on their team)
+    # Plus any explicitly excluded players passed in
+    team_player_full_names = []
+    for player in team_players:
+        full_name = match_abbreviated_name_to_full(player['name'], consolidated_data)
+        team_player_full_names.append(full_name)
+    
+    # Combine with any other excluded players
+    all_excluded = team_player_full_names.copy()
+    if excluded_players:
+        all_excluded.extend(excluded_players)
+    
+    print(f"Excluding {len(team_player_full_names)} team players from trade-in options")
+    
     # Calculate trade-in options
     trade_in_options = calculate_trade_options(
         consolidated_data,
@@ -716,7 +731,7 @@ def calculate_combined_trade_recommendations(
         team_list=team_list,
         simulate_datetime=simulate_datetime,
         apply_lockout=apply_lockout,
-        excluded_players=excluded_players,
+        excluded_players=all_excluded,
         cash_in_bank=cash_in_bank,
         target_bye_round=target_bye_round,
         strategy=strategy
@@ -950,6 +965,9 @@ def calculate_preseason_trade_in_candidates(
     elif strategy == '4':  # Test approach: Maximize Diff while minimizing salary cap remaining
         # Sort by Diff descending (primary), then by Price descending (secondary) to use more cap
         latest_data = latest_data.sort_values(['Diff', 'Price'], ascending=[False, False])
+    elif strategy == '5':  # Band approach: Sort by Diff descending (price bands handled in nrl_trade_calculator)
+        # For preseason mode, this just sorts by Diff; the actual band filtering is done in normal mode
+        latest_data = latest_data.sort_values('Diff', ascending=False)
     else:  # Default: Maximize value (Diff)
         latest_data = latest_data.sort_values('Diff', ascending=False)
 
