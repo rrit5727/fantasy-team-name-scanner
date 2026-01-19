@@ -124,9 +124,13 @@ function ImageUpload({
       /Q([a-z])[\.\s]*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
       /@\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
       /®\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      // Handle OCR misreading dot as hyphen (e.g., "u-Whyte" instead of "N. Whyte")
+      // Match: space/digit + single letter + hyphen + uppercase surname (not already a hyphenated name)
+      /(?:^|\s|\d)([a-zA-Z])-([A-Z][a-z]{2,})(?![a-z]|-[A-Z])/g,
     ];
 
-    const positionPattern = /\|\s*(HOK|MID|EDG|HLF|CTR|WFB|FRF|2RF|CTW|FLB|INT|EMG)(?:[,\s]*(HOK|MID|EDG|HLF|CTR|WFB|FRF|2RF|CTW|FLB|INT|EMG))?\s*\|/gi;
+    // Position pattern - OCR often misreads | as I, 1, l, or [ so we handle all these
+    const positionPattern = /[|Il1\[]\s*(HOK|MID|EDG|HLF|CTR|WFB|FRF|2RF|CTW|FLB|INT|EMG)(?:[,\s]*(HOK|MID|EDG|HLF|CTR|WFB|FRF|2RF|CTW|FLB|INT|EMG))?\s*[|Il1\]]/gi;
     const pricePattern = /\$\s*(\d{2,3})[|lIO0o]?(\d{1,2})k/gi;
     
     const extractFromText = (sourceText, yPosition) => {

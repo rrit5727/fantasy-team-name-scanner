@@ -2056,6 +2056,7 @@ function TeamView({
                   <SelectItem value="1">Maximize Value (Diff)</SelectItem>
                   <SelectItem value="2">Maximize Base (Projection)</SelectItem>
                   <SelectItem value="3">Hybrid Approach</SelectItem>
+                  <SelectItem value="4">Test Approach</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2688,7 +2689,7 @@ function TeamView({
                     className="strategy-select-compact w-28 sm:w-32 h-9 justify-between"
                     onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
                   >
-                    {selectedStrategy === '1' ? 'Max Value' : selectedStrategy === '2' ? 'Max Base' : selectedStrategy === '3' ? 'Hybrid' : 'Max Value'}
+                    {selectedStrategy === '1' ? 'Max Value' : selectedStrategy === '2' ? 'Max Base' : selectedStrategy === '3' ? 'Hybrid' : selectedStrategy === '4' ? 'Test Approach' : 'Max Value'}
                     <ChevronDown className="h-4 w-4 opacity-70" />
                   </Button>
                   {showStrategyDropdown && (
@@ -2710,6 +2711,12 @@ function TeamView({
                         onClick={() => { setSelectedStrategy('3'); setShowStrategyDropdown(false); }}
                       >
                         Hybrid
+                      </div>
+                      <div
+                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
+                        onClick={() => { setSelectedStrategy('4'); setShowStrategyDropdown(false); }}
+                      >
+                        Test Approach
                       </div>
                     </div>
                   )}
@@ -2847,6 +2854,7 @@ function TeamView({
                   <SelectItem value="1">Maximize Value (Diff)</SelectItem>
                   <SelectItem value="2">Maximize Base (Projection)</SelectItem>
                   <SelectItem value="3">Hybrid Approach</SelectItem>
+                  <SelectItem value="4">Test Approach</SelectItem>
                 </SelectContent>
               </Select>
             </div>

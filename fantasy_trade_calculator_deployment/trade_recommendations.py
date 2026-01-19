@@ -947,6 +947,9 @@ def calculate_preseason_trade_in_candidates(
             (latest_data['Projection'] / max_proj) * 0.5
         )
         latest_data = latest_data.sort_values('hybrid_score', ascending=False)
+    elif strategy == '4':  # Test approach: Maximize Diff while minimizing salary cap remaining
+        # Sort by Diff descending (primary), then by Price descending (secondary) to use more cap
+        latest_data = latest_data.sort_values(['Diff', 'Price'], ascending=[False, False])
     else:  # Default: Maximize value (Diff)
         latest_data = latest_data.sort_values('Diff', ascending=False)
 

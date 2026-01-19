@@ -333,14 +333,28 @@ export async function fetchPlayerValidationList() {
   }
 }
 
+// Common OCR misreadings: when OCR reads '1' or 'I', the actual letter could be T, J, L, I
+// This maps the misread initial to likely correct initials
+const OCR_MISREAD_MAP = {
+  'i': ['t', 'j', 'l', 'i', 'f'],  // '1' or 'I' often misread from T, J, L, F
+  'l': ['t', 'j', 'l', 'i', 'f'],
+  'o': ['o', 'd', 'q', 'c', 'g'],
+  '0': ['o', 'd', 'q', 'c', 'g'],
+  'u': ['n', 'u', 'h'],  // 'u' can be misread from N, H
+  's': ['s', 'g', '5'],
+  'b': ['b', 'd', 'r', '8'],
+  'g': ['g', 'q', '9'],
+};
+
 /**
  * Validate an OCR-extracted player name against the database
  * Uses fuzzy matching to handle OCR errors
  * @param {string} extractedName - Name extracted from OCR (e.g., "A. Fonua-Blake")
  * @param {Array} validPlayers - Array from fetchPlayerValidationList()
+ * @param {Array} extractedPositions - Optional positions extracted from OCR for disambiguation
  * @returns {Object|null} Matched player object or null if no match
  */
-export function validatePlayerName(extractedName, validPlayers) {
+export function validatePlayerName(extractedName, validPlayers, extractedPositions = []) {
   if (!extractedName || !validPlayers || validPlayers.length === 0) {
     return null;
   }
@@ -374,6 +388,71 @@ export function validatePlayerName(extractedName, validPlayers) {
 
   if (fuzzyMatches.length === 1) {
     return { ...fuzzyMatches[0], matchType: 'fuzzy' };
+  }
+
+  // FALLBACK: Surname-only matching when initial doesn't match
+  // This handles cases where OCR misreads the initial (e.g., 'T' as '1' -> 'I')
+  const surnameOnlyExactMatches = validPlayers.filter(p => 
+    p.surname === normalizedSurname
+  );
+  
+  if (surnameOnlyExactMatches.length === 1) {
+    console.log(`OCR initial mismatch corrected: "${extractedName}" -> "${surnameOnlyExactMatches[0].abbreviatedName}" (surname-only match)`);
+    return { ...surnameOnlyExactMatches[0], matchType: 'surname-only' };
+  }
+
+  // Multiple surname matches - try to disambiguate using OCR misread heuristics
+  if (surnameOnlyExactMatches.length > 1) {
+    console.log(`Multiple players with surname "${normalizedSurname}": ${surnameOnlyExactMatches.map(p => p.abbreviatedName).join(', ')}`);
+    
+    // Get likely correct initials based on OCR misread patterns
+    const likelyInitials = OCR_MISREAD_MAP[normalizedInitial] || [normalizedInitial];
+    
+    // Filter to players whose initial could be an OCR misread of the extracted initial
+    const likelyMatches = surnameOnlyExactMatches.filter(p => 
+      likelyInitials.includes(p.initial)
+    );
+    
+    if (likelyMatches.length === 1) {
+      console.log(`OCR misread corrected: "${extractedName}" -> "${likelyMatches[0].abbreviatedName}" (using OCR misread heuristic for '${normalizedInitial}' -> '${likelyMatches[0].initial}')`);
+      return { ...likelyMatches[0], matchType: 'ocr-misread' };
+    }
+    
+    // Still multiple? Try using position to disambiguate if we have position info
+    if (likelyMatches.length > 1 && extractedPositions && extractedPositions.length > 0) {
+      const positionMatches = likelyMatches.filter(p => {
+        if (!p.positions) return false;
+        return extractedPositions.some(pos => p.positions.includes(pos));
+      });
+      
+      if (positionMatches.length === 1) {
+        console.log(`Position-based disambiguation: "${extractedName}" -> "${positionMatches[0].abbreviatedName}"`);
+        return { ...positionMatches[0], matchType: 'position-match' };
+      }
+    }
+    
+    // If we have exactly 2 likely matches and one has the most common OCR misread pattern (T from 1/I)
+    if (likelyMatches.length > 1 && normalizedInitial === 'i') {
+      // Prefer 'T' initial when '1' or 'I' was read (most common misread)
+      const tMatch = likelyMatches.find(p => p.initial === 't');
+      if (tMatch) {
+        console.log(`OCR misread heuristic (prefer T): "${extractedName}" -> "${tMatch.abbreviatedName}"`);
+        return { ...tMatch, matchType: 'ocr-misread-t' };
+      }
+    }
+    
+    console.log(`Could not disambiguate "${extractedName}" - multiple matches: ${likelyMatches.map(p => p.abbreviatedName).join(', ')}`);
+  }
+
+  // Fuzzy surname match ignoring initial (for OCR errors in both initial and surname)
+  const surnameOnlyFuzzyMatches = validPlayers.filter(p => {
+    const similarity = calculateSimilarity(p.surname, normalizedSurname);
+    return similarity >= 0.85;
+  });
+
+  if (surnameOnlyFuzzyMatches.length === 1) {
+    console.log(`OCR corrected via fuzzy surname: "${extractedName}" -> "${surnameOnlyFuzzyMatches[0].abbreviatedName}"`);
+    return { ...surnameOnlyFuzzyMatches[0], matchType: 'surname-fuzzy' };
   }
 
   // No match found - this is likely a false positive (UI text, team name, etc.)
@@ -445,7 +524,8 @@ export function validateExtractedPlayers(extractedPlayers, validPlayers) {
   const rejectedNames = [];
 
   for (const player of extractedPlayers) {
-    const match = validatePlayerName(player.name, validPlayers);
+    // Pass position info for disambiguation when multiple players have the same surname
+    const match = validatePlayerName(player.name, validPlayers, player.positions || []);
     
     if (match) {
       validatedPlayers.push({

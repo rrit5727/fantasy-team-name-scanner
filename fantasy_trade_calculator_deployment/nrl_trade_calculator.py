@@ -346,11 +346,14 @@ def generate_trade_options(
     max_options: int = 10,
     traded_out_positions = None,  # Can be List[str] (old format) or List[Dict] (new format)
     num_players_needed: int = 2,
-    target_bye_round: bool = False
+    target_bye_round: bool = False,
+    test_approach: bool = False
 ) -> List[Dict]:
     """
     Generate trade combinations based on selected optimization strategy while ensuring
     position requirements are met for both like-for-like and positional swap trades.
+    
+    test_approach: If True, maximizes Diff while also minimizing salary cap remaining
     """
     valid_combinations = []
     used_players = set()
@@ -752,6 +755,10 @@ def generate_trade_options(
     elif hybrid_approach:
         # For hybrid, combinations are already prioritized by player selection
         pass
+    elif test_approach:
+        # Test approach: maximize diff while minimizing salary cap remaining
+        # Sort by total_diff descending (primary), then by salary_remaining ascending (secondary)
+        valid_combinations.sort(key=lambda x: (-x['total_diff'], x['salary_remaining']))
     else:  # maximize_value
         valid_combinations.sort(key=lambda x: x['total_diff'], reverse=True)
     
@@ -936,6 +943,7 @@ def calculate_trade_options(
             return []
 
     # Generate trade options based on the selected strategy
+    test_approach = (strategy == '4')
     options = generate_trade_options(
         available_players,
         salary_freed,
@@ -944,7 +952,8 @@ def calculate_trade_options(
         max_options,
         traded_out_positions,
         num_players_needed,
-        target_bye_round
+        target_bye_round,
+        test_approach
     )
     
     return options[:max_options]

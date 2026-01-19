@@ -347,6 +347,7 @@ def get_player_validation_list():
     - abbreviatedName: The abbreviated form (e.g., "A. Fonua-Blake")
     - surname: Just the surname for fuzzy matching (e.g., "Fonua-Blake")
     - initial: The first name initial (e.g., "A")
+    - positions: Array of positions the player can play (e.g., ["MID", "EDG"])
     """
     try:
         consolidated_data = cached_load_data()
@@ -356,7 +357,8 @@ def get_player_validation_list():
         latest_data = consolidated_data[consolidated_data['Round'] == latest_round]
         
         validation_list = []
-        for player_name in latest_data['Player'].unique():
+        for _, row in latest_data.iterrows():
+            player_name = row['Player']
             parts = player_name.split(' ', 1)
             if len(parts) == 2:
                 first_name, surname = parts
@@ -369,14 +371,22 @@ def get_player_validation_list():
                 initial = player_name[0].upper() if player_name else ''
                 abbreviated = player_name
             
+            # Get positions - primary and secondary
+            positions = []
+            if 'Position' in row and pd.notna(row['Position']):
+                positions.append(row['Position'])
+            if 'Secondary Position' in row and pd.notna(row['Secondary Position']):
+                positions.append(row['Secondary Position'])
+            
             validation_list.append({
                 'fullName': player_name,
                 'abbreviatedName': abbreviated,
                 'surname': surname.lower(),
-                'initial': initial.lower()
+                'initial': initial.lower(),
+                'positions': positions
             })
         
-        app.logger.info(f"Returning {len(validation_list)} players for OCR validation")
+        app.logger.info(f"Returning {len(validation_list)} players for OCR validation (with positions)")
         return jsonify(validation_list)
     except Exception as e:
         app.logger.error(f"Error in get_player_validation_list: {str(e)}")
