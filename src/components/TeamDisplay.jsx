@@ -225,7 +225,10 @@ function TeamDisplay({
       isHighlightedForTrade && !isSelected && !isPreseasonSelectedOut && !isInjured && "bg-amber-500/10 border-amber-500/40 ring-2 ring-amber-500/50"
     );
 
-    const handleClick = () => {
+    const handleClick = (e) => {
+      // Prevent default to avoid any double-firing on mobile
+      if (e) e.preventDefault();
+      
       if (isPreseasonMode && onPreseasonClick) {
         onPreseasonClick(player, position);
       } else if (onTradeOut) {
@@ -233,11 +236,23 @@ function TeamDisplay({
       }
     };
 
+    // Handle touch end for iOS - fires immediately without waiting for click
+    const handleTouchEnd = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleClick();
+    };
+
     return (
       <div
         key={`${player.name}-${isSelected}-${isPreseasonSelectedOut}`}
         className={cardClasses}
         onClick={handleClick}
+        onTouchEnd={handleTouchEnd}
+        style={{ 
+          WebkitTapHighlightColor: 'transparent',
+          touchAction: 'manipulation'
+        }}
         data-player-name={player.name}
         data-is-selected={isSelected || isPreseasonSelectedOut}
       >
