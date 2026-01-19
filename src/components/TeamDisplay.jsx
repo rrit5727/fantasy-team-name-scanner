@@ -449,14 +449,14 @@ function TradePanel({
         <div className="space-y-2">
             {players && players.length > 0 ? (
               isTradeOut ? (
-                // Trade-out display
+                // Trade-out display - width 220px centered for normal mode trade-in page
                 players.map((player, index) => {
                   const isSelected = selectedPlayer?.name === player.name || selectedPlayers?.some(p => p.name === player.name);
                   return (
                     <div 
                       key={player.name || index}
                       className={cn(
-                        "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer",
+                        "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer w-[220px] mx-auto",
                         "bg-primary/5 hover:bg-primary/10",
                         isSelected && "bg-primary/20 ring-1 ring-primary"
                       )}
@@ -517,17 +517,19 @@ function TradePanel({
                       <span>Remaining: ${formatNumberWithCommas(Math.round(option.salaryRemaining / 1000))}k</span>
                     </div>
                     {showConfirmButton && selectedOptionIndex === index && (
-                      <Button
-                        className="w-full mt-3"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onConfirmOption?.();
-                        }}
-                      >
-                        <Check className="w-4 h-4 mr-2" />
-                        Confirm Trade
-                      </Button>
+                      <div className="flex justify-center mt-3">
+                        <Button
+                          className="w-[150px]"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onConfirmOption?.();
+                          }}
+                        >
+                          <Check className="w-4 h-4 mr-2" />
+                          Confirm Trade
+                        </Button>
+                      </div>
                     )}
                   </div>
                 ))
