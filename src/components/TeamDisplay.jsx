@@ -95,6 +95,14 @@ function TeamDisplay({
   // Toggle tooltip on click
   const handleTooltipClick = (tooltipId, e) => {
     e.stopPropagation();
+    e.preventDefault();
+    setOpenTooltip(prev => prev === tooltipId ? null : tooltipId);
+  };
+
+  // Handle tooltip touch for iOS
+  const handleTooltipTouch = (tooltipId, e) => {
+    e.stopPropagation();
+    e.preventDefault();
     setOpenTooltip(prev => prev === tooltipId ? null : tooltipId);
   };
 
@@ -270,6 +278,8 @@ function TeamDisplay({
               <div 
                 className="injury-indicator w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform"
                 onClick={(e) => handleTooltipClick(`${player.name}-injured`, e)}
+                onTouchEnd={(e) => handleTooltipTouch(`${player.name}-injured`, e)}
+                style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
               >
                 <AlertTriangle className="w-3 h-3 text-amber-950" />
               </div>
@@ -286,6 +296,8 @@ function TeamDisplay({
               <div 
                 className="urgent-overvalued-indicator w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shadow-lg text-xs cursor-pointer hover:scale-110 transition-transform"
                 onClick={(e) => handleTooltipClick(`${player.name}-urgent`, e)}
+                onTouchEnd={(e) => handleTooltipTouch(`${player.name}-urgent`, e)}
+                style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
               >
                 🚨
               </div>
@@ -302,6 +314,8 @@ function TeamDisplay({
               <div 
                 className="lowupside-indicator w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform"
                 onClick={(e) => handleTooltipClick(`${player.name}-overvalued`, e)}
+                onTouchEnd={(e) => handleTooltipTouch(`${player.name}-overvalued`, e)}
+                style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
               >
                 <TrendingDown className="w-3 h-3 text-orange-950" />
               </div>
@@ -318,6 +332,8 @@ function TeamDisplay({
               <div 
                 className="not-selected-indicator w-5 h-5 rounded-full bg-red-500 flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform"
                 onClick={(e) => handleTooltipClick(`${player.name}-notselected`, e)}
+                onTouchEnd={(e) => handleTooltipTouch(`${player.name}-notselected`, e)}
+                style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
               >
                 <Ban className="w-3 h-3 text-white" />
               </div>
@@ -334,6 +350,8 @@ function TeamDisplay({
               <div 
                 className="junk-cheap-indicator w-5 h-5 rounded-full bg-amber-700 flex items-center justify-center shadow-lg text-xs cursor-pointer hover:scale-110 transition-transform"
                 onClick={(e) => handleTooltipClick(`${player.name}-junk`, e)}
+                onTouchEnd={(e) => handleTooltipTouch(`${player.name}-junk`, e)}
+                style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
               >
                 💩
               </div>
