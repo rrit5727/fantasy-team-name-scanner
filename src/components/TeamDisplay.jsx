@@ -253,7 +253,7 @@ function TeamDisplay({
 
     return (
       <div
-        key={`${player.name}-${isSelected}-${isPreseasonSelectedOut}`}
+        key={`${player.name || 'empty'}-${position}-${index}-${isSelected}-${isPreseasonSelectedOut}`}
         className={cardClasses}
         onClick={handleClick}
         onTouchEnd={handleTouchEnd}
@@ -851,7 +851,7 @@ function TeamView({
 
     return (
       <div
-        key={player.name}
+        key={`${player.name || 'empty'}-${position}-${index}`}
         className={cardClasses}
         onClick={handleClick}
         data-player-name={player.name}
@@ -1312,10 +1312,9 @@ function TeamView({
   const handleTradeOut = (player, position) => {
     if (!player) return;
 
-    // Only allow selection of highlighted players in normal mode
-    if (!isPreseasonMode && !normalModeHighlighted.some(p => p.name === player.name)) {
-      return;
-    }
+    // Allow selection of ANY player for trading out (not just highlighted ones)
+    // Highlighted players have orange border, but any player can be selected
+    // Selected players (highlighted or not) get the teal selection styling
 
     const exists = selectedTradeOutPlayers.some(p => p.name === player.name);
     

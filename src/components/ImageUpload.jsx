@@ -8,10 +8,24 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { Download, Trash2, ArrowUp, ArrowDown, X, Check, AlertCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import screenshotBench from '../assets/screenshot-bench.jpg';
 import screenshotTeam from '../assets/screenshot-team.jpg';
+
+// Expected position structure for a full NRL Fantasy team
+const EXPECTED_POSITIONS = [
+  { pos: 'HOK', count: 1 },
+  { pos: 'MID', count: 3 },
+  { pos: 'EDG', count: 2 },
+  { pos: 'HLF', count: 2 },
+  { pos: 'CTR', count: 2 },
+  { pos: 'WFB', count: 3 },
+  { pos: 'INT', count: 4 },
+  { pos: 'EMG', count: 4 },
+];
+const TOTAL_EXPECTED_PLAYERS = 21;
 
 function ImageUpload({ 
   onPlayersExtracted,
@@ -33,7 +47,13 @@ function ImageUpload({
   const [error, setError] = useState(null);
   const [screenshotData, setScreenshotData] = useState([]);
   const [validPlayerList, setValidPlayerList] = useState([]);
+  const [autocompleteState, setAutocompleteState] = useState({
+    activeSlot: null, // Index of slot being edited
+    searchText: '',
+    suggestions: []
+  });
   const fileInputRef = useRef(null);
+  const autocompleteInputRef = useRef(null);
 
   // Fetch the player validation list on mount (for OCR validation)
   useEffect(() => {
@@ -72,30 +92,107 @@ function ImageUpload({
   };
 
   // Assign positions to players based on Y-position ordering (for Format 2)
+  // Now preserves empty slots when players are missing
   const assignFormat2Positions = (players) => {
     const sorted = [...players].sort((a, b) => a.y - b.y || a.matchIndex - b.matchIndex);
     
-    const positionMap = [
-      { pos: 'HOK', count: 1 },
-      { pos: 'MID', count: 3 },
-      { pos: 'EDG', count: 2 },
-      { pos: 'HLF', count: 2 },
-      { pos: 'CTR', count: 2 },
-      { pos: 'WFB', count: 3 },
-      { pos: 'INT', count: 4 },
-      { pos: 'EMG', count: 4 },
-    ];
+    // If we have exactly 21 players, just assign positions sequentially
+    if (sorted.length >= TOTAL_EXPECTED_PLAYERS) {
+      let playerIndex = 0;
+      for (const { pos, count } of EXPECTED_POSITIONS) {
+        for (let i = 0; i < count && playerIndex < sorted.length; i++) {
+          sorted[playerIndex].positions = [pos];
+          playerIndex++;
+        }
+      }
+      console.log('Format 2: Full team detected, assigned positions based on Y-order:', sorted.map(p => `${p.name}: ${p.positions[0]}`));
+      return sorted;
+    }
     
-    let playerIndex = 0;
-    for (const { pos, count } of positionMap) {
-      for (let i = 0; i < count && playerIndex < sorted.length; i++) {
-        sorted[playerIndex].positions = [pos];
-        playerIndex++;
+    // If we have fewer players, we need to detect gaps and insert empty slots
+    // Calculate average spacing between detected players
+    const yPositions = sorted.map(p => p.y);
+    const spacings = [];
+    for (let i = 1; i < yPositions.length; i++) {
+      spacings.push(yPositions[i] - yPositions[i - 1]);
+    }
+    
+    // Use median spacing as the expected gap between adjacent players
+    const sortedSpacings = [...spacings].sort((a, b) => a - b);
+    const medianSpacing = sortedSpacings.length > 0 
+      ? sortedSpacings[Math.floor(sortedSpacings.length / 2)] 
+      : 50; // Default if not enough data
+    
+    // Threshold for detecting a gap (1.5x the median spacing indicates a missing player)
+    const gapThreshold = medianSpacing * 1.5;
+    
+    // Build result array with empty slots where gaps are detected
+    const result = [];
+    let slotIndex = 0;
+    
+    for (let i = 0; i < sorted.length; i++) {
+      const player = sorted[i];
+      
+      // Check for gap before this player (except for the first one)
+      if (i > 0) {
+        const gap = player.y - sorted[i - 1].y;
+        const missedSlots = Math.floor(gap / gapThreshold);
+        
+        // Insert empty slots for each detected gap
+        for (let j = 0; j < missedSlots && slotIndex < TOTAL_EXPECTED_PLAYERS; j++) {
+          const position = getPositionForSlot(slotIndex);
+          result.push({
+            name: null,
+            positions: [position],
+            price: null,
+            isEmpty: true,
+            slotIndex: slotIndex
+          });
+          slotIndex++;
+        }
+      }
+      
+      // Add the actual player
+      if (slotIndex < TOTAL_EXPECTED_PLAYERS) {
+        const position = getPositionForSlot(slotIndex);
+        result.push({
+          ...player,
+          positions: [position],
+          isEmpty: false,
+          slotIndex: slotIndex
+        });
+        slotIndex++;
       }
     }
     
-    console.log('Format 2: Assigned positions based on Y-order:', sorted.map(p => `${p.name}: ${p.positions[0]}`));
-    return sorted;
+    // Fill remaining slots at the end with empty placeholders
+    while (slotIndex < TOTAL_EXPECTED_PLAYERS) {
+      const position = getPositionForSlot(slotIndex);
+      result.push({
+        name: null,
+        positions: [position],
+        price: null,
+        isEmpty: true,
+        slotIndex: slotIndex
+      });
+      slotIndex++;
+    }
+    
+    console.log('Format 2: Assigned positions with gaps detected:', 
+      result.map(p => p.isEmpty ? `EMPTY: ${p.positions[0]}` : `${p.name}: ${p.positions[0]}`));
+    return result;
+  };
+
+  // Helper function to get position for a given slot index
+  const getPositionForSlot = (slotIndex) => {
+    let currentIndex = 0;
+    for (const { pos, count } of EXPECTED_POSITIONS) {
+      if (slotIndex < currentIndex + count) {
+        return pos;
+      }
+      currentIndex += count;
+    }
+    return 'EMG'; // Default to EMG if slot exceeds expected
   };
 
   const extractPlayerNamesFromText = (text, lines) => {
@@ -168,7 +265,7 @@ function ImageUpload({
           if (!surname || surname.length < 3) continue;
           
           const lowerSurname = surname.toLowerCase();
-          if (['warriors', 'broncos', 'eels', 'panthers', 'bulldogs', 'titans', 
+          if (['warriors', 'broncos', 'eels', 'panthers', 'bulldogs', 'titans',
               'cowboys', 'dragons', 'raiders', 'knights', 'roosters', 'sharks',
               'rabbitohs', 'dolphins', 'mid', 'edg', 'hlf', 'hok', 'wfb', 'ctr',
               'int', 'emg', 'frf', 'score', 'rank', 'overall', 'round', 'team',
@@ -176,12 +273,37 @@ function ImageUpload({
               'download', 'clear', 'csv', 'players', 'uploaded', 'screenshots',
               'image', 'upload', 'confirm', 'remove', 'move', 'back', 'scanner',
               'tap', 'capture', 'full', 'hisense', 'dnp', 'captain',
-              'tions', 'ptions', 'omplete', 'complete', 'aved', 'swyftx'].includes(lowerSurname)) {
+              'tions', 'ptions', 'omplete', 'complete', 'aved', 'swyftx',
+              // ADD THESE NEW EXCLUSIONS (team codes):
+              'bri', 'syd', 'cby', 'mel', 'gld', 'pen', 'war', 'wst', 'new',
+              'man', 'dol', 'nql', 'par', 'cro',
+              // ADD THESE (OCR misreads of position markers):
+              'imid', 'iedg', 'ihlf', 'ihok', 'iwfb', 'ictr', 'iint', 'iemg',
+              'lmid', 'ledg', 'lhlf', 'lhok', 'lwfb', 'lctr', 'lint', 'lemg',
+              // ADD THESE (OCR artifacts from price patterns):
+              'ik', 'kl', 'klsl', 'kls'
+          ].includes(lowerSurname)) {
             continue;
           }
           
           const formattedSurname = surname.charAt(0).toUpperCase() + surname.slice(1).toLowerCase();
           const finalSurname = formattedSurname.replace(/-([a-z])/g, (m, c) => '-' + c.toUpperCase());
+
+          // NEW VALIDATION: Skip if BOTH initial AND surname are suspicious (combined evidence)
+          const hasSuspiciousInitial = ['1', '0', 'O', 'o', 'l', 'I'].includes(initial);
+          const hasSuspiciousSurname =
+            (surname.length === 3 && /^[A-Z]{3}$/.test(surname)) || // 3-letter team codes like "BRI", "SYD"
+            /^[Il][A-Z]{2,}$/.test(surname); // Position marker artifacts like "IMID", "IWFB"
+
+          if (hasSuspiciousInitial && hasSuspiciousSurname) {
+            // BOTH initial AND surname are suspicious - very likely false positive like "1. Imid"
+            continue;
+          }
+
+          // Single-factor suspicious elements are handled elsewhere:
+          // - Suspicious surnames alone → caught by blacklist above (lines ~246)
+          // - Suspicious initials alone → let through, trust database validation
+
           const fullName = `${initial}. ${finalSurname}`;
           
           const afterName = sourceText.substring(match.index, match.index + 150);
@@ -345,51 +467,151 @@ function ImageUpload({
       
       const playersWithPositions = assignFormat2Positions(uniquePlayers);
       
+      // Return with isEmpty flag preserved for empty slots
       return playersWithPositions.map(p => ({
         name: p.name,
         positions: p.positions,
-        price: p.price
+        price: p.price,
+        isEmpty: p.isEmpty || false,
+        slotIndex: p.slotIndex
       }));
     }
     
+    // Format 1: detect position markers and fill in gaps
     if (allScreenshotData.length === 1) {
-      return allScreenshotData[0].players;
+      return ensureFullTeamSlots(allScreenshotData[0].players);
     }
-    
-    let firstScreenshotIndex = 0;
-    let earliestHokPosition = Infinity;
-    
-    for (let i = 0; i < allScreenshotData.length; i++) {
-      const players = allScreenshotData[i].players;
-      for (let j = 0; j < players.length; j++) {
-        const hasHok = players[j].positions && players[j].positions.includes('HOK');
-        if (hasHok && j < earliestHokPosition) {
-          earliestHokPosition = j;
-          firstScreenshotIndex = i;
-        }
+
+    // For multiple Format 1 screenshots, separate starting team from bench
+    const startingTeamScreenshots = [];
+    const benchScreenshots = [];
+
+    for (const data of allScreenshotData) {
+      const hasBenchMarker = /BENCH\s*\(\d+\/\d+\)/i.test(data.rawText);
+      if (hasBenchMarker) {
+        benchScreenshots.push(data);
+      } else {
+        startingTeamScreenshots.push(data);
       }
     }
-    
-    console.log(`Screenshot ${firstScreenshotIndex + 1} has HOK player earliest (position ${earliestHokPosition})`);
-    
-    const orderedScreenshots = [
-      allScreenshotData[firstScreenshotIndex],
-      ...allScreenshotData.filter((_, i) => i !== firstScreenshotIndex)
-    ];
-    
-    const seen = new Set();
-    const mergedPlayers = [];
-    
-    for (const screenshot of orderedScreenshots) {
+
+    console.log(`Format 1: ${startingTeamScreenshots.length} starting team screenshots, ${benchScreenshots.length} bench screenshots`);
+
+    // Merge starting team players (deduplicate)
+    const seenStarting = new Set();
+    const startingPlayers = [];
+    for (const screenshot of startingTeamScreenshots) {
       for (const player of screenshot.players) {
-        if (!seen.has(player.name)) {
-          seen.add(player.name);
-          mergedPlayers.push(player);
+        if (!seenStarting.has(player.name)) {
+          seenStarting.add(player.name);
+          startingPlayers.push(player);
         }
       }
     }
-    
-    return mergedPlayers;
+
+    // Merge bench players (deduplicate)
+    const seenBench = new Set();
+    const benchPlayers = [];
+    for (const screenshot of benchScreenshots) {
+      for (const player of screenshot.players) {
+        if (!seenBench.has(player.name)) {
+          seenBench.add(player.name);
+          benchPlayers.push(player);
+        }
+      }
+    }
+
+    console.log(`Format 1: ${startingPlayers.length} starting players, ${benchPlayers.length} bench players`);
+
+    // Build result with starting team (slots 0-12) and bench (slots 13-20)
+    const result = [];
+    const STARTING_TEAM_SLOTS = 13; // HOK + 3xMID + 2xEDG + 2xHLF + 2xCTR + 3xWFB
+
+    // Fill starting team slots (0-12)
+    for (let slotIndex = 0; slotIndex < STARTING_TEAM_SLOTS; slotIndex++) {
+      const position = getPositionForSlot(slotIndex);
+
+      if (slotIndex < startingPlayers.length && startingPlayers[slotIndex].name) {
+        result.push({
+          ...startingPlayers[slotIndex],
+          positions: [position],
+          isEmpty: false,
+          slotIndex: slotIndex
+        });
+      } else {
+        // Empty slot in starting team (e.g., S. Drinkwater not scanned)
+        result.push({
+          name: null,
+          positions: [position],
+          price: null,
+          isEmpty: true,
+          slotIndex: slotIndex
+        });
+      }
+    }
+
+    // Fill bench/emergency slots (13-20)
+    for (let slotIndex = STARTING_TEAM_SLOTS; slotIndex < TOTAL_EXPECTED_PLAYERS; slotIndex++) {
+      const position = getPositionForSlot(slotIndex);
+      const benchIndex = slotIndex - STARTING_TEAM_SLOTS;
+
+      if (benchIndex < benchPlayers.length && benchPlayers[benchIndex].name) {
+        result.push({
+          ...benchPlayers[benchIndex],
+          positions: [position],
+          isEmpty: false,
+          slotIndex: slotIndex
+        });
+      } else {
+        // Empty bench slot
+        result.push({
+          name: null,
+          positions: [position],
+          price: null,
+          isEmpty: true,
+          slotIndex: slotIndex
+        });
+      }
+    }
+
+    console.log('Format 1 multi-screenshot: Assigned players respecting screenshot boundaries:',
+      result.map(p => p.isEmpty ? `EMPTY: ${p.positions[0]}` : `${p.name}: ${p.positions[0]}`));
+
+    return result;
+  };
+
+  // Ensure we have 21 slots, assigning players in extraction order
+  // The position for each slot is determined by the slot index, not the player's detected position
+  const ensureFullTeamSlots = (players) => {
+    const result = [];
+
+    // Assign valid players to slots 0-N in extraction order
+    for (let slotIndex = 0; slotIndex < TOTAL_EXPECTED_PLAYERS; slotIndex++) {
+      const position = getPositionForSlot(slotIndex);
+
+      if (slotIndex < players.length && players[slotIndex].name) {
+        // We have a valid player for this slot
+        result.push({
+          ...players[slotIndex],
+          positions: [position], // Override with slot's position
+          isEmpty: false,
+          slotIndex: slotIndex
+        });
+      } else {
+        // Empty slot - no valid player for this position
+        result.push({
+          name: null,
+          positions: [position],
+          price: null,
+          isEmpty: true,
+          slotIndex: slotIndex
+        });
+      }
+    }
+
+    console.log('Format 1: Ensured full team slots:',
+      result.map(p => p.isEmpty ? `EMPTY: ${p.positions[0]}` : `${p.name}: ${p.positions[0]}`));
+    return result;
   };
 
   const handleFiles = useCallback(async (files) => {
@@ -424,14 +646,12 @@ function ImageUpload({
 
       const allData = [...screenshotData, ...newScreenshotData];
       let mergedPlayers = mergeAndOrderPlayers(allData);
-      
+
       console.log('Final merged players (before validation):', mergedPlayers);
-      
-      // Validate extracted players against the database to filter out false positives
-      // (e.g., "D. Arkhorseo" from team name, "S. Core" from "SCORE", "V. Erall" from "OVERALL")
+
+      // Validate BEFORE assigning to slots
       let currentValidList = validPlayerList;
-      
-      // If validation list isn't loaded yet, try to fetch it now
+
       if (currentValidList.length === 0) {
         console.log('Validation list not loaded yet, fetching now...');
         try {
@@ -441,33 +661,79 @@ function ImageUpload({
           console.warn('Failed to fetch validation list:', err);
         }
       }
-      
+
+      // Validate players IN PLACE while preserving slot structure
+      let playersInSlots = mergedPlayers; // Start with the properly structured slots from mergeAndOrderPlayers
+
       if (currentValidList.length > 0) {
-        console.log(`Validating ${mergedPlayers.length} players against ${currentValidList.length} known players...`);
-        const validatedPlayers = validateExtractedPlayers(mergedPlayers, currentValidList);
-        const rejectedCount = mergedPlayers.length - validatedPlayers.length;
+        // Validate non-empty players but keep them in their assigned slots
+        const actualPlayers = mergedPlayers.filter(p => !p.isEmpty && p.name);
+
+        console.log(`Validating ${actualPlayers.length} players against ${currentValidList.length} known players...`);
+        const validatedPlayers = validateExtractedPlayers(actualPlayers, currentValidList);
+        const rejectedCount = actualPlayers.length - validatedPlayers.length;
         console.log(`OCR validation: ${validatedPlayers.length} valid, ${rejectedCount} rejected`);
+
         if (rejectedCount > 0) {
-          const rejectedNames = mergedPlayers
+          const rejectedNames = actualPlayers
             .filter(p => !validatedPlayers.some(v => v.name === p.name))
             .map(p => p.name);
-          console.log('Rejected as false positives:', rejectedNames);
+          console.log('Rejected as false positives (converted to empty slots):', rejectedNames);
         }
-        mergedPlayers = validatedPlayers;
+
+        // Update players in place - keep slot structure intact
+        playersInSlots = mergedPlayers.map(slot => {
+          if (slot.isEmpty) {
+            // Keep empty slots as-is
+            return slot;
+          }
+
+          // Check if this player was validated
+          const validated = validatedPlayers.find(vp =>
+            vp.name === slot.name ||
+            (vp.fullName && slot.name && vp.fullName.toLowerCase().includes(slot.name.split('. ')[1]?.toLowerCase()))
+          );
+
+          if (validated) {
+            // Player is valid - update with validated data
+            return {
+              ...slot,
+              name: validated.name,
+              fullName: validated.fullName,
+              isEmpty: false
+            };
+          } else {
+            // Player was rejected - convert to empty slot but keep position
+            return {
+              ...slot,
+              name: null,
+              price: null,
+              isEmpty: true,
+              originalFailedName: slot.name // Keep track for debugging
+            };
+          }
+        });
       } else {
         console.warn('⚠️ Player validation list not available - cannot filter false positives');
+        // Keep the slot structure as-is
+        playersInSlots = mergedPlayers;
       }
-      
-      console.log('Final merged players (after validation):', mergedPlayers);
-      
-      const hasMissingPrices = mergedPlayers.some(p => !p.price || p.price === 0);
-      
-      let finalPlayers = mergedPlayers;
-      if (hasMissingPrices) {
-        console.log('Format 2 detected: Looking up player prices from database...');
+
+      console.log('Players in slots after validation:', playersInSlots);
+
+      // Only look up prices for non-empty slots
+      const nonEmptyPlayers = playersInSlots.filter(p => !p.isEmpty && p.name);
+      const hasMissingPrices = nonEmptyPlayers.some(p => !p.price || p.price === 0);
+
+      let finalPlayers = playersInSlots;
+      if (hasMissingPrices && nonEmptyPlayers.length > 0) {
+        console.log('Looking up player prices from database...');
         try {
-          const playersWithPrices = await lookupPlayerPrices(mergedPlayers);
-          finalPlayers = mergedPlayers.map(player => {
+          const playersWithPrices = await lookupPlayerPrices(nonEmptyPlayers);
+          finalPlayers = playersInSlots.map(player => {
+            if (player.isEmpty || !player.name) {
+              return player; // Keep empty slots as-is
+            }
             const lookedUp = playersWithPrices.find(p => p.name === player.name);
             return lookedUp ? { ...player, price: lookedUp.price } : player;
           });
@@ -567,6 +833,104 @@ function ImageUpload({
       if (newIndex < 0 || newIndex >= newList.length) return prev;
       [newList[index], newList[newIndex]] = [newList[newIndex], newList[index]];
       return newList;
+    });
+  };
+
+  // Autocomplete functions for empty slots
+  const filterPlayerSuggestions = (searchText) => {
+    if (!searchText || searchText.length < 2 || validPlayerList.length === 0) {
+      return [];
+    }
+    
+    const normalizedSearch = searchText.toLowerCase().trim();
+    
+    // Filter players whose surname or abbreviated name matches
+    const matches = validPlayerList.filter(player => {
+      const surname = player.surname?.toLowerCase() || '';
+      const abbr = player.abbreviatedName?.toLowerCase() || '';
+      const fullName = player.fullName?.toLowerCase() || '';
+      
+      return surname.startsWith(normalizedSearch) || 
+             abbr.includes(normalizedSearch) ||
+             fullName.includes(normalizedSearch);
+    });
+    
+    // Sort by best match (surname starts with search first)
+    matches.sort((a, b) => {
+      const aStartsWith = a.surname?.toLowerCase().startsWith(normalizedSearch) ? 0 : 1;
+      const bStartsWith = b.surname?.toLowerCase().startsWith(normalizedSearch) ? 0 : 1;
+      return aStartsWith - bStartsWith;
+    });
+    
+    return matches.slice(0, 8); // Limit to 8 suggestions
+  };
+
+  const handleAutocompleteInputChange = (e, slotIndex) => {
+    const searchText = e.target.value;
+    const suggestions = filterPlayerSuggestions(searchText);
+    
+    setAutocompleteState({
+      activeSlot: slotIndex,
+      searchText: searchText,
+      suggestions: suggestions
+    });
+  };
+
+  const handleStartEditing = (slotIndex) => {
+    setAutocompleteState({
+      activeSlot: slotIndex,
+      searchText: '',
+      suggestions: []
+    });
+    // Focus the input after state update
+    setTimeout(() => {
+      autocompleteInputRef.current?.focus();
+    }, 50);
+  };
+
+  const handleSelectSuggestion = async (player, slotIndex) => {
+    // Update the player at this slot with the selected player
+    const newPlayer = {
+      name: player.abbreviatedName,
+      fullName: player.fullName,
+      positions: [], // Will be set from slot
+      isEmpty: false
+    };
+    
+    // Look up the player's price from database
+    try {
+      const playersWithPrices = await lookupPlayerPrices([{ name: player.abbreviatedName }]);
+      if (playersWithPrices && playersWithPrices.length > 0 && playersWithPrices[0].price) {
+        newPlayer.price = playersWithPrices[0].price;
+      }
+    } catch (err) {
+      console.error('Failed to look up price for selected player:', err);
+    }
+    
+    setExtractedPlayers(prev => {
+      const updated = [...prev];
+      const slot = updated[slotIndex];
+      updated[slotIndex] = {
+        ...slot,
+        ...newPlayer,
+        positions: slot.positions, // Keep the slot's position
+      };
+      return updated;
+    });
+    
+    // Clear autocomplete state
+    setAutocompleteState({
+      activeSlot: null,
+      searchText: '',
+      suggestions: []
+    });
+  };
+
+  const handleCancelAutocomplete = () => {
+    setAutocompleteState({
+      activeSlot: null,
+      searchText: '',
+      suggestions: []
     });
   };
 
@@ -754,20 +1118,96 @@ function ImageUpload({
               <ul className="space-y-2 p-4">
                 {extractedPlayers.map((player, index) => (
                   <li
-                    key={index}
-                    className="flex items-center p-3 bg-primary/5 rounded-lg transition-colors hover:bg-primary/10 group"
+                    key={`slot-${index}-${player.name || 'empty'}-${player.isEmpty}`}  // More unique key
+                    className={cn(
+                      "flex items-center p-3 rounded-lg transition-colors group",
+                      player.isEmpty 
+                        ? "bg-amber-500/10 border border-dashed border-amber-500/40" 
+                        : "bg-primary/5 hover:bg-primary/10"
+                    )}
                   >
-                    <Badge className="w-7 h-7 rounded-lg flex items-center justify-center mr-3 shrink-0 text-xs">
+                    <Badge className={cn(
+                      "w-7 h-7 rounded-lg flex items-center justify-center mr-3 shrink-0 text-xs",
+                      player.isEmpty && "bg-amber-500/20 text-amber-400"
+                    )}>
                       {index + 1}
                     </Badge>
-                    <span className="text-primary text-xs font-bold min-w-[50px] text-center mr-3 shrink-0">
+                    <span className={cn(
+                      "text-xs font-bold min-w-[50px] text-center mr-3 shrink-0",
+                      player.isEmpty ? "text-amber-400" : "text-primary"
+                    )}>
                       {player.positions && player.positions.length > 0
                         ? player.positions.join(', ')
                         : '—'}
                     </span>
-                    <span className="text-foreground font-medium flex-1">
-                      {player.name}
-                    </span>
+                    
+                    {/* Empty slot with autocomplete */}
+                    {player.isEmpty ? (
+                      <div className="flex-1 relative">
+                        {autocompleteState.activeSlot === index ? (
+                          <div className="relative">
+                            <Input
+                              ref={autocompleteInputRef}
+                              type="text"
+                              value={autocompleteState.searchText}
+                              onChange={(e) => handleAutocompleteInputChange(e, index)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') handleCancelAutocomplete();
+                                if (e.key === 'Enter' && autocompleteState.suggestions.length > 0) {
+                                  e.preventDefault();
+                                  handleSelectSuggestion(autocompleteState.suggestions[0], index);
+                                }
+                              }}
+                              onBlur={() => {
+                                // Delay to allow click on suggestion
+                                setTimeout(() => {
+                                  if (autocompleteState.activeSlot === index) {
+                                    handleCancelAutocomplete();
+                                  }
+                                }, 200);
+                              }}
+                              placeholder="Type player name..."
+                              className="h-8 text-sm bg-background/50"
+                              autoFocus
+                            />
+                            {/* Suggestions dropdown */}
+                            {autocompleteState.suggestions.length > 0 && (
+                              <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-primary/30 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                                {autocompleteState.suggestions.map((suggestion, sIdx) => (
+                                  <button
+                                    key={sIdx}
+                                    type="button"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors flex justify-between items-center"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      handleSelectSuggestion(suggestion, index);
+                                    }}
+                                  >
+                                    <span className="text-foreground">{suggestion.abbreviatedName}</span>
+                                    <span className="text-muted-foreground text-xs">{suggestion.fullName}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleStartEditing(index); }}
+                            className="w-full text-left px-2 py-1 text-amber-400 text-sm italic hover:bg-amber-500/20 rounded transition-colors"
+                          >
+                            {player.originalFailedName 
+                              ? `Click to fix: "${player.originalFailedName}"`
+                              : 'Click to add player...'}
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-foreground font-medium flex-1">
+                        {player.name}
+                      </span>
+                    )}
+                    
                     <div className="flex gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
                       <Button
                         variant="ghost"
@@ -808,10 +1248,15 @@ function ImageUpload({
               💡 Use arrows to reorder, ✕ to remove incorrect entries
             </p>
             
-            <Button 
+            <Button
               className="btn-confirm-team w-full mt-6 h-12 text-base uppercase tracking-wide"
               onClick={() => {
-                onPlayersExtracted?.(extractedPlayers, true);
+                // Filter out empty slots AND any null/undefined entries
+                const filledPlayers = extractedPlayers.filter(p =>
+                  !p.isEmpty && p.name && p.name !== null && p.name !== undefined
+                );
+                console.log('Sending to backend:', filledPlayers);
+                onPlayersExtracted?.(filledPlayers, true);
                 if (isTourActive && currentTourStep === 1 && onTourNext) {
                   setTimeout(() => {
                     onTourNext();
