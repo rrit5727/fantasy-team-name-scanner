@@ -34,5 +34,5 @@ echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-PYTHONPATH="$PWD/fantasy_trade_calculator_deployment:$PYTHONPATH" python -m fantasy_trade_calculator_deployment.app
+PYTHONPATH="$PWD:$PWD/fantasy_trade_calculator_deployment:$PYTHONPATH" python -m fantasy_trade_calculator_deployment.app
 

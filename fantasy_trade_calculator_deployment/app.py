@@ -1,8 +1,16 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_caching import Cache
 from flask_cors import CORS
-from nrl_trade_calculator import calculate_trade_options, load_data, is_player_locked
-from trade_recommendations import calculate_combined_trade_recommendations
+
+# Handle imports for both local development and Heroku deployment
+try:
+    # Try relative imports first (for Heroku deployment)
+    from .nrl_trade_calculator import calculate_trade_options, load_data, is_player_locked
+    from .trade_recommendations import calculate_combined_trade_recommendations
+except ImportError:
+    # Fall back to absolute imports (for local development)
+    from nrl_trade_calculator import calculate_trade_options, load_data, is_player_locked
+    from trade_recommendations import calculate_combined_trade_recommendations
 from typing import List, Dict, Any
 import traceback
 import pandas as pd
@@ -508,7 +516,10 @@ def check_injured_players():
     Returns a list of injured player names for display purposes.
     """
     try:
-        from trade_recommendations import identify_injured_players
+        try:
+            from .trade_recommendations import identify_injured_players
+        except ImportError:
+            from trade_recommendations import identify_injured_players
         
         # Extract JSON data
         data = request.get_json()
@@ -542,7 +553,10 @@ def lookup_player_prices():
     Used for Format 2 screenshots where prices aren't visible in the OCR text.
     """
     try:
-        from trade_recommendations import fill_missing_prices
+        try:
+            from .trade_recommendations import fill_missing_prices
+        except ImportError:
+            from trade_recommendations import fill_missing_prices
         
         # Extract JSON data
         data = request.get_json()
@@ -578,11 +592,16 @@ def analyze_team_status():
     - overvalued: -7 < Diff <= -1 (moderately overvalued)
     """
     try:
-        from trade_recommendations import identify_injured_players, identify_overvalued_players_by_threshold, identify_junk_cheapies
+        try:
+            from .trade_recommendations import identify_injured_players, identify_overvalued_players_by_threshold, identify_junk_cheapies
+        except ImportError:
+            from trade_recommendations import identify_injured_players, identify_overvalued_players_by_threshold, identify_junk_cheapies
 
         # Extract JSON data
         data = request.get_json()
         team_players = data.get('team_players', [])
+
+        app.logger.info(f"analyze_team_status called with {len(team_players)} players")
 
         if not team_players:
             return jsonify({
@@ -593,7 +612,9 @@ def analyze_team_status():
             })
 
         # Load data
+        app.logger.info("Loading consolidated data...")
         consolidated_data = cached_load_data()
+        app.logger.info(f"Loaded {len(consolidated_data)} records")
 
         # Get injured players
         injured = identify_injured_players(team_players, consolidated_data)
@@ -638,7 +659,10 @@ def analyze_team_status():
             else:
                 # Strategy 2: Try to expand abbreviated name using existing function
                 try:
-                    from nrl_trade_calculator import match_abbreviated_name_to_full
+                    try:
+                        from .nrl_trade_calculator import match_abbreviated_name_to_full
+                    except ImportError:
+                        from nrl_trade_calculator import match_abbreviated_name_to_full
                     full_name = match_abbreviated_name_to_full(team_player['name'], consolidated_data)
                     if full_name != team_player['name']:
                         app.logger.info(f"Expanded '{team_player['name']}' to '{full_name}'")
@@ -721,7 +745,10 @@ def calculate_preseason_trade_ins():
     """
     try:
         # Import the function
-        from trade_recommendations import calculate_preseason_trade_in_candidates
+        try:
+            from .trade_recommendations import calculate_preseason_trade_in_candidates
+        except ImportError:
+            from trade_recommendations import calculate_preseason_trade_in_candidates
         
         # Extract JSON data
         data = request.get_json()

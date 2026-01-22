@@ -1,7 +1,7 @@
 import pandas as pd
 from typing import List, Dict, Tuple
-from nrl_trade_calculator import calculate_trade_options, match_abbreviated_name_to_full
-from bye_analyser import apply_bye_weighting
+from .nrl_trade_calculator import calculate_trade_options, match_abbreviated_name_to_full
+from .bye_analyser import apply_bye_weighting
 
 
 def fill_missing_prices(team_players: List[Dict], consolidated_data: pd.DataFrame) -> List[Dict]:
