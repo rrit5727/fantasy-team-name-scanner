@@ -1,0 +1,1 @@
+web: gunicorn fantasy_trade_calculator_deployment.app:app
