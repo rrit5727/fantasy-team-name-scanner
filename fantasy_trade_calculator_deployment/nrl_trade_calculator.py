@@ -6,7 +6,7 @@ from datetime import datetime
 from sqlalchemy import create_engine, text
 import os
 from dotenv import load_dotenv
-from bye_analyser import apply_bye_weighting
+from .bye_analyser import apply_bye_weighting
 
 @dataclass
 class Player:
