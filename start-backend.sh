@@ -24,18 +24,15 @@ if [ ! -f ".env" ]; then
     exit 1
 fi
 
-# Navigate to backend directory
-cd "$BACKEND_DIR"
+# Activate virtual environment first
+source "$BACKEND_DIR/venv/bin/activate"
 
-# Activate virtual environment
-source venv/bin/activate
-
-# Start Flask server
+# Start Flask server from project root with proper PYTHONPATH
 echo "✓ Virtual environment activated"
 echo "✓ Starting Flask server on http://127.0.0.1:5002"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
 
-python app.py
+PYTHONPATH="$PWD/fantasy_trade_calculator_deployment:$PYTHONPATH" python -m fantasy_trade_calculator_deployment.app
 

@@ -1,8 +1,8 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_caching import Cache
 from flask_cors import CORS
-from .nrl_trade_calculator import calculate_trade_options, load_data, is_player_locked
-from .trade_recommendations import calculate_combined_trade_recommendations
+from nrl_trade_calculator import calculate_trade_options, load_data, is_player_locked
+from trade_recommendations import calculate_combined_trade_recommendations
 from typing import List, Dict, Any
 import traceback
 import pandas as pd
