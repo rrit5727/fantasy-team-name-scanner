@@ -1172,19 +1172,18 @@ function ImageUpload({
                             />
                             {/* Suggestions dropdown */}
                             {autocompleteState.suggestions.length > 0 && (
-                              <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-primary/30 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+                              <div className="absolute top-full left-0 w-[200%] mt-1 bg-card border border-primary/30 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
                                 {autocompleteState.suggestions.map((suggestion, sIdx) => (
                                   <button
                                     key={sIdx}
                                     type="button"
-                                    className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors flex justify-between items-center"
+                                    className="w-full text-left px-3 py-2 text-sm hover:bg-primary/10 transition-colors"
                                     onMouseDown={(e) => {
                                       e.preventDefault();
                                       handleSelectSuggestion(suggestion, index);
                                     }}
                                   >
                                     <span className="text-foreground">{suggestion.abbreviatedName}</span>
-                                    <span className="text-muted-foreground text-xs">{suggestion.fullName}</span>
                                   </button>
                                 ))}
                               </div>
