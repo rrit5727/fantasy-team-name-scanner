@@ -526,7 +526,20 @@ export function validateExtractedPlayers(extractedPlayers, validPlayers) {
   for (const player of extractedPlayers) {
     // Pass position info for disambiguation when multiple players have the same surname
     const match = validatePlayerName(player.name, validPlayers, player.positions || []);
-    
+
+    // Debug specific names mentioned by user
+    if (player.name.includes("Fa'asuamaleaui") || player.name.includes("Keeley")) {
+      console.log(`🔍 Debugging ${player.name}:`, {
+        extractedName: player.name,
+        match: match ? {
+          abbreviatedName: match.abbreviatedName,
+          fullName: match.fullName,
+          matchType: match.matchType
+        } : null,
+        positions: player.positions
+      });
+    }
+
     if (match) {
       validatedPlayers.push({
         ...player,

@@ -258,28 +258,29 @@ function ImageUpload({
     const players = [];
     
     const namePatterns = [
-      /([A-Z])\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /([A-Z])\.([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /([A-Z])\)\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /([A-Z])\)\s+([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /\)\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /\|\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /1\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /([a-z])\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /[^A-Za-z]([A-Z])\.\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /©\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /\+\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /&\s+([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /\*\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /(?:^|[^A-Za-z])([A-Z])\s+([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)(?=[^a-z]|$)/g,
-      /[«»]\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /[•●○]\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /[\d<>]\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /([KkDdTtBbVv])[\.\s]+([A-Z][a-zA-Z]{3,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /O([A-Z])[\.\s]*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /Q([a-z])[\.\s]*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /@\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
-      /®\s*([A-Z])\.?\s*([A-Z][a-zA-Z]{2,}(?:-[A-Z][a-zA-Z]+)*)/g,
+      /([A-Z])\.\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /([A-Z])\.([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /([A-Z])\)\.\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /([A-Z])\)\s+([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /\)\.\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /\|\.\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /1\.\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /([a-z])\.\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /[^A-Za-z]([A-Z])\.\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /©\s*([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /\+\s*([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /&\s+([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /\*\s*([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /(?:^|[^A-Za-z])([A-Z])\s+([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)(?=[^a-z]|$)/g,
+      /[«»]\s*([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /[•●○]\s*([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /([0-9])\.\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,  // Handle OCR misreading O as 0
+      /[\d<>]\s*([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /([KkDdTtBbVv])[\.\s]+([A-Z][a-zA-Z']{3,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /O([A-Z])[\.\s]*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /Q([a-z])[\.\s]*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /@\s*([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
+      /®\s*([A-Z])\.?\s*([A-Z][a-zA-Z']{2,}(?:-[A-Z][a-zA-Z']+)*)/g,
       // Handle OCR misreading dot as hyphen (e.g., "u-Whyte" instead of "N. Whyte")
       // Match: space/digit + single letter + hyphen + uppercase surname (not already a hyphenated name)
       /(?:^|\s|\d)([a-zA-Z])-([A-Z][a-z]{2,})(?![a-z]|-[A-Z])/g,
@@ -290,12 +291,17 @@ function ImageUpload({
     const pricePattern = /\$\s*(\d{2,3})[|lIO0o]?(\d{1,2})k/gi;
     
     const extractFromText = (sourceText, yPosition) => {
+      // Debug: Check if we're processing text containing Fa'asuamaleaui
+      if (sourceText.includes("Fa'asuamaleaui") || sourceText.includes("Faasuamaleaui")) {
+        console.log(`🔍 Processing text containing Faasuamaleaui: "${sourceText}" at y=${yPosition}`);
+      }
+
       for (const pattern of namePatterns) {
         pattern.lastIndex = 0;
         let match;
         while ((match = pattern.exec(sourceText)) !== null) {
           let initial, surname;
-          
+
           if (match[2]) {
             initial = (match[1] || '').toUpperCase();
             surname = match[2];
@@ -370,6 +376,11 @@ function ImageUpload({
           // - Suspicious initials alone → let through, trust database validation
 
           const fullName = `${initial}. ${finalSurname}`;
+
+          // Debug: Log when we extract Fa'asuamaleaui
+          if (fullName.includes("Fa'asuamaleaui") || fullName.includes("Faasuamaleaui")) {
+            console.log(`🔍 Extracted Faasuamaleaui: "${fullName}" from text at y=${yPosition}`);
+          }
 
           // FOOTER FILTER: Exclude UI legend text (y > 1200 for typical screenshots)
           // Footer contains text like "Player has been selected", "Trade player"
@@ -790,6 +801,17 @@ function ImageUpload({
             vp.name === slot.name ||
             (vp.fullName && slot.name && vp.fullName.toLowerCase().includes(slot.name.split('. ')[1]?.toLowerCase()))
           );
+
+          // Debug specific names mentioned by user
+          if (slot.name && (slot.name.includes("Fa'asuamaleaui") || slot.name.includes("Keeley"))) {
+            console.log(`🔍 Slot matching for ${slot.name}:`, {
+              slotName: slot.name,
+              validatedFound: !!validated,
+              validatedName: validated?.name,
+              validatedFullName: validated?.fullName,
+              matchType: validated?.matchType
+            });
+          }
 
           if (validated) {
             // Player is valid - update with validated data (but we'll do this in a separate step)
