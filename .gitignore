@@ -37,3 +37,4 @@ env/
 *.njsproj
 *.sln
 *.sw?
+node_modules/
