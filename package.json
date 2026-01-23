@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "heroku-postbuild": "npm run build",
     "setup": "chmod +x setup-backend.sh start-backend.sh verify-setup.sh && echo '✓ Scripts are now executable. Run ./setup-backend.sh to set up the backend.'",
     "verify": "chmod +x verify-setup.sh && ./verify-setup.sh"
   },
