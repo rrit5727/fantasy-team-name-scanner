@@ -183,6 +183,65 @@ function ImageUpload({
     return result;
   };
 
+  /**
+   * Check if text at given coordinates appears on a green background
+   * Used to filter out user account names which appear on cyan/green header
+   * @param {File} imageFile - The image file being processed
+   * @param {Object} bbox - Bounding box from Tesseract {x0, y0, x1, y1}
+   * @returns {Promise<boolean>} - True if background is predominantly green
+   */
+  const hasGreenBackground = async (imageFile, bbox) => {
+    return new Promise((resolve) => {
+      try {
+        const img = new Image();
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+
+          // Sample points around the text bounding box
+          const samplePoints = [
+            { x: bbox.x0 - 10, y: bbox.y0 - 10 }, // Top-left
+            { x: bbox.x1 + 10, y: bbox.y0 - 10 }, // Top-right
+            { x: bbox.x0 - 10, y: bbox.y1 + 10 }, // Bottom-left
+            { x: (bbox.x0 + bbox.x1) / 2, y: bbox.y0 - 15 }, // Top-center
+          ];
+
+          let greenPixelCount = 0;
+          let totalSampled = 0;
+
+          samplePoints.forEach(point => {
+            if (point.x >= 0 && point.x < img.width && point.y >= 0 && point.y < img.height) {
+              const pixel = ctx.getImageData(point.x, point.y, 1, 1).data;
+              const [r, g, b] = pixel;
+
+              // Detect cyan/green background (high green, low red, variable blue)
+              // Green header has RGB approximately (0-100, 200-255, 150-255)
+              const isGreenish = g > 180 && r < 120 && (g - r) > 80;
+
+              if (isGreenish) greenPixelCount++;
+              totalSampled++;
+            }
+          });
+
+          // If majority of sampled points are green, text is on green background
+          const isGreen = totalSampled > 0 && (greenPixelCount / totalSampled) >= 0.5;
+          resolve(isGreen);
+        };
+
+        img.onerror = () => resolve(false);
+        img.src = URL.createObjectURL(imageFile);
+
+      } catch (err) {
+        console.error('Error checking background color:', err);
+        resolve(false); // Fail safe - don't filter on error
+      }
+    });
+  };
+
   // Helper function to get position for a given slot index
   const getPositionForSlot = (slotIndex) => {
     let currentIndex = 0;
@@ -280,8 +339,14 @@ function ImageUpload({
               // ADD THESE (OCR misreads of position markers):
               'imid', 'iedg', 'ihlf', 'ihok', 'iwfb', 'ictr', 'iint', 'iemg',
               'lmid', 'ledg', 'lhlf', 'lhok', 'lwfb', 'lctr', 'lint', 'lemg',
-              // ADD THESE (OCR artifacts from price patterns):
-              'ik', 'kl', 'klsl', 'kls'
+              // ADD THESE NEW EXCLUSIONS for position marker variants:
+              'dgi', 'edgi', 'midi', 'hlfi', 'ctri', 'wfbi', 'inti', 'emgi',  // OCR reads 'I' at end
+              'ledgi', 'lmidi', 'lhlfi', 'lctri', 'lwfbi', 'linti', 'lemgi',  // 'l' variants with 'i'
+              'iedgi', 'imidi', 'ihlfi', 'ictri', 'iwfbi', 'iinti', 'iemgi',  // 'i' variants with 'i'
+              // ADD THESE (UI legend keywords that might be parsed as surnames):
+              'player', 'trade', 'captain', 'selected', 'injured', 'suspended',
+              'emergency', 'favourite', 'favorite', 'uncertain', 'swap', 'remove',
+              'vice', 'sub'
           ].includes(lowerSurname)) {
             continue;
           }
@@ -305,7 +370,15 @@ function ImageUpload({
           // - Suspicious initials alone → let through, trust database validation
 
           const fullName = `${initial}. ${finalSurname}`;
-          
+
+          // FOOTER FILTER: Exclude UI legend text (y > 1200 for typical screenshots)
+          // Footer contains text like "Player has been selected", "Trade player"
+          const isInFooterRegion = yPosition > 1200;
+          if (isInFooterRegion) {
+            console.log(`📍 Rejected "${fullName}" - footer region (y=${yPosition})`);
+            continue; // Skip this match
+          }
+
           const afterName = sourceText.substring(match.index, match.index + 150);
           positionPattern.lastIndex = 0;
           const posMatch = positionPattern.exec(afterName);
@@ -314,7 +387,7 @@ function ImageUpload({
             if (posMatch[1]) positions.push(posMatch[1].toUpperCase());
             if (posMatch[2]) positions.push(posMatch[2].toUpperCase());
           }
-          
+
           pricePattern.lastIndex = 0;
           const priceMatch = pricePattern.exec(afterName);
           let price = null;
@@ -323,7 +396,7 @@ function ImageUpload({
             const tens = priceMatch[2];
             price = parseInt(hundreds + tens) * 1000;
           }
-          
+
           players.push({
             name: fullName,
             positions: positions,
@@ -413,10 +486,32 @@ function ImageUpload({
       setRawText(prev => prev + '\n---IMAGE ' + (imageIndex + 1) + '---\n' + result.data.text);
       
       const format = detectScreenshotFormat(result.data.text);
-      const players = extractPlayerNamesFromText(result.data.text, result.data.lines);
-      console.log('Extracted players:', players);
-      
-      return { players, rawText: result.data.text, format };
+      let players = extractPlayerNamesFromText(result.data.text, result.data.lines);
+      console.log('Extracted players (before green filter):', players);
+
+      // Filter out players on green backgrounds (account names)
+      const filteredPlayers = [];
+      for (const player of players) {
+        // Find the line that contains this player's name (only if lines data is available)
+        if (result.data.lines && result.data.lines.length > 0) {
+          const matchingLine = result.data.lines.find(line =>
+            line.text && line.text.includes(player.name)
+          );
+
+          if (matchingLine && matchingLine.bbox) {
+            const hasGreen = await hasGreenBackground(file, matchingLine.bbox);
+            if (hasGreen) {
+              console.log(`🟢 Rejected "${player.name}" - green background (account name)`);
+              continue; // Skip this player
+            }
+          }
+        }
+
+        filteredPlayers.push(player);
+      }
+      console.log('Extracted players (after green filter):', filteredPlayers);
+
+      return { players: filteredPlayers, rawText: result.data.text, format, imageFile: file };
     } catch (err) {
       console.error('OCR Error:', err);
       throw err;
@@ -678,14 +773,16 @@ function ImageUpload({
           const rejectedNames = actualPlayers
             .filter(p => !validatedPlayers.some(v => v.name === p.name))
             .map(p => p.name);
-          console.log('Rejected as false positives (converted to empty slots):', rejectedNames);
+          console.log(`✅ Database validation rejected ${rejectedCount} false positives:`, rejectedNames);
+          console.log('   ℹ️  These false positives have been completely removed from the player list.');
+          console.log('   💡 Consider adding to surname blacklist if recurring:', rejectedNames.map(n => n.split('. ')[1]?.toLowerCase()));
         }
 
-        // Update players in place - keep slot structure intact
-        playersInSlots = mergedPlayers.map(slot => {
+        // Filter out rejected players completely - don't show them as empty slots
+        playersInSlots = mergedPlayers.filter(slot => {
           if (slot.isEmpty) {
-            // Keep empty slots as-is
-            return slot;
+            // Keep legitimate empty slots (where no player was detected)
+            return true;
           }
 
           // Check if this player was validated
@@ -695,23 +792,30 @@ function ImageUpload({
           );
 
           if (validated) {
-            // Player is valid - update with validated data
-            return {
-              ...slot,
-              name: validated.name,
-              fullName: validated.fullName,
-              isEmpty: false
-            };
+            // Player is valid - update with validated data (but we'll do this in a separate step)
+            return true;
           } else {
-            // Player was rejected - convert to empty slot but keep position
-            return {
-              ...slot,
-              name: null,
-              price: null,
-              isEmpty: true,
-              originalFailedName: slot.name // Keep track for debugging
-            };
+            // Player was rejected by database validation - completely remove from list
+            console.log(`🗑️ Completely removed false positive: "${slot.name}"`);
+            return false;
           }
+        }).map(slot => {
+          if (slot.isEmpty) {
+            return slot;
+          }
+
+          // Update valid players with validated data
+          const validated = validatedPlayers.find(vp =>
+            vp.name === slot.name ||
+            (vp.fullName && slot.name && vp.fullName.toLowerCase().includes(slot.name.split('. ')[1]?.toLowerCase()))
+          );
+
+          return {
+            ...slot,
+            name: validated.name,
+            fullName: validated.fullName,
+            isEmpty: false
+          };
         });
       } else {
         console.warn('⚠️ Player validation list not available - cannot filter false positives');
