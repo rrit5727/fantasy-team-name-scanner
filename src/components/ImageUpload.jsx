@@ -183,6 +183,7 @@ function ImageUpload({
     return result;
   };
 
+  // Force rebuild trigger
   /**
    * Check if text at given coordinates appears on a green background
    * Used to filter out user account names which appear on cyan/green header
