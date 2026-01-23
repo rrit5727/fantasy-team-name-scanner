@@ -31,9 +31,9 @@ app = Flask(__name__, static_folder='static', static_url_path='/static')
 CORS(app, resources={
     r"/*": {
         "origins": [
-            "http://localhost:5173", 
-            "http://127.0.0.1:5173", 
-            "http://localhost:5174", 
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5174",
             "http://127.0.0.1:5174",
             "https://fantasytradecalc.com",
             "https://www.fantasytradecalc.com",
@@ -43,6 +43,16 @@ CORS(app, resources={
         "allow_headers": ["Content-Type"]
     }
 })
+
+# Add cache-busting headers for static assets to prevent serving stale JavaScript
+@app.after_request
+def add_header(response):
+    """Add headers to prevent caching during development"""
+    if 'Cache-Control' not in response.headers:
+        response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '-1'
+    return response
 
 # Configure cache
 cache = Cache(config={'CACHE_TYPE': 'SimpleCache'})

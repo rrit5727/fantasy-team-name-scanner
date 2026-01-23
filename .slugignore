@@ -1,0 +1,48 @@
+# .slugignore - Files to exclude from Heroku deployment
+# This reduces slug size and deployment time
+
+# Source files (not needed in production)
+src/
+
+*.jsx
+*.tsx
+
+# Development dependencies
+node_modules/
+
+# Test files
+tests/
+test/
+*.test.js
+*.spec.js
+
+# Documentation
+README.md
+CONTRIBUTING.md
+docs/
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Scripts (keep only what's needed)
+setup-backend.sh
+start-backend.sh
+verify-setup.sh
+
+# Config files for local dev
+.env.local
+.env.*.local
+vite.config.js
+tsconfig.json
