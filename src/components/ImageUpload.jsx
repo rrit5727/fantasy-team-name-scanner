@@ -119,14 +119,72 @@ function ImageUpload({
     return 'unknown';
   };
 
+  // Known dopplegangers - players with same initial + surname but different positions
+  // Format: { "abbreviated_name": [{ fullName, positions }, { fullName, positions }] }
+  // These are hardcoded to handle ambiguous lookups based on slot requirements
+  const KNOWN_DOPPLEGANGERS = {
+    'b. smith': [
+      { fullName: 'Brandon Smith', positions: ['HOK', 'MID'] },
+      { fullName: 'Billy Smith', positions: ['CTR'] }
+    ],
+    'b. burns': [
+      { fullName: 'Braidon Burns', positions: ['WFB'] },
+      { fullName: 'Billy Burns', positions: ['EDG'] }
+    ],
+    't. may': [
+      { fullName: 'Terrell May', positions: ['MID'] },
+      { fullName: 'Taylan May', positions: ['CTR'] }
+    ],
+    'j. paulo': [
+      { fullName: 'Junior Paulo', positions: ['MID'] },
+      { fullName: 'Jaxson Paulo', positions: ['WFB'] }
+    ],
+    'j. papalii': [
+      { fullName: 'Josh Papalii', positions: ['MID'] },
+      { fullName: 'Joash Papalii', positions: ['WFB'] }
+    ],
+    's. fainu': [
+      { fullName: 'Samuela Fainu', positions: ['EDG'] },
+      { fullName: 'Sione Fainu', positions: ['MID'] }
+    ],
+    'm. feagai': [
+      { fullName: 'Mathew Feagai', positions: ['WFB'] },
+      { fullName: 'Max Feagai', positions: ['CTR'] }
+    ],
+    'j. walsh': [
+      { fullName: 'Joey Walsh', positions: ['HLF'] },
+      { fullName: 'James Walsh', positions: ['EDG'] }
+    ]
+  };
+
   // Helper to get player's actual positions from validation list
-  // IMPORTANT: Prioritize exact abbreviated name match to avoid matching wrong player with same surname
-  const getPlayerPositions = (playerName, validationList) => {
+  // IMPORTANT: Handles dopplegangers by choosing the player whose position fits the target slot
+  // @param slotIndex - optional slot index to disambiguate dopplegangers
+  const getPlayerPositions = (playerName, validationList, slotIndex = null) => {
     if (!playerName || !validationList || validationList.length === 0) return null;
     
     const normalizedName = playerName.toLowerCase().trim();
     
-    // FIRST: Try exact abbreviated name match (highest priority)
+    // CHECK FOR DOPPLEGANGERS FIRST - if this is a known doppleganger name
+    const dopplegangers = KNOWN_DOPPLEGANGERS[normalizedName];
+    if (dopplegangers && slotIndex !== null) {
+      const slotPositions = SLOT_POSITION_RULES[slotIndex];
+      if (slotPositions) {
+        // Find which doppleganger fits this slot
+        for (const doppleganger of dopplegangers) {
+          const fits = doppleganger.positions.some(pos => slotPositions.includes(pos));
+          if (fits) {
+            console.log(`🎭 Doppleganger disambiguation: "${playerName}" at slot ${slotIndex + 1} → ${doppleganger.fullName} [${doppleganger.positions.join('/')}]`);
+            return doppleganger.positions;
+          }
+        }
+        // No doppleganger fits - return first one's positions (will fail slot check)
+        console.log(`⚠️ Doppleganger "${playerName}" - no variant fits slot ${slotIndex + 1}, using ${dopplegangers[0].fullName}`);
+        return dopplegangers[0].positions;
+      }
+    }
+    
+    // STANDARD LOOKUP: Try exact abbreviated name match (highest priority)
     let match = validationList.find(p => 
       p.abbreviatedName?.toLowerCase() === normalizedName
     );
@@ -190,7 +248,7 @@ function ImageUpload({
       // Check if we have a player and if they fit this slot
       if (playerIndex < sorted.length && sorted[playerIndex].name) {
         const player = sorted[playerIndex];
-        const playerPositions = getPlayerPositions(player.name, validationList);
+        const playerPositions = getPlayerPositions(player.name, validationList, slotIndex);
         
         // Check if player fits this slot
         if (canPlayerFitSlot(playerPositions, slotIndex)) {
@@ -713,57 +771,65 @@ function ImageUpload({
     }
 
     // For multiple Format 1 screenshots, separate starting team from bench
-    const startingTeamScreenshots = [];
-    const benchScreenshots = [];
-
-    for (const data of allScreenshotData) {
-      const hasBenchMarker = /BENCH\s*\(\d+\/\d+\)/i.test(data.rawText);
-      if (hasBenchMarker) {
-        benchScreenshots.push(data);
-      } else {
-        startingTeamScreenshots.push(data);
-      }
-    }
-
-    console.log(`Format 1: ${startingTeamScreenshots.length} starting team screenshots, ${benchScreenshots.length} bench screenshots`);
-
+    // IMPORTANT: A screenshot with BENCH marker may contain BOTH starting team players (before BENCH)
+    // and bench players (after BENCH). We need to split by matchIndex relative to BENCH position.
+    
     // Helper function for deduplication (exact name match only, case-insensitive)
-    // NOTE: We do NOT use surname-only matching because different players can share surnames
     const isDuplicate = (name, seenNames) => {
       if (!name) return false;
-      
       const normalizedName = name.toLowerCase().trim();
       if (seenNames.has(normalizedName)) return true;
-      
       seenNames.add(normalizedName);
       return false;
     };
 
-    // Merge starting team players (deduplicate)
     const seenStartingNames = new Set();
+    const seenBenchNames = new Set();
     const startingPlayers = [];
-    for (const screenshot of startingTeamScreenshots) {
-      for (const player of screenshot.players) {
-        if (!isDuplicate(player.name, seenStartingNames)) {
-          startingPlayers.push(player);
-        } else {
-          console.log(`🔄 Format 1 starting duplicate removed: "${player.name}"`);
-        }
-      }
-    }
-
-    // Merge bench players (deduplicate) - but also check against starting players
-    const seenBenchNames = new Set(seenStartingNames); // Include starting players
     const benchPlayers = [];
-    for (const screenshot of benchScreenshots) {
-      for (const player of screenshot.players) {
-        if (!isDuplicate(player.name, seenBenchNames)) {
-          benchPlayers.push(player);
-        } else {
-          console.log(`🔄 Format 1 bench duplicate removed: "${player.name}"`);
+
+    for (const data of allScreenshotData) {
+      const benchMatch = data.rawText.match(/BENCH\s*\(\d+\/\d+\)/i);
+      
+      if (benchMatch) {
+        // This screenshot contains BENCH marker - split players by position
+        const benchPosition = benchMatch.index;
+        console.log(`Format 1: Screenshot has BENCH marker at position ${benchPosition}`);
+        
+        for (const player of data.players) {
+          // Players BEFORE BENCH marker are starting team, AFTER are bench
+          if (player.matchIndex < benchPosition) {
+            if (!isDuplicate(player.name, seenStartingNames)) {
+              startingPlayers.push(player);
+              console.log(`  → Starting team (before BENCH): ${player.name}`);
+            } else {
+              console.log(`🔄 Format 1 starting duplicate removed: "${player.name}"`);
+            }
+          } else {
+            // Check against both starting and bench players for deduplication
+            if (!seenStartingNames.has(player.name?.toLowerCase().trim()) && 
+                !isDuplicate(player.name, seenBenchNames)) {
+              benchPlayers.push(player);
+              console.log(`  → Bench (after BENCH): ${player.name}`);
+            } else {
+              console.log(`🔄 Format 1 bench duplicate removed: "${player.name}"`);
+            }
+          }
+        }
+      } else {
+        // No BENCH marker - all players go to starting team
+        for (const player of data.players) {
+          if (!isDuplicate(player.name, seenStartingNames)) {
+            startingPlayers.push(player);
+          } else {
+            console.log(`🔄 Format 1 starting duplicate removed: "${player.name}"`);
+          }
         }
       }
     }
+    
+    // Add starting names to bench seen set to prevent duplicates across categories
+    seenStartingNames.forEach(name => seenBenchNames.add(name));
 
     console.log(`Format 1: ${startingPlayers.length} starting players, ${benchPlayers.length} bench players (before position validation)`);
 
@@ -781,7 +847,7 @@ function ImageUpload({
 
       if (startingPlayerIndex < startingPlayers.length && startingPlayers[startingPlayerIndex].name) {
         const player = startingPlayers[startingPlayerIndex];
-        const playerPositions = getPlayerPositions(player.name, validationList);
+        const playerPositions = getPlayerPositions(player.name, validationList, slotIndex);
         
         // Check if player fits this slot
         if (canPlayerFitSlot(playerPositions, slotIndex)) {
@@ -833,7 +899,7 @@ function ImageUpload({
 
       if (benchPlayerIndex < benchPlayers.length && benchPlayers[benchPlayerIndex].name) {
         const player = benchPlayers[benchPlayerIndex];
-        const playerPositions = getPlayerPositions(player.name, validationList);
+        const playerPositions = getPlayerPositions(player.name, validationList, slotIndex);
         
         // Check if player fits this slot (INT/EMG slots accept any position, so this will always pass)
         if (canPlayerFitSlot(playerPositions, slotIndex)) {
@@ -960,7 +1026,30 @@ function ImageUpload({
         }
       }
 
+      // VALIDATE PLAYERS EARLY - Remove false positives BEFORE position allocation
+      // This prevents invalid names like "Tigers" from taking up slots
       const allData = [...screenshotData, ...newScreenshotData];
+      if (currentValidList.length > 0) {
+        console.log('🔍 Pre-validation: Filtering false positives from OCR before position allocation...');
+        
+        for (const screenshot of allData) {
+          const originalCount = screenshot.players.length;
+          const validatedPlayers = validateExtractedPlayers(screenshot.players, currentValidList);
+          
+          if (validatedPlayers.length < originalCount) {
+            const rejected = screenshot.players.filter(p => 
+              !validatedPlayers.some(v => v.name === p.name)
+            ).map(p => p.name);
+            console.log(`   ❌ Rejected from screenshot: ${rejected.join(', ')}`);
+          }
+          
+          // Replace screenshot's player list with validated players only
+          screenshot.players = validatedPlayers;
+        }
+        
+        console.log('✅ Pre-validation complete - proceeding with position allocation');
+      }
+
       let mergedPlayers = mergeAndOrderPlayers(allData, currentValidList);
 
       console.log('Final merged players (before validation):', mergedPlayers);
@@ -969,21 +1058,21 @@ function ImageUpload({
       let playersInSlots = mergedPlayers; // Start with the properly structured slots from mergeAndOrderPlayers
 
       if (currentValidList.length > 0) {
-        // Validate non-empty players but keep them in their assigned slots
+        // Secondary validation check (primary validation happens before position allocation)
         const actualPlayers = mergedPlayers.filter(p => !p.isEmpty && p.name);
 
-        console.log(`Validating ${actualPlayers.length} players against ${currentValidList.length} known players...`);
+        console.log(`🔍 Post-validation check: ${actualPlayers.length} players in final slots...`);
         const validatedPlayers = validateExtractedPlayers(actualPlayers, currentValidList);
         const rejectedCount = actualPlayers.length - validatedPlayers.length;
-        console.log(`OCR validation: ${validatedPlayers.length} valid, ${rejectedCount} rejected`);
 
         if (rejectedCount > 0) {
           const rejectedNames = actualPlayers
             .filter(p => !validatedPlayers.some(v => v.name === p.name))
             .map(p => p.name);
-          console.log(`✅ Database validation rejected ${rejectedCount} false positives:`, rejectedNames);
-          console.log('   ℹ️  These false positives have been completely removed from the player list.');
-          console.log('   💡 Consider adding to surname blacklist if recurring:', rejectedNames.map(n => n.split('. ')[1]?.toLowerCase()));
+          console.log(`⚠️ Post-validation found ${rejectedCount} additional false positives:`, rejectedNames);
+          console.log('   ℹ️  These slipped through pre-validation and will be removed.');
+        } else {
+          console.log('✅ All players in slots are valid');
         }
 
         // Filter out rejected players completely - don't show them as empty slots
