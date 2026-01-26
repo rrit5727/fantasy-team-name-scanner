@@ -27,6 +27,34 @@ const EXPECTED_POSITIONS = [
 ];
 const TOTAL_EXPECTED_PLAYERS = 21;
 
+// Define which positions are valid for each slot index
+// Slots 0: HOK, Slots 1-3: MID, Slots 4-5: EDG, Slots 6-7: HLF, 
+// Slots 8-9: CTR, Slots 10-12: WFB, Slots 13-16: INT (any), Slots 17-20: EMG (any)
+const SLOT_POSITION_RULES = {
+  0: ['HOK'],           // Slot 1 - HOK only
+  1: ['MID'],           // Slot 2 - MID only
+  2: ['MID'],           // Slot 3 - MID only
+  3: ['MID'],           // Slot 4 - MID only
+  4: ['EDG'],           // Slot 5 - EDG only
+  5: ['EDG'],           // Slot 6 - EDG only
+  6: ['HLF'],           // Slot 7 - HLF only
+  7: ['HLF'],           // Slot 8 - HLF only
+  8: ['CTR'],           // Slot 9 - CTR only
+  9: ['CTR'],           // Slot 10 - CTR only
+  10: ['WFB'],          // Slot 11 - WFB only
+  11: ['WFB'],          // Slot 12 - WFB only
+  12: ['WFB'],          // Slot 13 - WFB only
+  // INT and EMG slots accept any position
+  13: ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB'],  // INT slot 1
+  14: ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB'],  // INT slot 2
+  15: ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB'],  // INT slot 3
+  16: ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB'],  // INT slot 4
+  17: ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB'],  // EMG slot 1
+  18: ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB'],  // EMG slot 2
+  19: ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB'],  // EMG slot 3
+  20: ['HOK', 'MID', 'EDG', 'HLF', 'CTR', 'WFB'],  // EMG slot 4
+};
+
 function ImageUpload({ 
   onPlayersExtracted,
   isTourActive = false,
@@ -91,95 +119,120 @@ function ImageUpload({
     return 'unknown';
   };
 
-  // Assign positions to players based on Y-position ordering (for Format 2)
-  // Now preserves empty slots when players are missing
-  const assignFormat2Positions = (players) => {
-    const sorted = [...players].sort((a, b) => a.y - b.y || a.matchIndex - b.matchIndex);
+  // Helper to get player's actual positions from validation list
+  // IMPORTANT: Prioritize exact abbreviated name match to avoid matching wrong player with same surname
+  const getPlayerPositions = (playerName, validationList) => {
+    if (!playerName || !validationList || validationList.length === 0) return null;
     
-    // If we have exactly 21 players, just assign positions sequentially
-    if (sorted.length >= TOTAL_EXPECTED_PLAYERS) {
-      let playerIndex = 0;
-      for (const { pos, count } of EXPECTED_POSITIONS) {
-        for (let i = 0; i < count && playerIndex < sorted.length; i++) {
-          sorted[playerIndex].positions = [pos];
-          playerIndex++;
-        }
+    const normalizedName = playerName.toLowerCase().trim();
+    
+    // FIRST: Try exact abbreviated name match (highest priority)
+    let match = validationList.find(p => 
+      p.abbreviatedName?.toLowerCase() === normalizedName
+    );
+    
+    // SECOND: Try initial + surname match
+    if (!match) {
+      const nameMatch = normalizedName.match(/^([a-z])\.?\s*(.+)$/);
+      if (nameMatch) {
+        const [, initial, surname] = nameMatch;
+        match = validationList.find(p =>
+          p.initial?.toLowerCase() === initial &&
+          p.surname?.toLowerCase() === surname.toLowerCase()
+        );
       }
-      console.log('Format 2: Full team detected, assigned positions based on Y-order:', sorted.map(p => `${p.name}: ${p.positions[0]}`));
-      return sorted;
     }
     
-    // If we have fewer players, we need to detect gaps and insert empty slots
-    // Calculate average spacing between detected players
-    const yPositions = sorted.map(p => p.y);
-    const spacings = [];
-    for (let i = 1; i < yPositions.length; i++) {
-      spacings.push(yPositions[i] - yPositions[i - 1]);
+    // THIRD: Surname-only match (least reliable - log warning)
+    if (!match) {
+      const surnameOnly = normalizedName.match(/\.\s*(.+)$/)?.[1] || normalizedName;
+      match = validationList.find(p => 
+        p.surname?.toLowerCase() === surnameOnly.toLowerCase()
+      );
+      if (match) {
+        console.log(`⚠️ Position lookup for "${playerName}" used surname-only match - may be incorrect`);
+      }
     }
     
-    // Use median spacing as the expected gap between adjacent players
-    const sortedSpacings = [...spacings].sort((a, b) => a - b);
-    const medianSpacing = sortedSpacings.length > 0 
-      ? sortedSpacings[Math.floor(sortedSpacings.length / 2)] 
-      : 50; // Default if not enough data
+    return match?.positions || null;
+  };
+
+  // Check if a player's positions allow them to be placed in a specific slot
+  const canPlayerFitSlot = (playerPositions, slotIndex) => {
+    if (!playerPositions || playerPositions.length === 0) {
+      // Unknown position - allow for now (will be caught by database validation later)
+      return true;
+    }
     
-    // Threshold for detecting a gap (1.5x the median spacing indicates a missing player)
-    const gapThreshold = medianSpacing * 1.5;
+    const validPositions = SLOT_POSITION_RULES[slotIndex];
+    if (!validPositions) return true; // No rules for this slot
     
-    // Build result array with empty slots where gaps are detected
+    // Player can fit if ANY of their positions matches the slot's valid positions
+    return playerPositions.some(pos => validPositions.includes(pos));
+  };
+
+  // Assign positions to players based on Y-position ordering (for Format 2)
+  // Uses position validation to detect missed scans (inserts empty slots when player doesn't fit)
+  // This prevents players from being allocated to wrong position slots
+  const assignFormat2Positions = (players, validationList = []) => {
+    const sorted = [...players].sort((a, b) => a.y - b.y || a.matchIndex - b.matchIndex);
     const result = [];
-    let slotIndex = 0;
     
-    for (let i = 0; i < sorted.length; i++) {
-      const player = sorted[i];
+    console.log(`Format 2: Assigning ${sorted.length} players with position validation...`);
+    
+    let playerIndex = 0; // Track current position in player queue
+    
+    // Fill all 21 slots
+    for (let slotIndex = 0; slotIndex < TOTAL_EXPECTED_PLAYERS; slotIndex++) {
+      const slotPosition = getPositionForSlot(slotIndex);
+      const validSlotPositions = SLOT_POSITION_RULES[slotIndex];
       
-      // Check for gap before this player (except for the first one)
-      if (i > 0) {
-        const gap = player.y - sorted[i - 1].y;
-        const missedSlots = Math.floor(gap / gapThreshold);
+      // Check if we have a player and if they fit this slot
+      if (playerIndex < sorted.length && sorted[playerIndex].name) {
+        const player = sorted[playerIndex];
+        const playerPositions = getPlayerPositions(player.name, validationList);
         
-        // Insert empty slots for each detected gap
-        for (let j = 0; j < missedSlots && slotIndex < TOTAL_EXPECTED_PLAYERS; j++) {
-          const position = getPositionForSlot(slotIndex);
+        // Check if player fits this slot
+        if (canPlayerFitSlot(playerPositions, slotIndex)) {
+          // Player fits - assign to slot
+          result.push({
+            ...player,
+            positions: [slotPosition],
+            isEmpty: false,
+            slotIndex: slotIndex
+          });
+          playerIndex++; // Move to next player
+          console.log(`  Slot ${slotIndex + 1} (${slotPosition}): ${player.name} ✓`);
+        } else {
+          // Player doesn't fit - insert empty slot, keep player for next slot
           result.push({
             name: null,
-            positions: [position],
+            positions: [slotPosition],
             price: null,
             isEmpty: true,
             slotIndex: slotIndex
           });
-          slotIndex++;
+          console.log(`  Slot ${slotIndex + 1} (${slotPosition}): EMPTY (${player.name} doesn't fit - has ${playerPositions?.join('/')})`);
         }
-      }
-      
-      // Add the actual player
-      if (slotIndex < TOTAL_EXPECTED_PLAYERS) {
-        const position = getPositionForSlot(slotIndex);
+      } else {
+        // No more players - insert empty slot
         result.push({
-          ...player,
-          positions: [position],
-          isEmpty: false,
+          name: null,
+          positions: [slotPosition],
+          price: null,
+          isEmpty: true,
           slotIndex: slotIndex
         });
-        slotIndex++;
+        console.log(`  Slot ${slotIndex + 1} (${slotPosition}): EMPTY (no more players)`);
       }
     }
     
-    // Fill remaining slots at the end with empty placeholders
-    while (slotIndex < TOTAL_EXPECTED_PLAYERS) {
-      const position = getPositionForSlot(slotIndex);
-      result.push({
-        name: null,
-        positions: [position],
-        price: null,
-        isEmpty: true,
-        slotIndex: slotIndex
-      });
-      slotIndex++;
+    // Log any players that couldn't be placed
+    if (playerIndex < sorted.length) {
+      const unplaced = sorted.slice(playerIndex).map(p => p.name);
+      console.log(`⚠️ ${unplaced.length} players couldn't be placed:`, unplaced);
     }
     
-    console.log('Format 2: Assigned positions with gaps detected:', 
-      result.map(p => p.isEmpty ? `EMPTY: ${p.positions[0]}` : `${p.name}: ${p.positions[0]}`));
     return result;
   };
 
@@ -530,7 +583,57 @@ function ImageUpload({
     }
   };
 
-  const mergeAndOrderPlayers = (allScreenshotData) => {
+  // Helper function to check if a player is a HOK based on their database position
+  const isPlayerHOK = (playerName, validationList) => {
+    if (!playerName || !validationList || validationList.length === 0) return null;
+    
+    // Find player in validation list by matching name
+    const normalizedName = playerName.toLowerCase().trim();
+    const match = validationList.find(p => {
+      const abbrevMatch = p.abbreviatedName?.toLowerCase() === normalizedName;
+      const surnameMatch = normalizedName.includes(p.surname?.toLowerCase());
+      return abbrevMatch || surnameMatch;
+    });
+    
+    if (match && match.positions) {
+      console.log(`Position lookup for "${playerName}": positions = ${match.positions.join(', ')}`);
+      return match.positions.includes('HOK');
+    }
+    return null;
+  };
+
+  // Determine correct screenshot order based on first player's position
+  // First screenshot should contain HOK as the first player (slot 1)
+  const determineScreenshotOrder = (screenshotData, validationList) => {
+    if (!screenshotData || screenshotData.length < 2) {
+      return screenshotData; // No reordering needed for single screenshot
+    }
+    
+    // Get the first player from the first screenshot
+    const firstScreenshot = screenshotData[0];
+    const firstPlayer = firstScreenshot.players?.[0];
+    
+    if (!firstPlayer || !firstPlayer.name) {
+      console.log('No first player found in first screenshot, using original order');
+      return screenshotData;
+    }
+    
+    const isHOK = isPlayerHOK(firstPlayer.name, validationList);
+    
+    if (isHOK === false) {
+      // First player is NOT a HOK - this means screenshots are in wrong order
+      console.log(`⚠️ Screenshot order detection: "${firstPlayer.name}" is NOT a HOK. Reversing screenshot order.`);
+      return [...screenshotData].reverse();
+    } else if (isHOK === true) {
+      console.log(`✓ Screenshot order confirmed: "${firstPlayer.name}" IS a HOK. Order is correct.`);
+    } else {
+      console.log(`? Could not determine position for "${firstPlayer.name}", using original order`);
+    }
+    
+    return screenshotData;
+  };
+
+  const mergeAndOrderPlayers = (allScreenshotData, validationList = []) => {
     if (allScreenshotData.length === 0) return [];
     
     const detectedFormat = allScreenshotData.some(d => d.format === 'format2') ? 'format2' : 'format1';
@@ -552,7 +655,13 @@ function ImageUpload({
         }
       }
       
-      const orderedScreenshots = [...screenshotsWithoutBench, ...screenshotsWithBench];
+      // First order by BENCH marker, then apply HOK-based detection
+      let orderedScreenshots = [...screenshotsWithoutBench, ...screenshotsWithBench];
+      
+      // Apply HOK-based ordering if we have validation data
+      if (validationList.length > 0) {
+        orderedScreenshots = determineScreenshotOrder(orderedScreenshots, validationList);
+      }
       
       for (let i = 0; i < orderedScreenshots.length; i++) {
         const data = orderedScreenshots[i];
@@ -565,14 +674,28 @@ function ImageUpload({
         yOffset += 10000;
       }
       
+      // Deduplicate players using exact name matching only (case-insensitive)
+      // NOTE: We do NOT use surname-only matching because different players can share surnames
+      // (e.g., B. Smith and J. Smith are different players)
       const seen = new Set();
       const uniquePlayers = allPlayers.filter(p => {
-        if (seen.has(p.name)) return false;
-        seen.add(p.name);
+        if (!p.name) return true; // Keep empty/null entries
+        
+        const normalizedName = p.name.toLowerCase().trim();
+        
+        // Check for exact match only (case-insensitive)
+        if (seen.has(normalizedName)) {
+          console.log(`🔄 Duplicate removed: "${p.name}"`);
+          return false;
+        }
+        
+        seen.add(normalizedName);
         return true;
       });
       
-      const playersWithPositions = assignFormat2Positions(uniquePlayers);
+      console.log(`Deduplication: ${allPlayers.length} players -> ${uniquePlayers.length} unique`);
+      
+      const playersWithPositions = assignFormat2Positions(uniquePlayers, validationList);
       
       // Return with isEmpty flag preserved for empty slots
       return playersWithPositions.map(p => ({
@@ -604,49 +727,86 @@ function ImageUpload({
 
     console.log(`Format 1: ${startingTeamScreenshots.length} starting team screenshots, ${benchScreenshots.length} bench screenshots`);
 
+    // Helper function for deduplication (exact name match only, case-insensitive)
+    // NOTE: We do NOT use surname-only matching because different players can share surnames
+    const isDuplicate = (name, seenNames) => {
+      if (!name) return false;
+      
+      const normalizedName = name.toLowerCase().trim();
+      if (seenNames.has(normalizedName)) return true;
+      
+      seenNames.add(normalizedName);
+      return false;
+    };
+
     // Merge starting team players (deduplicate)
-    const seenStarting = new Set();
+    const seenStartingNames = new Set();
     const startingPlayers = [];
     for (const screenshot of startingTeamScreenshots) {
       for (const player of screenshot.players) {
-        if (!seenStarting.has(player.name)) {
-          seenStarting.add(player.name);
+        if (!isDuplicate(player.name, seenStartingNames)) {
           startingPlayers.push(player);
+        } else {
+          console.log(`🔄 Format 1 starting duplicate removed: "${player.name}"`);
         }
       }
     }
 
-    // Merge bench players (deduplicate)
-    const seenBench = new Set();
+    // Merge bench players (deduplicate) - but also check against starting players
+    const seenBenchNames = new Set(seenStartingNames); // Include starting players
     const benchPlayers = [];
     for (const screenshot of benchScreenshots) {
       for (const player of screenshot.players) {
-        if (!seenBench.has(player.name)) {
-          seenBench.add(player.name);
+        if (!isDuplicate(player.name, seenBenchNames)) {
           benchPlayers.push(player);
+        } else {
+          console.log(`🔄 Format 1 bench duplicate removed: "${player.name}"`);
         }
       }
     }
 
-    console.log(`Format 1: ${startingPlayers.length} starting players, ${benchPlayers.length} bench players`);
+    console.log(`Format 1: ${startingPlayers.length} starting players, ${benchPlayers.length} bench players (before position validation)`);
 
     // Build result with starting team (slots 0-12) and bench (slots 13-20)
+    // NOW WITH POSITION VALIDATION
     const result = [];
     const STARTING_TEAM_SLOTS = 13; // HOK + 3xMID + 2xEDG + 2xHLF + 2xCTR + 3xWFB
 
-    // Fill starting team slots (0-12)
+    console.log('Format 1: Assigning starting team with position validation...');
+
+    // Fill starting team slots (0-12) WITH POSITION VALIDATION
+    let startingPlayerIndex = 0;
     for (let slotIndex = 0; slotIndex < STARTING_TEAM_SLOTS; slotIndex++) {
       const position = getPositionForSlot(slotIndex);
 
-      if (slotIndex < startingPlayers.length && startingPlayers[slotIndex].name) {
-        result.push({
-          ...startingPlayers[slotIndex],
-          positions: [position],
-          isEmpty: false,
-          slotIndex: slotIndex
-        });
+      if (startingPlayerIndex < startingPlayers.length && startingPlayers[startingPlayerIndex].name) {
+        const player = startingPlayers[startingPlayerIndex];
+        const playerPositions = getPlayerPositions(player.name, validationList);
+        
+        // Check if player fits this slot
+        if (canPlayerFitSlot(playerPositions, slotIndex)) {
+          // Player fits - assign to slot
+          result.push({
+            ...player,
+            positions: [position],
+            isEmpty: false,
+            slotIndex: slotIndex
+          });
+          startingPlayerIndex++; // Move to next player
+          console.log(`  Format 1 Slot ${slotIndex + 1} (${position}): ${player.name} ✓`);
+        } else {
+          // Player doesn't fit - insert empty slot, keep player for next slot
+          result.push({
+            name: null,
+            positions: [position],
+            price: null,
+            isEmpty: true,
+            slotIndex: slotIndex
+          });
+          console.log(`  Format 1 Slot ${slotIndex + 1} (${position}): EMPTY (${player.name} doesn't fit - has ${playerPositions?.join('/')})`);
+        }
       } else {
-        // Empty slot in starting team (e.g., S. Drinkwater not scanned)
+        // No more starting players - insert empty slot
         result.push({
           name: null,
           positions: [position],
@@ -654,23 +814,52 @@ function ImageUpload({
           isEmpty: true,
           slotIndex: slotIndex
         });
+        console.log(`  Format 1 Slot ${slotIndex + 1} (${position}): EMPTY (no more starting players)`);
       }
     }
 
-    // Fill bench/emergency slots (13-20)
+    // Log any starting players that couldn't be placed
+    if (startingPlayerIndex < startingPlayers.length) {
+      const unplacedStarting = startingPlayers.slice(startingPlayerIndex).map(p => p.name);
+      console.log(`⚠️ Format 1: ${unplacedStarting.length} starting players couldn't be placed:`, unplacedStarting);
+    }
+
+    console.log('Format 1: Assigning bench with position validation...');
+
+    // Fill bench/emergency slots (13-20) WITH POSITION VALIDATION
+    let benchPlayerIndex = 0;
     for (let slotIndex = STARTING_TEAM_SLOTS; slotIndex < TOTAL_EXPECTED_PLAYERS; slotIndex++) {
       const position = getPositionForSlot(slotIndex);
-      const benchIndex = slotIndex - STARTING_TEAM_SLOTS;
 
-      if (benchIndex < benchPlayers.length && benchPlayers[benchIndex].name) {
-        result.push({
-          ...benchPlayers[benchIndex],
-          positions: [position],
-          isEmpty: false,
-          slotIndex: slotIndex
-        });
+      if (benchPlayerIndex < benchPlayers.length && benchPlayers[benchPlayerIndex].name) {
+        const player = benchPlayers[benchPlayerIndex];
+        const playerPositions = getPlayerPositions(player.name, validationList);
+        
+        // Check if player fits this slot (INT/EMG slots accept any position, so this will always pass)
+        if (canPlayerFitSlot(playerPositions, slotIndex)) {
+          // Player fits - assign to slot
+          result.push({
+            ...player,
+            positions: [position],
+            isEmpty: false,
+            slotIndex: slotIndex
+          });
+          benchPlayerIndex++; // Move to next player
+          console.log(`  Format 1 Slot ${slotIndex + 1} (${position}): ${player.name} ✓`);
+        } else {
+          // Player doesn't fit - insert empty slot, keep player for next slot
+          // NOTE: This branch should rarely/never execute for INT/EMG slots since they accept any position
+          result.push({
+            name: null,
+            positions: [position],
+            price: null,
+            isEmpty: true,
+            slotIndex: slotIndex
+          });
+          console.log(`  Format 1 Slot ${slotIndex + 1} (${position}): EMPTY (${player.name} doesn't fit - has ${playerPositions?.join('/')})`);
+        }
       } else {
-        // Empty bench slot
+        // No more bench players - insert empty slot
         result.push({
           name: null,
           positions: [position],
@@ -678,10 +867,17 @@ function ImageUpload({
           isEmpty: true,
           slotIndex: slotIndex
         });
+        console.log(`  Format 1 Slot ${slotIndex + 1} (${position}): EMPTY (no more bench players)`);
       }
     }
 
-    console.log('Format 1 multi-screenshot: Assigned players respecting screenshot boundaries:',
+    // Log any bench players that couldn't be placed
+    if (benchPlayerIndex < benchPlayers.length) {
+      const unplacedBench = benchPlayers.slice(benchPlayerIndex).map(p => p.name);
+      console.log(`⚠️ Format 1: ${unplacedBench.length} bench players couldn't be placed:`, unplacedBench);
+    }
+
+    console.log('Format 1 multi-screenshot with position validation: Assigned players:',
       result.map(p => p.isEmpty ? `EMPTY: ${p.positions[0]}` : `${p.name}: ${p.positions[0]}`));
 
     return result;
@@ -751,12 +947,7 @@ function ImageUpload({
         newScreenshotData.push(data);
       }
 
-      const allData = [...screenshotData, ...newScreenshotData];
-      let mergedPlayers = mergeAndOrderPlayers(allData);
-
-      console.log('Final merged players (before validation):', mergedPlayers);
-
-      // Validate BEFORE assigning to slots
+      // Ensure we have validation list BEFORE merging (needed for HOK-based screenshot ordering)
       let currentValidList = validPlayerList;
 
       if (currentValidList.length === 0) {
@@ -768,6 +959,11 @@ function ImageUpload({
           console.warn('Failed to fetch validation list:', err);
         }
       }
+
+      const allData = [...screenshotData, ...newScreenshotData];
+      let mergedPlayers = mergeAndOrderPlayers(allData, currentValidList);
+
+      console.log('Final merged players (before validation):', mergedPlayers);
 
       // Validate players IN PLACE while preserving slot structure
       let playersInSlots = mergedPlayers; // Start with the properly structured slots from mergeAndOrderPlayers

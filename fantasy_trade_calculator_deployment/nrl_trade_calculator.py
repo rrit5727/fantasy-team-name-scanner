@@ -810,6 +810,10 @@ def generate_trade_options(
             valid_players.sort(key=lambda x: calculate_player_priority(x))
             players = valid_players
         else:  # maximize_value - use Diff
+            # Filter out players with negative diff (no point trading IN players who are losing value)
+            positive_diff_players = [p for p in players if p['Diff'] >= 0]
+            print(f"Max value strategy: Filtered {len(players) - len(positive_diff_players)} players with negative diff")
+            players = positive_diff_players
             players.sort(key=lambda x: x['Diff'], reverse=True)
     
     # Handle single player trades
@@ -1172,7 +1176,20 @@ def calculate_trade_options(
                     trade_out_prices.append(int(player_data.iloc[0]['Price']))
                 else:
                     trade_out_prices.append(0)
-        print(f"Trade-out prices for band approach: {trade_out_prices}")
+        print(f"Trade-out prices for band approach (raw): {trade_out_prices}")
+        
+        # Distribute cash_in_bank proportionally across trade-out prices to increase price bands
+        # This allows users with extra cash to look at higher price bands for trade-ins
+        if cash_in_bank > 0 and sum(trade_out_prices) > 0:
+            total_trade_out = sum(trade_out_prices)
+            adjusted_prices = []
+            for i, price in enumerate(trade_out_prices):
+                # Distribute cash proportionally based on each player's share of total trade-out value
+                proportion = price / total_trade_out if total_trade_out > 0 else 1 / len(trade_out_prices)
+                cash_share = int(cash_in_bank * proportion)
+                adjusted_prices.append(price + cash_share)
+            trade_out_prices = adjusted_prices
+            print(f"Trade-out prices adjusted for cash in bank (${cash_in_bank:,}): {trade_out_prices}")
     
     options = generate_trade_options(
         available_players,

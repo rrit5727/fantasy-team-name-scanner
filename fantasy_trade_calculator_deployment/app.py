@@ -391,10 +391,10 @@ def get_player_validation_list():
             
             # Get positions - primary and secondary
             positions = []
-            if 'Position' in row and pd.notna(row['Position']):
-                positions.append(row['Position'])
-            if 'Secondary Position' in row and pd.notna(row['Secondary Position']):
-                positions.append(row['Secondary Position'])
+            if 'POS1' in row and pd.notna(row['POS1']):
+                positions.append(row['POS1'])
+            if 'POS2' in row and pd.notna(row['POS2']):
+                positions.append(row['POS2'])
             
             validation_list.append({
                 'fullName': player_name,

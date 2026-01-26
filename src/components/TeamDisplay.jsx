@@ -110,34 +110,26 @@ function TeamDisplay({
   const handleContainerClick = () => {
     setOpenTooltip(null);
   };
-  // Group players by their primary position
+  
+  // Group players by their SLOT position (respecting slot order from scanner)
+  // The scanner already assigns correct positions based on slot rules (HOK=slot 0, MID=1-3, etc.)
   const groupedPlayers = {};
   POSITION_ORDER.forEach(pos => {
     groupedPlayers[pos] = [];
   });
 
-  // Assign players to positions based on their extracted position or order
-  let playerIndex = 0;
-  
-  // First, try to place players by their detected position
-  const unassigned = [];
-  players.forEach(player => {
-    const primaryPos = player.positions?.[0];
-    if (primaryPos && groupedPlayers[primaryPos] && 
-        groupedPlayers[primaryPos].length < POSITION_CONFIG[primaryPos]?.count) {
-      groupedPlayers[primaryPos].push(player);
-    } else {
-      unassigned.push(player);
+  // Use slot-based assignment: respect the order players come in (which matches slot positions)
+  // Each player's positions[0] already reflects the slot they were assigned to
+  let slotIndex = 0;
+  for (const { pos, count } of Object.entries(POSITION_CONFIG).map(([pos, config]) => ({ pos, count: config.count }))) {
+    for (let i = 0; i < count; i++) {
+      if (slotIndex < players.length) {
+        // Player already has the correct position from scanner's slot assignment
+        groupedPlayers[pos].push(players[slotIndex]);
+      }
+      slotIndex++;
     }
-  });
-
-  // Fill remaining slots in order with unassigned players
-  POSITION_ORDER.forEach(pos => {
-    const config = POSITION_CONFIG[pos];
-    while (groupedPlayers[pos].length < config.count && unassigned.length > 0) {
-      groupedPlayers[pos].push(unassigned.shift());
-    }
-  });
+  }
 
   // Helper to check if player is in a list by name
   const isPlayerInList = (player, list) => {
@@ -495,8 +487,13 @@ function TradePanel({
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="secondary" className="text-xs">Option {index + 1}</Badge>
                       <div className="flex gap-2">
-                        {option.totalDiff && (
-                          <span className="option-diff text-xs text-primary font-semibold">+{option.totalDiff.toFixed(1)}</span>
+                        {option.totalDiff !== undefined && (
+                          <span className={cn(
+                            "option-diff text-xs font-semibold",
+                            option.totalDiff >= 0 ? "text-primary" : "text-red-500"
+                          )}>
+                            {option.totalDiff >= 0 ? `+${option.totalDiff.toFixed(1)}` : option.totalDiff.toFixed(1)}
+                          </span>
                         )}
                         {option.totalProjection && (
                           <span className="text-xs text-muted-foreground">Proj: {option.totalProjection.toFixed(1)}</span>
@@ -510,7 +507,12 @@ function TradePanel({
                           <span className="flex-1 text-foreground truncate">{formatPlayerName(player.name)}</span>
                           <span className="text-xs text-primary shrink-0">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
                           {player.diff !== undefined && (
-                            <span className="text-xs text-green-500 font-semibold shrink-0">+{player.diff.toFixed(1)}</span>
+                            <span className={cn(
+                              "text-xs font-semibold shrink-0",
+                              player.diff >= 0 ? "text-green-500" : "text-red-500"
+                            )}>
+                              {player.diff >= 0 ? `+${player.diff.toFixed(1)}` : player.diff.toFixed(1)}
+                            </span>
                           )}
                         </div>
                       ))}
@@ -660,28 +662,29 @@ function TeamView({
     return visibleTooltips.has(tooltipId);
   };
 
+  // Helper to group players by slot position (same logic as main grouping)
+  const groupPlayersBySlot = (playerList) => {
+    const grouped = {};
+    POSITION_ORDER.forEach(pos => { grouped[pos] = []; });
+    
+    let slotIndex = 0;
+    for (const [pos, config] of Object.entries(POSITION_CONFIG)) {
+      for (let i = 0; i < config.count; i++) {
+        if (slotIndex < playerList.length) {
+          grouped[pos].push(playerList[slotIndex]);
+        }
+        slotIndex++;
+      }
+    }
+    return grouped;
+  };
+
   // Find the first player with status indicators for tour step 2
   const firstIndicatorPlayer = React.useMemo(() => {
     if (!teamAnalysisComplete) return null;
 
-    // Replicate the same player grouping logic as in the render
-    const grouped = {};
-    POSITION_ORDER.forEach(pos => { grouped[pos] = []; });
-    const unassigned = [];
-
-    teamPlayers.forEach(player => {
-      const primaryPos = player.positions?.[0];
-      if (primaryPos && grouped[primaryPos] && grouped[primaryPos].length < POSITION_CONFIG[primaryPos].count) {
-        grouped[primaryPos].push(player);
-      } else {
-        unassigned.push(player);
-      }
-    });
-    POSITION_ORDER.forEach(pos => {
-      while (grouped[pos].length < POSITION_CONFIG[pos].count && unassigned.length > 0) {
-        grouped[pos].push(unassigned.shift());
-      }
-    });
+    // Use slot-based grouping (same as main render)
+    const grouped = groupPlayersBySlot(teamPlayers);
 
     // Check in priority order: HOK → MID → EDG → HLF
     const targetPositions = ['HOK', 'MID', 'EDG', 'HLF'];
@@ -715,24 +718,8 @@ function TeamView({
   const firstIntEmgIndicatorPlayer = React.useMemo(() => {
     if (!teamAnalysisComplete) return null;
 
-    // Replicate the same player grouping logic as in the render
-    const grouped = {};
-    POSITION_ORDER.forEach(pos => { grouped[pos] = []; });
-    const unassigned = [];
-
-    teamPlayers.forEach(player => {
-      const primaryPos = player.positions?.[0];
-      if (primaryPos && grouped[primaryPos] && grouped[primaryPos].length < POSITION_CONFIG[primaryPos].count) {
-        grouped[primaryPos].push(player);
-      } else {
-        unassigned.push(player);
-      }
-    });
-    POSITION_ORDER.forEach(pos => {
-      while (grouped[pos].length < POSITION_CONFIG[pos].count && unassigned.length > 0) {
-        grouped[pos].push(unassigned.shift());
-      }
-    });
+    // Use slot-based grouping (same as main render)
+    const grouped = groupPlayersBySlot(teamPlayers);
 
     // Check INT and EMG positions for players with indicators
     const intEmgPositions = ['INT', 'EMG'];
@@ -2409,7 +2396,12 @@ function TeamView({
                           ${formatNumberWithCommas(Math.round(player.price / 1000))}k
                         </span>
                         {player.diff && (
-                          <span className="text-xs text-green-500 font-semibold">+{player.diff.toFixed(1)}</span>
+                          <span className={cn(
+                            "text-xs font-semibold",
+                            player.diff >= 0 ? "text-green-500" : "text-red-500"
+                          )}>
+                            {player.diff >= 0 ? `+${player.diff.toFixed(1)}` : player.diff.toFixed(1)}
+                          </span>
                         )}
                       </div>
                     );
@@ -2622,23 +2614,8 @@ function TeamView({
       // Find the first INT/EMG player to use for the dropdown
       const targetPlayer = firstIntEmgIndicatorPlayer;
       if (targetPlayer) {
-        // Determine if player is in INT or EMG position
-        const grouped = {};
-        POSITION_ORDER.forEach(pos => { grouped[pos] = []; });
-        const unassigned = [];
-        teamPlayers.forEach(player => {
-          const primaryPos = player.positions?.[0];
-          if (primaryPos && grouped[primaryPos] && grouped[primaryPos].length < POSITION_CONFIG[primaryPos].count) {
-            grouped[primaryPos].push(player);
-          } else {
-            unassigned.push(player);
-          }
-        });
-        POSITION_ORDER.forEach(pos => {
-          while (grouped[pos].length < POSITION_CONFIG[pos].count && unassigned.length > 0) {
-            grouped[pos].push(unassigned.shift());
-          }
-        });
+        // Determine if player is in INT or EMG position using slot-based grouping
+        const grouped = groupPlayersBySlot(teamPlayers);
         
         // Check if player is in INT or EMG
         const isInInt = grouped['INT']?.some(p => p?.name === targetPlayer.name);
@@ -3110,7 +3087,12 @@ function TeamView({
                                 ${formatNumberWithCommas(Math.round(player.price / 1000))}k
                               </span>
                               {player.diff && (
-                                <span className="text-xs text-green-500 font-semibold">+{player.diff.toFixed(1)}</span>
+                                <span className={cn(
+                                  "text-xs font-semibold",
+                                  player.diff >= 0 ? "text-green-500" : "text-red-500"
+                                )}>
+                                  {player.diff >= 0 ? `+${player.diff.toFixed(1)}` : player.diff.toFixed(1)}
+                                </span>
                               )}
                             </div>
                           );
