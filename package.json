@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "heroku-postbuild": "npm run build",
     "setup": "chmod +x setup-backend.sh start-backend.sh verify-setup.sh && echo '✓ Scripts are now executable. Run ./setup-backend.sh to set up the backend.'",
-    "verify": "chmod +x verify-setup.sh && ./verify-setup.sh"
+    "verify": "chmod +x verify-setup.sh && ./verify-setup.sh",
+    "build:deploy": "npm run build && rm -rf fantasy_trade_calculator_deployment/static/react/* && cp -r dist/* fantasy_trade_calculator_deployment/static/react/ && echo '✅ Build copied to deployment folder!'",
+    "deploy": "npm run build:deploy && git add fantasy_trade_calculator_deployment/static/react/ && git commit -m 'Update React build' && git push heroku main && git push origin main && echo '🚀 Deployed to Heroku!'"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.3",
