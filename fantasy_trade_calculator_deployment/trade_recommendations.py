@@ -774,6 +774,7 @@ def calculate_preseason_trade_in_candidates(
     List[Dict]: List of trade-in candidate players
     """
     PRICE_BAND_MARGIN = 75000  # ±$75k price band
+    MIN_DIFF_THRESHOLD = 4.5  # Include players with Diff >= 4.5 as options
     
     # Fill in missing prices for trade-out players (for Format 2 screenshots)
     if trade_out_players:
@@ -851,13 +852,13 @@ def calculate_preseason_trade_in_candidates(
                     min_price = player_price - (PRICE_BAND_MARGIN * (band_offset + 1))
                     max_price = player_price - (PRICE_BAND_MARGIN * band_offset)
 
-                # Check if this band contains players with diff >= 7 AND matching position
+                # Check if this band contains players with diff >= MIN_DIFF_THRESHOLD AND matching position
                 band_players = latest_data[
                     (latest_data['Price'] >= min_price) &
                     (latest_data['Price'] <= max_price) &
-                    (latest_data['Diff'] >= 7)
+                    (latest_data['Diff'] >= MIN_DIFF_THRESHOLD)
                 ]
-                
+
                 # If we have position requirements, also filter by position
                 if required_positions and len(band_players) > 0:
                     position_mask = (
@@ -867,7 +868,7 @@ def calculate_preseason_trade_in_candidates(
                     band_players = band_players[position_mask]
 
                 if len(band_players) > 0:
-                    # Found a valid band with players having diff >= 7 AND matching position
+                    # Found a valid band with players meeting diff threshold AND matching position
                     final_bands.append({
                         'player_name': player_name,
                         'position': original_position,
@@ -877,10 +878,16 @@ def calculate_preseason_trade_in_candidates(
                         'center_price': player_price,
                         'band_offset': band_offset
                     })
-                    print(f"  -> Price band for {player_name} ({original_position}): ${min_price:,} - ${max_price:,} (offset: {band_offset}, {len(band_players)} players)")
+                    print(
+                        f"  -> Price band for {player_name} ({original_position}): "
+                        f"${min_price:,} - ${max_price:,} (offset: {band_offset}, {len(band_players)} players)"
+                    )
                     found_valid_band = True
                 else:
-                    print(f"  -> No valid players (diff >= 7, positions {required_positions}) in band ${min_price:,} - ${max_price:,}, trying lower band...")
+                    print(
+                        f"  -> No valid players (diff >= {MIN_DIFF_THRESHOLD}, positions {required_positions}) "
+                        f"in band ${min_price:,} - ${max_price:,}, trying lower band..."
+                    )
                     band_offset += 1
 
             if not found_valid_band:
@@ -898,21 +905,17 @@ def calculate_preseason_trade_in_candidates(
                 })
                 print(f"  -> Fallback: Using original band for {player_name} (${min_price:,} - ${max_price:,}) - no valid players found after {band_offset} cascades")
 
-        # Filter players to those within any final price band AND with diff >= 7
-        # (The cascading logic finds bands based on players with diff >= 7, so we should only show those players)
-        if final_bands:
-            # Create a mask for players within any final price band
-            price_mask = pd.Series([False] * len(latest_data), index=latest_data.index)
-            for band in final_bands:
-                band_mask = (latest_data['Price'] >= band['min_price']) & (latest_data['Price'] <= band['max_price'])
-                price_mask = price_mask | band_mask
-
-            latest_data = latest_data[price_mask]
-            print(f"Players after cascading price band filtering: {len(latest_data)}")
-            
-            # Also filter by diff >= 7 to ensure only valuable trade-in options are shown
-            latest_data = latest_data[latest_data['Diff'] >= 7]
-            print(f"Players after diff >= 7 filtering: {len(latest_data)}")
+        # DON'T filter by price band - include ALL players with diff >= 7
+        # This ensures we don't run out of options just because players are in lower price bands
+        # The matching_bands info will help the frontend prioritize players closer to trade-out prices
+        
+        # Filter by diff >= 7 to ensure only valuable trade-in options are shown
+        latest_data = latest_data[latest_data['Diff'] >= 7]
+        print(f"Players after diff >= 7 filtering: {len(latest_data)}")
+        
+        # Also filter by salary cap - can't trade in someone we can't afford
+        latest_data = latest_data[latest_data['Price'] <= salary_cap]
+        print(f"Players after salary cap filtering (${salary_cap:,}): {len(latest_data)}")
 
     else:
         # Normal approach: filter by salary cap
@@ -968,8 +971,9 @@ def calculate_preseason_trade_in_candidates(
     elif strategy == '5':  # Band approach: Sort by Diff descending (price bands handled in nrl_trade_calculator)
         # For preseason mode, this just sorts by Diff; the actual band filtering is done in normal mode
         latest_data = latest_data.sort_values('Diff', ascending=False)
-    else:  # Default: Maximize value (Diff)
-        latest_data = latest_data.sort_values('Diff', ascending=False)
+    else:  # Default: Maximize value (Diff) - Now prioritizes price
+        # Prioritize higher priced players to use up more salary cap, then by Diff
+        latest_data = latest_data.sort_values(['Price', 'Diff'], ascending=[False, False])
 
     # For test approach, return all players within price bands (no limit)
     # For normal approach, limit to max_results
@@ -992,16 +996,13 @@ def calculate_preseason_trade_in_candidates(
             'projection': float(row['Projection'])
         }
         
-        # If test approach, add price band info to help frontend filtering
+        # If test approach, add matching info to help frontend determine which slots this player can fill
         if test_approach and trade_out_players:
-            # Find which final band(s) this player fits into (price AND position must match)
+            # Find which trade-out slots this player can fill based on POSITION only
+            # (not price band - we want to include all options, even in lower price ranges)
             matching_bands = []
             for i, band in enumerate(final_bands):
-                # Check price is within band
-                if not (band['min_price'] <= row['Price'] <= band['max_price']):
-                    continue
-                
-                # Check position compatibility
+                # Check position compatibility only (not price)
                 band_positions = band.get('trade_in_positions', [])
                 if band_positions:
                     # Player must have at least one position that matches the requirement
@@ -1010,11 +1011,18 @@ def calculate_preseason_trade_in_candidates(
                     if not position_matches:
                         continue
                 
+                # Calculate price distance from trade-out player for sorting purposes
+                trade_out_price = band.get('center_price', 0)
+                price_distance = abs(row['Price'] - trade_out_price)
+                in_original_band = band['min_price'] <= row['Price'] <= band['max_price']
+                
                 matching_bands.append({
                     'index': i,
                     'player_name': band['player_name'],
                     'position': band['position'],
-                    'trade_in_positions': band_positions
+                    'trade_in_positions': band_positions,
+                    'price_distance': price_distance,
+                    'in_price_band': in_original_band
                 })
             candidate['matching_bands'] = matching_bands
         

@@ -782,7 +782,7 @@ def calculate_preseason_trade_ins():
 
         # Get team player names for exclusion - convert abbreviated names to full names
         # to match database format
-        from nrl_trade_calculator import match_abbreviated_name_to_full
+        from .nrl_trade_calculator import match_abbreviated_name_to_full
         team_player_full_names = []
         for p in team_players:
             full_name = match_abbreviated_name_to_full(p['name'], consolidated_data)
