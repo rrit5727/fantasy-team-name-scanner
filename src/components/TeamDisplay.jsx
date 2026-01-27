@@ -1724,101 +1724,24 @@ function TeamView({
     // Get remaining slots that haven't been filled
     const remainingSlots = getRemainingTradeOutSlots();
     const playerPosition = player.position || player.positions?.[0];
+
+    // Budget feasibility: prevent selecting a player that makes it impossible to complete the remaining trades.
+    // We also use this to choose the best slot assignment (max slack) if multiple slots are possible.
+    const bestFeasible = findBestFeasibleSlotAssignment(player, remainingSlots, totalAvailableSalary);
+    if (!bestFeasible) {
+      console.log('Preseason: selection rejected (would leave insufficient budget to fill remaining slots):', player.name);
+      return;
+    }
     
     let matchingTradeOut = null;
     let matchingBandIndex = -1;
 
-    // TEST APPROACH: Match based on price bands using backend's matching_bands data
+    // Choose the slot assignment that keeps remaining trades feasible.
+    matchingTradeOut = bestFeasible.slot;
+
+    // In test approach, also map to the frontend band index so we can mark it filled.
     if (preseasonTestApproach && preseasonPriceBands.length > 0) {
-      // Use the matching_bands data provided by the backend
-      const playerMatchingBands = player.matching_bands || [];
-      console.log('Player', player.name, 'matches bands:', playerMatchingBands.map(b => b.player_name));
-
-      // Find an unfilled band that this player can fill, considering position compatibility
-      // Match by player_name instead of index (backend indices may differ from frontend)
-      for (const bandInfo of playerMatchingBands) {
-        // Find the band in our frontend array by player_name
-        const bandIndex = preseasonPriceBands.findIndex(b => b.playerName === bandInfo.player_name);
-        if (bandIndex === -1) continue;
-        
-        const band = preseasonPriceBands[bandIndex];
-
-        // Skip filled bands
-        if (band.filled) continue;
-
-        // Check if the corresponding trade-out slot is still available
-        const bandSlot = remainingSlots.find(s => s.name === band.playerName);
-        if (!bandSlot) continue;
-
-        // Check position compatibility
-        const isFlexible = isFlexibleSlot(bandSlot.originalPosition);
-        let canFillSlot = false;
-        
-        // Get all positions the player can play (not just primary)
-        const playerPositions = player.positions || [playerPosition];
-
-        if (isFlexible) {
-          // For flexible slots, check position requirements
-          const tradeInPositions = bandSlot.trade_in_positions;
-          if (!tradeInPositions || tradeInPositions.length === 0) {
-            // No specific requirements, any player can fill flexible slots
-            canFillSlot = true;
-          } else {
-            // Player must be able to play at least one of the required positions
-            canFillSlot = tradeInPositions.some(requiredPos => {
-              return playerPositions.includes(requiredPos);
-            });
-          }
-        } else {
-          // For non-flexible slots, check if ANY of the player's positions match
-          // (e.g., Jazz Tevaga with MID/HOK can fill a HOK slot)
-          canFillSlot = playerPositions.includes(bandSlot.originalPosition);
-        }
-
-        if (canFillSlot) {
-          matchingTradeOut = bandSlot;
-          matchingBandIndex = bandIndex;
-          console.log('Using band', bandIndex, 'for player', band.playerName, '- filled by', player.name);
-          break;
-        }
-      }
-
-      if (!matchingTradeOut) {
-        const unfilledBandNames = preseasonPriceBands.filter(b => !b.filled).map(b => b.playerName);
-        console.log('Test approach: No available matching price band found for:', player.name,
-          '\n  Player matches bands for:', playerMatchingBands.map(b => b.player_name),
-          '\n  Unfilled bands:', unfilledBandNames,
-          '\n  Remaining slots:', remainingSlots.map(s => `${s.name} (${s.originalPosition})`));
-        return;
-      }
-    } else {
-      // NORMAL APPROACH: Match based on position and requirements
-      // Get all positions the player can play
-      const playerPositions = player.positions || [playerPosition];
-      
-      // Priority 1: Find a non-flexible slot with matching position (any of player's positions)
-      matchingTradeOut = remainingSlots.find(out => {
-        return !isFlexibleSlot(out.originalPosition) && playerPositions.includes(out.originalPosition);
-      });
-
-      // Priority 2: If no position match, find a flexible slot where the player satisfies the position requirements
-      if (!matchingTradeOut) {
-        matchingTradeOut = remainingSlots.find(out => {
-          if (!isFlexibleSlot(out.originalPosition)) return false;
-
-          // Check if this flexible slot has position requirements
-          const tradeInPositions = out.trade_in_positions;
-          if (!tradeInPositions || tradeInPositions.length === 0) {
-            // No specific requirements, any player can fill flexible slots
-            return true;
-          }
-
-          // Player must be able to play at least one of the required positions
-          return tradeInPositions.some(requiredPos => {
-            return playerPositions.includes(requiredPos);
-          });
-        });
-      }
+      matchingBandIndex = preseasonPriceBands.findIndex(b => b.playerName === matchingTradeOut.name);
     }
     
     if (!matchingTradeOut) {
@@ -1928,6 +1851,94 @@ function TeamView({
     return preseasonSelectedTradeOuts.filter(p => !filledSlotNames.includes(p.name));
   };
 
+  // ---------- Preseason trade-in feasibility helpers ----------
+  // We prevent "too expensive" selections by ensuring that after selecting a player,
+  // we can still (at least) fill every remaining slot with the cheapest available options.
+  const getPlayerPositions = (player) => {
+    const primary = player?.position || player?.positions?.[0];
+    const positions = Array.isArray(player?.positions) ? player.positions : [];
+    const combined = [...positions, primary].filter(Boolean);
+    return Array.from(new Set(combined));
+  };
+
+  const canPlayerFillSlot = (player, slot) => {
+    const playerPositions = getPlayerPositions(player);
+    const slotPos = slot?.originalPosition;
+    const isFlex = isFlexibleSlot(slotPos);
+
+    if (!slotPos) return false;
+
+    if (!isFlex) {
+      return playerPositions.includes(slotPos);
+    }
+
+    // Flexible slot (INT/EMG): enforce trade_in_positions if present; otherwise any position
+    const req = slot?.trade_in_positions;
+    if (!req || req.length === 0) return true;
+    return req.some(pos => playerPositions.includes(pos));
+  };
+
+  // Greedy lower-bound for the minimum total spend required to fill given slots.
+  // Uses distinct players (no duplicates) to avoid obvious false feasibility.
+  const minCostToFillSlots = (slots, candidatePool, excludedNames) => {
+    const used = new Set();
+    let sum = 0;
+
+    for (const slot of slots) {
+      let best = null;
+      for (const p of candidatePool) {
+        if (!p?.name) continue;
+        if (excludedNames.has(p.name)) continue;
+        if (used.has(p.name)) continue;
+        if (!canPlayerFillSlot(p, slot)) continue;
+
+        if (!best || (p.price || 0) < (best.price || 0)) {
+          best = p;
+        }
+      }
+
+      if (!best) return Infinity;
+      used.add(best.name);
+      sum += (best.price || 0);
+    }
+
+    return sum;
+  };
+
+  // Returns the best (most slack) slot assignment for this player, or null if infeasible.
+  const findBestFeasibleSlotAssignment = (player, remainingSlots, totalAvailableSalary) => {
+    const selectedNames = new Set(preseasonSelectedTradeIns.map(p => p.name));
+    const excludedNames = new Set([...selectedNames, player.name]);
+    const candidatePool = (preseasonAvailableTradeIns || []).filter(p => p?.name && !selectedNames.has(p.name));
+
+    // Which slots could this player potentially fill?
+    let candidateSlots = remainingSlots.filter(slot => canPlayerFillSlot(player, slot));
+
+    // In test approach, further restrict by backend-provided matching bands (slot names)
+    if (preseasonTestApproach && preseasonPriceBands.length > 0) {
+      const bandNames = new Set((player.matching_bands || []).map(b => b.player_name).filter(Boolean));
+      candidateSlots = candidateSlots.filter(slot => bandNames.has(slot.name));
+    }
+
+    const budgetAfter = totalAvailableSalary - (player.price || 0);
+    if (budgetAfter < 0) return null;
+
+    let best = null; // { slot, slack }
+    for (const slot of candidateSlots) {
+      const remainingAfterSlots = remainingSlots.filter(s => s.name !== slot.name);
+      const minRemainingCost = minCostToFillSlots(remainingAfterSlots, candidatePool, excludedNames);
+      if (minRemainingCost === Infinity) continue;
+      const slack = budgetAfter - minRemainingCost;
+      if (slack < 0) continue;
+
+      if (!best || slack > best.slack) {
+        best = { slot, slack };
+      }
+    }
+
+    return best;
+  };
+
   // Filter available trade-ins based on remaining positions and salary
   const getFilteredTradeIns = () => {
     const remainingSlots = getRemainingTradeOutSlots();
@@ -1972,7 +1983,7 @@ function TeamView({
 
         // Check if player can fill any unfilled band with position compatibility
         // Match by player_name instead of index (backend indices may differ from frontend)
-        return playerMatchingBands.some(bandInfo => {
+        const matchesAnyUnfilledSlot = playerMatchingBands.some(bandInfo => {
           // Only consider unfilled bands - match by player_name
           if (!unfilledBandPlayerNames.has(bandInfo.player_name)) return false;
 
@@ -2005,6 +2016,12 @@ function TeamView({
 
           return positionMatches;
         });
+
+        if (!matchesAnyUnfilledSlot) return false;
+
+        // Budget feasibility: selecting this player must still allow filling all remaining slots
+        const bestAssignment = findBestFeasibleSlotAssignment(player, remainingSlots, totalAvailableSalary);
+        return !!bestAssignment;
       });
     }
 
