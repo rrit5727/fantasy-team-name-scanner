@@ -909,9 +909,9 @@ def calculate_preseason_trade_in_candidates(
         # This ensures we don't run out of options just because players are in lower price bands
         # The matching_bands info will help the frontend prioritize players closer to trade-out prices
         
-        # Filter by diff >= 7 to ensure only valuable trade-in options are shown
-        latest_data = latest_data[latest_data['Diff'] >= 7]
-        print(f"Players after diff >= 7 filtering: {len(latest_data)}")
+        # Filter by diff >= MIN_DIFF_THRESHOLD to ensure only valuable trade-in options are shown
+        latest_data = latest_data[latest_data['Diff'] >= MIN_DIFF_THRESHOLD]
+        print(f"Players after diff >= {MIN_DIFF_THRESHOLD} filtering: {len(latest_data)}")
         
         # Also filter by salary cap - can't trade in someone we can't afford
         latest_data = latest_data[latest_data['Price'] <= salary_cap]
