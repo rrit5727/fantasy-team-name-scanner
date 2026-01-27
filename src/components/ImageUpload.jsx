@@ -642,11 +642,29 @@ function ImageUpload({
   };
 
   // Helper function to check if a player is a HOK based on their database position
+  // IMPORTANT: Handles dopplegangers - if ANY variant is a HOK, returns true
+  // (because if they appear first in a screenshot, they're likely the HOK variant)
   const isPlayerHOK = (playerName, validationList) => {
     if (!playerName || !validationList || validationList.length === 0) return null;
     
-    // Find player in validation list by matching name
     const normalizedName = playerName.toLowerCase().trim();
+    
+    // CHECK FOR DOPPLEGANGERS FIRST
+    // If this is a known doppleganger and ANY variant is a HOK, return true
+    // (because if they appear first in the screenshot, they're most likely the HOK variant)
+    const dopplegangers = KNOWN_DOPPLEGANGERS[normalizedName];
+    if (dopplegangers) {
+      const anyVariantIsHOK = dopplegangers.some(d => d.positions.includes('HOK'));
+      if (anyVariantIsHOK) {
+        console.log(`🎭 HOK check for doppleganger "${playerName}": Found HOK variant, assuming correct order`);
+        return true;
+      } else {
+        console.log(`🎭 HOK check for doppleganger "${playerName}": No HOK variant exists`);
+        // Continue to standard lookup - all variants are non-HOK
+      }
+    }
+    
+    // STANDARD LOOKUP: Find player in validation list by matching name
     const match = validationList.find(p => {
       const abbrevMatch = p.abbreviatedName?.toLowerCase() === normalizedName;
       const surnameMatch = normalizedName.includes(p.surname?.toLowerCase());
@@ -774,6 +792,43 @@ function ImageUpload({
     // IMPORTANT: A screenshot with BENCH marker may contain BOTH starting team players (before BENCH)
     // and bench players (after BENCH). We need to split by matchIndex relative to BENCH position.
     
+    // SCREENSHOT ORDER DETECTION FOR FORMAT 1
+    // Screenshots with "STARTING SIDE" should be processed before screenshots with "BENCH"
+    // Also apply HOK-based detection as a backup
+    const screenshotsWithStartingSide = [];
+    const screenshotsWithBenchOnly = [];
+    
+    for (const data of allScreenshotData) {
+      const hasStartingSide = /STARTING SIDE/i.test(data.rawText);
+      if (hasStartingSide) {
+        screenshotsWithStartingSide.push(data);
+      } else {
+        screenshotsWithBenchOnly.push(data);
+      }
+    }
+    
+    // Order: starting side screenshots first, then bench-only screenshots
+    let orderedFormat1Screenshots = [...screenshotsWithStartingSide, ...screenshotsWithBenchOnly];
+    
+    // Apply HOK-based detection as additional check
+    if (validationList.length > 0 && orderedFormat1Screenshots.length >= 2) {
+      // Get first player from the screenshot that should be first (has STARTING SIDE or no BENCH marker)
+      const firstScreenshot = orderedFormat1Screenshots[0];
+      const firstValidPlayer = firstScreenshot.players?.find(p => p.name && p.name.trim());
+      
+      if (firstValidPlayer) {
+        const isHOK = isPlayerHOK(firstValidPlayer.name, validationList);
+        if (isHOK === false) {
+          console.log(`⚠️ Format 1 Screenshot order detection: "${firstValidPlayer.name}" is NOT a HOK. Reversing screenshot order.`);
+          orderedFormat1Screenshots = orderedFormat1Screenshots.reverse();
+        } else if (isHOK === true) {
+          console.log(`✓ Format 1 Screenshot order confirmed: "${firstValidPlayer.name}" IS a HOK. Order is correct.`);
+        }
+      }
+    }
+    
+    console.log(`Format 1: ${screenshotsWithStartingSide.length} screenshots with STARTING SIDE, ${screenshotsWithBenchOnly.length} with BENCH only`);
+    
     // Helper function for deduplication (exact name match only, case-insensitive)
     const isDuplicate = (name, seenNames) => {
       if (!name) return false;
@@ -788,7 +843,7 @@ function ImageUpload({
     const startingPlayers = [];
     const benchPlayers = [];
 
-    for (const data of allScreenshotData) {
+    for (const data of orderedFormat1Screenshots) {
       const benchMatch = data.rawText.match(/BENCH\s*\(\d+\/\d+\)/i);
       
       if (benchMatch) {
