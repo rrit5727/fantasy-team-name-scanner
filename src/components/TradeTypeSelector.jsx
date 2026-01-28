@@ -68,11 +68,11 @@ function TradeTypeSelector({
   return (
     <Card 
       ref={panelRef}
-      className={`trade-type-selector w-full max-w-sm shadow-lg ${preventClose ? 'border-[3px] border-[#00d9a3] shadow-[0_0_30px_rgba(0,217,163,0.6)] !bg-card' : 'border-primary/50 shadow-primary/20'}`}
+      className={`trade-type-selector w-full max-w-sm min-h-[160px] shadow-lg ${preventClose ? 'border-[3px] border-[#00d9a3] shadow-[0_0_30px_rgba(0,217,163,0.6)] !bg-card' : 'border-primary/50 shadow-primary/20'}`}
     >
-      <CardContent className="">
+      <CardContent className="px-4">
         {/* Header with label and action buttons */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-around mx-auto pt-2 pb-1">
           <Label className="text-sm font-semibold text-foreground">
             Select Positions for Swap:
           </Label>
@@ -100,11 +100,11 @@ function TradeTypeSelector({
         </div>
 
         {/* Position checkboxes grid */}
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-2 gap-y-1 items-center justify-items-center">
           {POSITIONS.map(position => (
             <div 
               key={position} 
-              className="flex space-x-2"
+              className="flex space-x-2 w-24"
             >
               <Checkbox
                 id={`position-${position}`}
@@ -121,14 +121,6 @@ function TradeTypeSelector({
           ))}
         </div>
 
-        {/* Selected count indicator */}
-        {selectedPositions.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-primary/20">
-            <p className="text-xs text-muted-foreground">
-              {selectedPositions.length} position{selectedPositions.length !== 1 ? 's' : ''} selected: {selectedPositions.join(', ')}
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
