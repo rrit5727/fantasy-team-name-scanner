@@ -70,13 +70,13 @@ function TradeTypeSelector({
       ref={panelRef}
       className={`trade-type-selector w-full max-w-sm shadow-lg ${preventClose ? 'border-[3px] border-[#00d9a3] shadow-[0_0_30px_rgba(0,217,163,0.6)] !bg-card' : 'border-primary/50 shadow-primary/20'}`}
     >
-      <CardContent className="p-4">
+      <CardContent className="">
         {/* Header with label and action buttons */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between">
           <Label className="text-sm font-semibold text-foreground">
             Select Positions for Swap:
           </Label>
-          <div className="flex gap-2">
+          <div className="flex">
             <Button
               variant="ghost"
               size="icon"
@@ -100,11 +100,11 @@ function TradeTypeSelector({
         </div>
 
         {/* Position checkboxes grid */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="flex flex-col gap-2">
           {POSITIONS.map(position => (
             <div 
               key={position} 
-              className="flex items-center space-x-2"
+              className="flex space-x-2"
             >
               <Checkbox
                 id={`position-${position}`}

@@ -279,10 +279,10 @@ function TeamDisplay({
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-card border border-primary/30 rounded-md shadow-lg text-xs text-card-foreground whitespace-nowrap z-50">
                   Player injured
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary/30" />
-                </div>
-              )}
-            </div>
-          )}
+          </div>
+        )}
+          </div>
+        )}
           {isUrgentOvervalued && !isInjured && (
             <div className="relative">
               <div 
@@ -297,10 +297,10 @@ function TeamDisplay({
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-card border border-primary/30 rounded-md shadow-lg text-xs text-card-foreground whitespace-nowrap z-50">
                   Very overvalued: losing money
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary/30" />
-                </div>
-              )}
-            </div>
-          )}
+          </div>
+        )}
+          </div>
+        )}
           {isOvervalued && !isInjured && !isUrgentOvervalued && (
             <div className="relative">
               <div 
@@ -345,15 +345,15 @@ function TeamDisplay({
                 onTouchEnd={(e) => handleTooltipTouch(`${player.name}-junk`, e)}
                 style={{ WebkitTapHighlightColor: 'transparent', touchAction: 'manipulation' }}
               >
-                💩
+            💩
               </div>
               {openTooltip === `${player.name}-junk` && (
                 <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-card border border-primary/30 rounded-md shadow-lg text-xs text-card-foreground whitespace-nowrap z-50">
                   Junk cheapie - trade out
                   <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-primary/30" />
-                </div>
-              )}
-            </div>
+          </div>
+        )}
+        </div>
           )}
         </div>
         
@@ -373,7 +373,7 @@ function TeamDisplay({
   const renderPositionRow = (position) => {
     const config = POSITION_CONFIG[position];
     const posPlayers = groupedPlayers[position] || [];
-
+    
     // Pad array to expected count
     const paddedPlayers = [...posPlayers];
     while (paddedPlayers.length < config.count) {
@@ -399,16 +399,16 @@ function TeamDisplay({
         const isTourStep7 = isTourActive && currentTourStep === 7;
         return (
           <div className={cn(
-            "fixed inset-x-0 bottom-0 p-4 animate-in slide-in-from-bottom duration-300",
+            "fixed inset-x-0 bottom-0 animate-in slide-in-from-bottom duration-300",
             isTourStep7 ? "z-[10001]" : "z-50"
           )}>
             <TradeTypeSelector
-              player={player}
-              slotPosition={showPositionDropdown.slotPosition}
-              positionRequirements={positionRequirements}
-              onPositionRequirementSelect={onPositionRequirementSelect}
-              onCancelPositionRequirement={onCancelPositionRequirement}
-              onPositionRequirementChange={onPositionRequirementChange}
+            player={player}
+            slotPosition={showPositionDropdown.slotPosition}
+            positionRequirements={positionRequirements}
+            onPositionRequirementSelect={onPositionRequirementSelect}
+            onCancelPositionRequirement={onCancelPositionRequirement}
+            onPositionRequirementChange={onPositionRequirementChange}
               preventClose={isTourStep7}
             />
           </div>
@@ -439,51 +439,51 @@ function TradePanel({
       </CardHeader>
       <CardContent className="px-4 pb-4">
         <div className="space-y-2">
-            {players && players.length > 0 ? (
-              isTradeOut ? (
+        {players && players.length > 0 ? (
+          isTradeOut ? (
                 // Trade-out display - width 220px centered for normal mode trade-in page
                 players.map((player, index) => {
                   const isSelected = selectedPlayer?.name === player.name || selectedPlayers?.some(p => p.name === player.name);
                   return (
-                    <div 
-                      key={player.name || index}
+              <div 
+                key={player.name || index}
                       className={cn(
                         "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer w-[220px] mx-auto",
                         "bg-primary/5 hover:bg-primary/10",
                         isSelected && "bg-primary/20 ring-1 ring-primary"
                       )}
-                      onClick={() => onSelect?.(player)}
-                    >
+                onClick={() => onSelect?.(player)}
+              >
                       <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
-                        {player.positions?.[0] || '—'}
+                  {player.positions?.[0] || '—'}
                       </Badge>
                       <span className="flex-1 text-sm text-foreground truncate">{formatPlayerName(player.name)}</span>
-                      {player.price && (
+                {player.price && (
                         <span className="text-xs text-primary font-semibold shrink-0">${formatNumberWithCommas(Math.round(player.price / 1000))}k</span>
-                      )}
-                      {player.reason && (
+                )}
+                {player.reason && (
                         <span className={cn(
                           "text-xs px-1.5 py-0.5 rounded shrink-0",
                           player.reason === 'injured' ? "bg-amber-500/20 text-amber-400" : "bg-red-500/20 text-red-400"
                         )}>
                           {player.reason === 'injured' ? '⚠️' : `📉 ${player.diff?.toFixed(1)}`}
-                        </span>
-                      )}
-                    </div>
+                  </span>
+                )}
+              </div>
                   );
                 })
-              ) : isTradeIn ? (
-                // Trade-in display (options with multiple players)
-                players.map((option, index) => (
-                  <div 
-                    key={index}
+          ) : isTradeIn ? (
+            // Trade-in display (options with multiple players)
+            players.map((option, index) => (
+              <div 
+                key={index}
                     className={cn(
                       "trade-option p-3 rounded-lg transition-all cursor-pointer border",
                       "bg-card/50 border-primary/20 hover:border-primary/40",
                       selectedOptionIndex === index && "bg-primary/10 border-primary ring-1 ring-primary/50"
                     )}
-                    onClick={() => onSelect?.(option, index)}
-                  >
+                onClick={() => onSelect?.(option, index)}
+              >
                     <div className="flex items-center justify-between mb-2">
                       <Badge variant="secondary" className="text-xs">Option {index + 1}</Badge>
                       <div className="flex gap-2">
@@ -494,14 +494,14 @@ function TradePanel({
                           )}>
                             {option.totalDiff >= 0 ? `+${option.totalDiff.toFixed(1)}` : option.totalDiff.toFixed(1)}
                           </span>
-                        )}
-                        {option.totalProjection && (
+                  )}
+                  {option.totalProjection && (
                           <span className="text-xs text-muted-foreground">Proj: {option.totalProjection.toFixed(1)}</span>
-                        )}
-                      </div>
+                  )}
+                </div>
                     </div>
                     <div className="space-y-1.5">
-                      {option.players.map((player, pIndex) => (
+                {option.players.map((player, pIndex) => (
                         <div key={pIndex} className="flex items-center gap-2 text-sm">
                           <Badge variant="outline" className="px-1.5 py-0 text-xs shrink-0">{player.position}</Badge>
                           <span className="flex-1 text-foreground truncate">{formatPlayerName(player.name)}</span>
@@ -514,53 +514,53 @@ function TradePanel({
                               {player.diff >= 0 ? `+${player.diff.toFixed(1)}` : player.diff.toFixed(1)}
                             </span>
                           )}
-                        </div>
-                      ))}
+                  </div>
+                ))}
                     </div>
                     <div className="flex justify-between mt-2 pt-2 border-t border-primary/10 text-xs text-muted-foreground">
-                      <span>Total: ${formatNumberWithCommas(Math.round(option.totalPrice / 1000))}k</span>
-                      <span>Remaining: ${formatNumberWithCommas(Math.round(option.salaryRemaining / 1000))}k</span>
-                    </div>
-                    {showConfirmButton && selectedOptionIndex === index && (
+                  <span>Total: ${formatNumberWithCommas(Math.round(option.totalPrice / 1000))}k</span>
+                  <span>Remaining: ${formatNumberWithCommas(Math.round(option.salaryRemaining / 1000))}k</span>
+                </div>
+                {showConfirmButton && selectedOptionIndex === index && (
                       <div className="flex justify-center mt-3">
                         <Button
                           className="w-[150px]"
                           size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onConfirmOption?.();
-                          }}
-                        >
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onConfirmOption?.();
+                    }}
+                  >
                           <Check className="w-4 h-4 mr-2" />
-                          Confirm Trade
+                    Confirm Trade
                         </Button>
                       </div>
-                    )}
-                  </div>
-                ))
-              ) : (
-                // Default display
-                players.map((player, index) => (
-                  <div 
-                    key={player.name || index}
+                )}
+              </div>
+            ))
+          ) : (
+            // Default display
+          players.map((player, index) => (
+            <div 
+              key={player.name || index}
                     className={cn(
                       "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer",
                       "bg-primary/5 hover:bg-primary/10",
                       selectedPlayer?.name === player.name && "bg-primary/20 ring-1 ring-primary"
                     )}
-                    onClick={() => onSelect?.(player)}
-                  >
+              onClick={() => onSelect?.(player)}
+            >
                     <Badge variant="outline" className="px-2 py-0.5 text-xs">
-                      {player.positions?.[0] || '—'}
+                {player.positions?.[0] || '—'}
                     </Badge>
                     <span className="flex-1 text-sm text-foreground">{formatPlayerName(player.name)}</span>
-                  </div>
-                ))
-              )
-            ) : (
+            </div>
+          ))
+          )
+        ) : (
               <p className="text-center text-muted-foreground text-sm py-4">{emptyMessage}</p>
-            )}
-        </div>
+        )}
+      </div>
       </CardContent>
     </Card>
   );
@@ -1308,7 +1308,7 @@ function TeamView({
     if (exists) {
       // Allow deselection even if at limit - use flushSync for immediate UI update
       flushSync(() => {
-        setSelectedTradeOutPlayers(prev => prev.filter(p => p.name !== player.name));
+      setSelectedTradeOutPlayers(prev => prev.filter(p => p.name !== player.name));
       });
       // Clear position requirements for deselected player
       setPositionRequirements(prev => {
@@ -1331,11 +1331,11 @@ function TeamView({
       // For positional players, add directly with automatic position requirement
       // Use flushSync for immediate UI update
       flushSync(() => {
-        setSelectedTradeOutPlayers(prev => [...prev, {
-          ...player,
-          originalPosition: position,
-          trade_in_positions: [position]  // Positional players require same position replacement
-        }]);
+      setSelectedTradeOutPlayers(prev => [...prev, {
+        ...player,
+        originalPosition: position,
+        trade_in_positions: [position]  // Positional players require same position replacement
+      }]);
       });
     }
     // If not exists and at limit, do nothing
@@ -1501,7 +1501,7 @@ function TeamView({
         ...notSelectedPlayers,
         ...junkCheapies
       ]);
-
+      
       // Find the actual player objects from teamPlayers that match these names
       const highlightedPlayers = teamPlayers.filter(player =>
         allProblemPlayers.has(player.name)
@@ -1594,7 +1594,7 @@ function TeamView({
         // Deselect - reduce salary cap and clear position requirements
         // Use flushSync for immediate UI update
         flushSync(() => {
-          setPreseasonSelectedTradeOuts(prev => prev.filter(p => p.name !== player.name));
+        setPreseasonSelectedTradeOuts(prev => prev.filter(p => p.name !== player.name));
         });
         setPositionRequirements(prev => {
           const newReqs = { ...prev };
@@ -1616,11 +1616,11 @@ function TeamView({
         // For positional players, add directly with automatic position requirement
         // Use flushSync for immediate UI update
         flushSync(() => {
-          setPreseasonSelectedTradeOuts(prev => [...prev, {
-            ...player,
-            originalPosition: position,
-            trade_in_positions: [position]  // Positional players require same position replacement
-          }]);
+        setPreseasonSelectedTradeOuts(prev => [...prev, {
+          ...player,
+          originalPosition: position,
+          trade_in_positions: [position]  // Positional players require same position replacement
+        }]);
         });
       }
     }
@@ -1724,14 +1724,14 @@ function TeamView({
     // Get remaining slots that haven't been filled
     const remainingSlots = getRemainingTradeOutSlots();
     const playerPosition = player.position || player.positions?.[0];
-
+    
     // Budget feasibility: prevent selecting a player that makes it impossible to complete the remaining trades.
     // We also use this to choose the best slot assignment (max slack) if multiple slots are possible.
     const bestFeasible = findBestFeasibleSlotAssignment(player, remainingSlots, totalAvailableSalary);
     if (!bestFeasible) {
       console.log('Preseason: selection rejected (would leave insufficient budget to fill remaining slots):', player.name);
-      return;
-    }
+        return;
+      }
     
     let matchingTradeOut = null;
     let matchingBandIndex = -1;
@@ -2052,41 +2052,41 @@ function TeamView({
             </Button>
           </CardHeader>
           <CardContent className="space-y-4 pb-8">
-            {/* Trade-out selections (only in normal mode) */}
-            {!isPreseasonMode && (
-              <TradePanel 
-                title="Trade Out"
-                subtitle="Trade-out Selections"
-                players={selectedTradeOutPlayers}
-                onSelect={handleTradeOut}
-                selectedPlayers={selectedTradeOutPlayers}
-                emptyMessage="Select highlighted players to add them here"
-                isTradeOut={true}
-              />
-            )}
+          {/* Trade-out selections (only in normal mode) */}
+          {!isPreseasonMode && (
+          <TradePanel 
+            title="Trade Out"
+            subtitle="Trade-out Selections"
+            players={selectedTradeOutPlayers}
+            onSelect={handleTradeOut}
+            selectedPlayers={selectedTradeOutPlayers}
+            emptyMessage="Select highlighted players to add them here"
+            isTradeOut={true}
+          />
+          )}
 
-            {/* Preseason mode info */}
-            {isPreseasonMode && (
+          {/* Preseason mode info */}
+          {isPreseasonMode && (
               <Alert className="bg-primary/10 border-primary/30">
                 <AlertDescription className="text-primary">
-                  Trade-out recommendations will be highlighted on your team screen
+              Trade-out recommendations will be highlighted on your team screen
                 </AlertDescription>
               </Alert>
-            )}
+          )}
 
-            {/* Cash in Bank Input */}
+          {/* Cash in Bank Input */}
             <div className="space-y-2">
               <label htmlFor="cashInBankModal" className="text-sm font-medium text-foreground">Cash in Bank ($)</label>
               <Input
                 id="cashInBankModal"
-                type="text"
-                value={cashInBankDisplay}
-                onChange={handleCashChange}
-                placeholder="$ 000 k"
-              />
-            </div>
+              type="text"
+              value={cashInBankDisplay}
+              onChange={handleCashChange}
+              placeholder="$ 000 k"
+            />
+          </div>
 
-            {/* Strategy Selection */}
+          {/* Strategy Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Strategy</label>
               <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
@@ -2101,24 +2101,24 @@ function TeamView({
                   <SelectItem value="5">Band</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+          </div>
 
             {/* Bye round toggle */}
             <div className="flex items-center justify-between py-2">
               <div>
                 <label className="text-sm font-medium text-foreground">Target Bye Round</label>
                 <p className="text-xs text-muted-foreground">Prioritise bye coverage</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={targetByeRound}
-                  onChange={(e) => setTargetByeRound(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
             </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={targetByeRound}
+                onChange={(e) => setTargetByeRound(e.target.checked)}
+                  className="sr-only peer"
+              />
+                <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
 
             {/* Pre-season Mode Toggle */}
             <Card className={cn("p-3 border", isPreseasonMode ? "border-primary bg-primary/5" : "border-primary/20")}>
@@ -2126,82 +2126,82 @@ function TeamView({
                 <div>
                   <label className="text-sm font-medium text-foreground">Pre-season Mode</label>
                   <p className="text-xs text-muted-foreground">Up to 6 trades</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isPreseasonMode}
-                    onChange={(e) => setIsPreseasonMode(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                </label>
               </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPreseasonMode}
+                  onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                    className="sr-only peer"
+                />
+                  <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
               
-              {isPreseasonMode && (
+            {isPreseasonMode && (
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-primary/20">
                   <div>
                     <label className="text-sm font-medium text-foreground">Test Approach</label>
                     <p className="text-xs text-muted-foreground">Price band ±$75k</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={preseasonTestApproach}
-                      onChange={(e) => setPreseasonTestApproach(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
                 </div>
-              )}
+                  <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={preseasonTestApproach}
+                    onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                      className="sr-only peer"
+                  />
+                    <div className="w-11 h-6 bg-muted rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+            )}
             </Card>
 
-            {/* Number of Trades (hidden in preseason mode) */}
-            {!isPreseasonMode && (
+          {/* Number of Trades (hidden in preseason mode) */}
+          {!isPreseasonMode && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Number of Trades</label>
                 <Input
-                  type="number"
-                  value={numTrades}
-                  onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+              type="number"
+              value={numTrades}
+              onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
                   min={1}
                   max={2}
-                />
-              </div>
-            )}
+            />
+          </div>
+          )}
 
             {/* Action Button */}
-            {isPreseasonMode ? (
+          {isPreseasonMode ? (
               <Button 
                 className="w-full"
-                onClick={() => {
-                  handleHighlightOptions();
-                }}
-                disabled={isCalculating}
-              >
+              onClick={() => {
+                handleHighlightOptions();
+              }}
+              disabled={isCalculating}
+            >
                 {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
+              {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
               </Button>
-            ) : (
+          ) : (
               <Button
                 className="w-full"
-                onClick={handleTradeWorkflow}
-                disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
-              >
+            onClick={handleTradeWorkflow}
+            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
+          >
                 {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {isCalculating ? 'Calculating...' :
-                 normalModePhase === 'recommend' ? 'Recommend players to trade out' :
-                 'Calculate trade recommendations'}
+            {isCalculating ? 'Calculating...' :
+             normalModePhase === 'recommend' ? 'Recommend players to trade out' :
+             'Calculate trade recommendations'}
               </Button>
-            )}
+          )}
 
-            {error && (
+          {error && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
-            )}
+          )}
           </CardContent>
         </Card>
       </div>
@@ -2331,7 +2331,7 @@ function TeamView({
                         ${formatNumberWithCommas(Math.round(tradeOutPlayer.price / 1000))}k
                       </span>
                     </div>
-
+                    
                     {/* Arrow */}
                     <div className={cn(
                       "text-lg flex items-center justify-center",
@@ -2339,7 +2339,7 @@ function TeamView({
                     )}>
                       ⇄
                     </div>
-
+                    
                     {/* Trade In Player */}
                     <div className={cn(
                       "flex items-center gap-2 p-2 rounded-lg min-h-[40px] w-[150px]",
@@ -2364,16 +2364,16 @@ function TeamView({
                   </div>
                 );
               })}
-              
-              {allPositionsFilled && (
+            
+            {allPositionsFilled && (
                 <Button 
                   className="w-full mt-3"
-                  onClick={handleConfirmAllPreseasonTrades}
-                >
+                onClick={handleConfirmAllPreseasonTrades}
+              >
                   <Check className="w-4 h-4 mr-2" />
                   Confirm Trades
                 </Button>
-              )}
+            )}
             </CardContent>
           </Card>
         </div>
@@ -2386,17 +2386,17 @@ function TeamView({
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <div className="space-y-2">
-                {getFilteredTradeIns().length > 0 ? (
-                  getFilteredTradeIns().map((player, index) => {
-                    const totalAvailableSalary = (cashInBank * 1000) +
-                      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
-                      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
-                    const isDisabled = player.price > totalAvailableSalary;
+              {getFilteredTradeIns().length > 0 ? (
+                getFilteredTradeIns().map((player, index) => {
+                  const totalAvailableSalary = (cashInBank * 1000) +
+                    preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                    preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+                  const isDisabled = player.price > totalAvailableSalary;
                     const isSelected = preseasonSelectedTradeIns.some(p => p.name === player.name);
 
-                    return (
-                      <div
-                        key={player.name || index}
+                  return (
+                    <div
+                      key={player.name || index}
                         className={cn(
                           "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer",
                           "bg-primary/5 hover:bg-primary/10",
@@ -2404,33 +2404,33 @@ function TeamView({
                           isDisabled && "opacity-50 cursor-not-allowed"
                         )}
                         onClick={() => !isDisabled && handlePreseasonTradeInSelect(player)}
-                      >
+                    >
                         <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
-                          {player.position || player.positions?.[0] || '—'}
+                      {player.position || player.positions?.[0] || '—'}
                         </Badge>
                         <span className="flex-1 text-sm text-foreground truncate">{formatPlayerName(player.name)}</span>
                         <span className="text-xs text-primary font-semibold shrink-0">
-                          ${formatNumberWithCommas(Math.round(player.price / 1000))}k
-                        </span>
-                        {player.diff && (
+                      ${formatNumberWithCommas(Math.round(player.price / 1000))}k
+                    </span>
+                      {player.diff && (
                           <span className={cn(
                             "text-xs font-semibold",
                             player.diff >= 0 ? "text-green-500" : "text-red-500"
                           )}>
                             {player.diff >= 0 ? `+${player.diff.toFixed(1)}` : player.diff.toFixed(1)}
                           </span>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
+                      )}
+                    </div>
+                  );
+                })
+              ) : (
                   <p className="text-center text-muted-foreground text-sm py-4">
-                    {allPositionsFilled
-                      ? 'All positions filled! Click "Confirm Trades" above.'
+                  {allPositionsFilled
+                    ? 'All positions filled! Click "Confirm Trades" above.'
                       : 'No trade-in options available'}
-                  </p>
-                )}
-              </div>
+                </p>
+              )}
+            </div>
             </CardContent>
           </Card>
         </div>
@@ -2708,13 +2708,13 @@ function TeamView({
               
               <Input
                 className="cash-input-compact w-20 sm:w-24 h-9 text-sm"
-                type="text"
-                value={cashInBankDisplay}
-                onChange={handleCashChange}
-                placeholder="$ Cash"
-              />
+                  type="text"
+                  value={cashInBankDisplay}
+                  onChange={handleCashChange}
+                  placeholder="$ Cash"
+                />
               
-              {!isPreseasonMode && (
+                {!isPreseasonMode && (
                 <div className="relative" ref={strategyDropdownRef}>
                   <Button
                     variant="outline"
@@ -2765,10 +2765,10 @@ function TeamView({
                 variant={targetByeRound ? "default" : "outline"}
                 size="sm"
                 className="bye-round-btn-compact h-9 px-3"
-                onClick={() => setTargetByeRound(!targetByeRound)}
-                title="Target bye round players"
-              >
-                Bye
+                  onClick={() => setTargetByeRound(!targetByeRound)}
+                  title="Target bye round players"
+                >
+                  Bye
               </Button>
               
               {/* Desktop Salary cap display */}
@@ -2869,19 +2869,19 @@ function TeamView({
             <CardTitle className="text-lg text-primary">Trade Options</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Cash in Bank Input */}
+          {/* Cash in Bank Input */}
             <div className="space-y-2">
               <label htmlFor="cashInBank" className="text-sm font-medium text-foreground">Cash in Bank ($)</label>
               <Input
-                id="cashInBank"
-                type="text"
-                value={cashInBankDisplay}
-                onChange={handleCashChange}
-                placeholder="$ 000 k"
-              />
-            </div>
+              id="cashInBank"
+              type="text"
+              value={cashInBankDisplay}
+              onChange={handleCashChange}
+              placeholder="$ 000 k"
+            />
+          </div>
 
-            {/* Strategy Selection */}
+          {/* Strategy Selection */}
             <div className="space-y-2">
               <label htmlFor="strategy" className="text-sm font-medium text-foreground">Strategy</label>
               <Select value={selectedStrategy} onValueChange={setSelectedStrategy}>
@@ -2896,180 +2896,180 @@ function TeamView({
                   <SelectItem value="5">Band</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+          </div>
 
             {/* Bye round toggle */}
             <div className="flex items-center justify-between py-2">
               <div>
                 <label className="text-sm font-medium text-foreground">Target Bye Round</label>
                 <p className="text-xs text-muted-foreground">Prioritise bye coverage</p>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={targetByeRound}
-                  onChange={(e) => setTargetByeRound(e.target.checked)}
-                  className="sr-only peer"
-                />
-                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-              </label>
             </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={targetByeRound}
+                onChange={(e) => setTargetByeRound(e.target.checked)}
+                  className="sr-only peer"
+              />
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+            </label>
+          </div>
 
-            {/* Pre-season Mode Toggle */}
+          {/* Pre-season Mode Toggle */}
             <Card className={cn("p-3 border", isPreseasonMode ? "border-primary bg-primary/5" : "border-primary/20")}>
               <div className="flex items-center justify-between">
                 <div>
                   <label className="text-sm font-medium text-foreground">Pre-season Mode</label>
                   <p className="text-xs text-muted-foreground">Up to 6 trades</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isPreseasonMode}
-                    onChange={(e) => setIsPreseasonMode(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                </label>
               </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isPreseasonMode}
+                  onChange={(e) => setIsPreseasonMode(e.target.checked)}
+                    className="sr-only peer"
+                />
+                  <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
               
-              {isPreseasonMode && (
+            {isPreseasonMode && (
                 <div className="flex items-center justify-between mt-3 pt-3 border-t border-primary/20">
                   <div>
                     <label className="text-sm font-medium text-foreground">Test Approach</label>
                     <p className="text-xs text-muted-foreground">Price band ±$75k</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={preseasonTestApproach}
-                      onChange={(e) => setPreseasonTestApproach(e.target.checked)}
-                      className="sr-only peer"
-                    />
-                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
-                  </label>
                 </div>
-              )}
+                  <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={preseasonTestApproach}
+                    onChange={(e) => setPreseasonTestApproach(e.target.checked)}
+                      className="sr-only peer"
+                  />
+                    <div className="w-11 h-6 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                </label>
+              </div>
+            )}
             </Card>
 
-            {/* Number of Trades (hidden in preseason mode) */}
-            {!isPreseasonMode && (
+          {/* Number of Trades (hidden in preseason mode) */}
+          {!isPreseasonMode && (
               <div className="space-y-2">
                 <label htmlFor="numTrades" className="text-sm font-medium text-foreground">Number of Trades</label>
                 <Input
-                  id="numTrades"
-                  type="number"
-                  value={numTrades}
-                  onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
+              id="numTrades"
+              type="number"
+              value={numTrades}
+              onChange={(e) => setNumTrades(parseInt(e.target.value) || 2)}
                   min={1}
                   max={2}
-                />
-              </div>
-            )}
+            />
+          </div>
+          )}
 
             {/* Action Buttons based on mode */}
-            {isPreseasonMode ? (
+          {isPreseasonMode ? (
               <div className="space-y-3">
-                {preseasonPhase === 'idle' && (
+              {preseasonPhase === 'idle' && (
                   <Button 
                     className="w-full"
-                    onClick={handleHighlightOptions}
-                    disabled={isCalculating}
-                  >
+                  onClick={handleHighlightOptions}
+                  disabled={isCalculating}
+                >
                     {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
+                  {isCalculating ? 'Calculating...' : 'Highlight Trade-Out Options'}
                   </Button>
-                )}
-                
-                {preseasonPhase === 'selecting-out' && (
-                  <>
+              )}
+              
+              {preseasonPhase === 'selecting-out' && (
+                <>
                     <Badge variant="outline" className="w-full justify-center py-2 text-primary border-primary/50">
-                      Cash in Bank: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                    Cash in Bank: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
                     </Badge>
                     <p className="text-sm text-center text-muted-foreground">
                       {preseasonSelectedTradeOuts.length} player{preseasonSelectedTradeOuts.length !== 1 ? 's' : ''} selected
                     </p>
                     <Button 
                       className="w-full"
-                      onClick={handleConfirmPreseasonTradeOuts}
-                      disabled={isCalculating || preseasonSelectedTradeOuts.length === 0}
-                    >
+                    onClick={handleConfirmPreseasonTradeOuts}
+                    disabled={isCalculating || preseasonSelectedTradeOuts.length === 0}
+                  >
                       {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                      {isCalculating ? 'Loading Trade-Ins...' : 'Confirm Trade-Outs'}
+                    {isCalculating ? 'Loading Trade-Ins...' : 'Confirm Trade-Outs'}
                     </Button>
-                  </>
-                )}
-                
-                {preseasonPhase === 'selecting-in' && (
-                  <>
-                    {(() => {
-                      const remaining = (cashInBank * 1000) +
-                        preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
-                        preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
-                      return (
-                        <>
+                </>
+              )}
+              
+              {preseasonPhase === 'selecting-in' && (
+                <>
+                  {(() => {
+                    const remaining = (cashInBank * 1000) +
+                      preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                      preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+                    return (
+                      <>
                           <Badge variant={remaining > 0 ? "default" : "destructive"} className="w-full justify-center py-2">
-                            Remaining: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
+                          Remaining: ${formatNumberWithCommas(Math.round(remaining / 1000))}k
                           </Badge>
                           <p className="text-sm text-center text-muted-foreground">
                             {preseasonSelectedTradeIns.length}/{preseasonSelectedTradeOuts.length} selected
                           </p>
-                        </>
-                      );
-                    })()}
-                  </>
-                )}
+                      </>
+                    );
+                  })()}
+                </>
+              )}
               </div>
-            ) : (
+          ) : (
               <Button
                 className="btn-calculate-trades w-full"
-                onClick={handleTradeWorkflow}
-                disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
-              >
+            onClick={handleTradeWorkflow}
+            disabled={isCalculating || (normalModePhase === 'calculate' && selectedTradeOutPlayers.length < 1)}
+          >
                 {isCalculating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {isCalculating ? 'Calculating...' :
-                 normalModePhase === 'recommend' ? 'Recommend players to trade out' :
-                 'Calculate trade recommendations'}
+            {isCalculating ? 'Calculating...' :
+             normalModePhase === 'recommend' ? 'Recommend players to trade out' :
+             'Calculate trade recommendations'}
               </Button>
-            )}
+          )}
 
             {/* Error display */}
-            {error && (
+          {error && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
-            )}
-            
-            {/* Trade Panels - Normal mode only */}
-            {!isPreseasonMode && (
-              <>
-                <TradePanel
-                  title="Trade Out"
-                  subtitle="Trade-out Selections"
-                  players={selectedTradeOutPlayers}
-                  onSelect={handleTradeOut}
-                  selectedPlayers={selectedTradeOutPlayers}
-                  emptyMessage="Click on highlighted players to select them for trade-out"
-                  isTradeOut={true}
-                />
-                
-                <TradePanel 
-                  title="Trade In"
-                  subtitle="Trade-in Recommendations"
-                  players={tradeInRecommendations}
-                  onSelect={handleTradeIn}
-                  selectedOptionIndex={selectedTradeInIndex}
-                  onConfirmOption={handleConfirmTrade}
-                  showConfirmButton={true}
-                  emptyMessage="Trade-out players will generate trade-in options"
-                  isTradeIn={true}
-                />
-              </>
-            )}
-            
-            {/* Pre-season Trade-In List */}
-            {isPreseasonMode && preseasonPhase === 'selecting-in' && (
+          )}
+          
+          {/* Trade Panels - Normal mode only */}
+          {!isPreseasonMode && (
+            <>
+          <TradePanel
+            title="Trade Out"
+            subtitle="Trade-out Selections"
+            players={selectedTradeOutPlayers}
+            onSelect={handleTradeOut}
+            selectedPlayers={selectedTradeOutPlayers}
+            emptyMessage="Click on highlighted players to select them for trade-out"
+            isTradeOut={true}
+          />
+          
+          <TradePanel 
+            title="Trade In"
+            subtitle="Trade-in Recommendations"
+            players={tradeInRecommendations}
+            onSelect={handleTradeIn}
+            selectedOptionIndex={selectedTradeInIndex}
+            onConfirmOption={handleConfirmTrade}
+            showConfirmButton={true}
+            emptyMessage="Trade-out players will generate trade-in options"
+            isTradeIn={true}
+          />
+            </>
+          )}
+          
+          {/* Pre-season Trade-In List */}
+          {isPreseasonMode && preseasonPhase === 'selecting-in' && (
               <Card className="border-primary/30">
                 <CardHeader className="pb-2 pt-4 px-4">
                   <CardTitle className="text-sm font-semibold text-primary uppercase tracking-wide">Trade-In Options</CardTitle>
@@ -3077,17 +3077,17 @@ function TeamView({
                 <CardContent className="px-4 pb-4">
                   <ScrollArea className="max-h-[300px]">
                     <div className="space-y-2">
-                      {getFilteredTradeIns().length > 0 ? (
-                        getFilteredTradeIns().map((player, index) => {
-                          const totalAvailableSalary = (cashInBank * 1000) +
-                            preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
-                            preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
-                          const isDisabled = player.price > totalAvailableSalary;
+              {getFilteredTradeIns().length > 0 ? (
+                getFilteredTradeIns().map((player, index) => {
+                  const totalAvailableSalary = (cashInBank * 1000) +
+                    preseasonSelectedTradeOuts.reduce((sum, p) => sum + (p.price || 0), 0) -
+                    preseasonSelectedTradeIns.reduce((sum, p) => sum + (p.price || 0), 0);
+                  const isDisabled = player.price > totalAvailableSalary;
                           const isSelected = preseasonSelectedTradeIns.some(p => p.name === player.name);
 
-                          return (
-                            <div
-                              key={player.name || index}
+                  return (
+                    <div
+                      key={player.name || index}
                               className={cn(
                                 "flex items-center gap-2 p-2 rounded-lg transition-all cursor-pointer",
                                 "bg-primary/5 hover:bg-primary/10",
@@ -3095,37 +3095,37 @@ function TeamView({
                                 isDisabled && "opacity-50 cursor-not-allowed"
                               )}
                               onClick={() => !isDisabled && handlePreseasonTradeInSelect(player)}
-                            >
+                    >
                               <Badge variant="outline" className="px-2 py-0.5 text-xs shrink-0">
-                                {player.position || player.positions?.[0] || '—'}
+                        {player.position || player.positions?.[0] || '—'}
                               </Badge>
                               <span className="flex-1 text-sm text-foreground truncate">{formatPlayerName(player.name)}</span>
                               <span className="text-xs text-primary font-semibold shrink-0">
-                                ${formatNumberWithCommas(Math.round(player.price / 1000))}k
-                              </span>
-                              {player.diff && (
+                        ${formatNumberWithCommas(Math.round(player.price / 1000))}k
+                      </span>
+                        {player.diff && (
                                 <span className={cn(
                                   "text-xs font-semibold",
                                   player.diff >= 0 ? "text-green-500" : "text-red-500"
                                 )}>
                                   {player.diff >= 0 ? `+${player.diff.toFixed(1)}` : player.diff.toFixed(1)}
                                 </span>
-                              )}
-                            </div>
-                          );
-                        })
-                      ) : (
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
                         <p className="text-center text-muted-foreground text-sm py-4">
-                          {preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length
-                            ? 'All positions filled!'
+                    {preseasonSelectedTradeIns.length === preseasonSelectedTradeOuts.length
+                      ? 'All positions filled!'
                             : 'No trade-in options available'}
-                        </p>
-                      )}
-                    </div>
+                  </p>
+                )}
+              </div>
                   </ScrollArea>
                 </CardContent>
               </Card>
-            )}
+          )}
           </CardContent>
         </Card>
       </div>
