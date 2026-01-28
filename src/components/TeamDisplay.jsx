@@ -226,8 +226,8 @@ function TeamDisplay({
     );
 
     const handleClick = (e) => {
-      // Prevent default to avoid any double-firing on mobile
-      if (e) e.preventDefault();
+      // Prevent default to avoid any double-firing on mobile - Removed for now to fix outside click
+      // if (e) e.preventDefault();
       
       if (isPreseasonMode && onPreseasonClick) {
         onPreseasonClick(player, position);
@@ -239,7 +239,6 @@ function TeamDisplay({
     // Handle touch end for iOS - fires immediately without waiting for click
     const handleTouchEnd = (e) => {
       e.preventDefault();
-      e.stopPropagation();
       handleClick();
     };
 
@@ -399,7 +398,7 @@ function TeamDisplay({
         const isTourStep7 = isTourActive && currentTourStep === 7;
         return (
           <div className={cn(
-            "fixed inset-x-0 bottom-0 animate-in slide-in-from-bottom duration-300",
+            "fixed inset-x-0 bottom-0 mb-1 animate-in slide-in-from-bottom duration-300",
             isTourStep7 ? "z-[10001]" : "z-50"
           )}>
             <TradeTypeSelector
@@ -1299,6 +1298,11 @@ function TeamView({
   const handleTradeOut = (player, position) => {
     if (!player) return;
 
+    // Close any open position dropdown first
+    if (showPositionDropdown) {
+      setShowPositionDropdown(null);
+    }
+
     // Allow selection of ANY player for trading out (not just highlighted ones)
     // Highlighted players have orange border, but any player can be selected
     // Selected players (highlighted or not) get the teal selection styling
@@ -1582,6 +1586,11 @@ function TeamView({
   // Using flushSync for immediate UI updates (same fix as handleTradeOut)
   const handlePreseasonPlayerClick = (player, position) => {
     if (!player) return;
+
+    // Close any open position dropdown first
+    if (showPositionDropdown) {
+      setShowPositionDropdown(null);
+    }
 
     // During selecting-out phase - user is selecting which highlighted players to trade out
     if (preseasonPhase === 'selecting-out') {
