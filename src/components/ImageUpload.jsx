@@ -542,44 +542,65 @@ function ImageUpload({
     extractFromText(text || '', 0);
     players.sort((a, b) => a.y - b.y || a.matchIndex - b.matchIndex);
     
-    const seen = new Map();
-    const seenBySurname = new Map();
-    
+    // Deduplicate by *exact extracted name* only.
+    // Then, if we have multiple variants for the same surname, drop the ones with invalid initials
+    // (but KEEP distinct valid initials like T. Couchman vs R. Couchman).
+    const seen = new Map(); // key: exact extracted name
+
     for (const player of players) {
-      const nameParts = player.name.split('. ');
-      const surname = nameParts.length > 1 ? nameParts[1].toLowerCase() : player.name.toLowerCase();
-      const initial = nameParts.length > 1 ? nameParts[0] : '';
-      const hasValidInitial = initial.length === 1 && /[A-Z]/i.test(initial);
-      
-      if (!seen.has(player.name)) {
-        if (seenBySurname.has(surname)) {
-          const existing = seenBySurname.get(surname);
-          const existingParts = existing.name.split('. ');
-          const existingInitial = existingParts.length > 1 ? existingParts[0] : '';
-          const existingHasValidInitial = existingInitial.length === 1 && /[A-Z]/i.test(existingInitial);
-          
-          if (hasValidInitial && !existingHasValidInitial) {
-            seen.delete(existing.name);
-            seen.set(player.name, player);
-            seenBySurname.set(surname, player);
-          }
-          else if (!hasValidInitial || (hasValidInitial && existingHasValidInitial && initial !== existingInitial)) {
-            continue;
-          }
-        } else {
-          seen.set(player.name, player);
-          seenBySurname.set(surname, player);
-        }
-      } else {
-        const existing = seen.get(player.name);
-        if (!existing.price && player.price) {
-          seen.set(player.name, player);
-          seenBySurname.set(surname, player);
-        }
+      if (!player?.name) continue;
+
+      const key = player.name;
+      if (!seen.has(key)) {
+        seen.set(key, player);
+        continue;
+      }
+
+      const existing = seen.get(key);
+      // Prefer the version that has a parsed price (format1) if the other doesn't.
+      if (!existing.price && player.price) {
+        seen.set(key, player);
       }
     }
-    
-    const orderedPlayers = Array.from(seen.values()).map(player => ({
+
+    const dedupedPlayers = Array.from(seen.values());
+
+    const groupBySurname = new Map(); // surnameLower -> Array<player>
+    for (const player of dedupedPlayers) {
+      const nameParts = player.name.split('. ');
+      const surnameLower = (nameParts.length > 1 ? nameParts[1] : player.name).toLowerCase();
+      const group = groupBySurname.get(surnameLower) || [];
+      group.push(player);
+      groupBySurname.set(surnameLower, group);
+    }
+
+    const orderedPlayers = [];
+    for (const [, group] of groupBySurname) {
+      const hasAnyValidInitial = group.some(p => {
+        const parts = p.name.split('. ');
+        const init = parts.length > 1 ? parts[0] : '';
+        return init.length === 1 && /[A-Z]/.test(init);
+      });
+
+      if (!hasAnyValidInitial) {
+        orderedPlayers.push(...group);
+        continue;
+      }
+
+      // If at least one valid-initial entry exists for this surname, drop the invalid-initial ones.
+      orderedPlayers.push(
+        ...group.filter(p => {
+          const parts = p.name.split('. ');
+          const init = parts.length > 1 ? parts[0] : '';
+          return init.length === 1 && /[A-Z]/.test(init);
+        })
+      );
+    }
+
+    // Preserve original OCR ordering (by y/matchIndex) after filtering
+    orderedPlayers.sort((a, b) => (a.y || 0) - (b.y || 0) || (a.matchIndex || 0) - (b.matchIndex || 0));
+
+    const normalizedPlayers = orderedPlayers.map(player => ({
       name: player.name,
       positions: player.positions,
       price: player.price,
@@ -587,7 +608,7 @@ function ImageUpload({
       matchIndex: player.matchIndex
     }));
     
-    return orderedPlayers;
+    return normalizedPlayers;
   };
 
   const processImage = async (file, imageIndex, total) => {
@@ -1137,11 +1158,9 @@ function ImageUpload({
             return true;
           }
 
-          // Check if this player was validated
-          const validated = validatedPlayers.find(vp =>
-            vp.name === slot.name ||
-            (vp.fullName && slot.name && vp.fullName.toLowerCase().includes(slot.name.split('. ')[1]?.toLowerCase()))
-          );
+          // Check if this player was validated.
+          // IMPORTANT: Match by slotIndex (stable) instead of surname heuristics (unstable for shared surnames).
+          const validated = validatedPlayers.find(vp => vp.slotIndex === slot.slotIndex);
 
           // Debug specific names mentioned by user
           if (slot.name && (slot.name.includes("Fa'asuamaleaui") || slot.name.includes("Keeley"))) {
@@ -1168,10 +1187,7 @@ function ImageUpload({
           }
 
           // Update valid players with validated data
-          const validated = validatedPlayers.find(vp =>
-            vp.name === slot.name ||
-            (vp.fullName && slot.name && vp.fullName.toLowerCase().includes(slot.name.split('. ')[1]?.toLowerCase()))
-          );
+          const validated = validatedPlayers.find(vp => vp.slotIndex === slot.slotIndex);
 
           return {
             ...slot,

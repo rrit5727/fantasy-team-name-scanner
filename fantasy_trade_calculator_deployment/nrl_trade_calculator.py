@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional, Sequence
 from dataclasses import dataclass
 from itertools import combinations
 from datetime import datetime
@@ -41,19 +41,37 @@ def get_fixture_rank_map() -> Dict[str, int]:
     return rank_map
 
 
-def match_abbreviated_name_to_full(abbreviated_name: str, all_players: pd.DataFrame) -> str:
+def match_abbreviated_name_to_full(
+    abbreviated_name: str,
+    all_players: pd.DataFrame,
+    positions_hint: Optional[Sequence[str]] = None
+) -> str:
     """
     Match an abbreviated name like "A. Fonua-Blake" to a full name like "Addin Fonua-Blake".
     
     Parameters:
     abbreviated_name (str): Name in format "I. Surname" (e.g., "A. Fonua-Blake")
     all_players (pd.DataFrame): DataFrame containing player data with 'Player' column
+    positions_hint (Optional[Sequence[str]]): Optional position(s) to disambiguate duplicates
+        (e.g., ['HOK'] for "B. Smith" to select the hooker variant).
     
     Returns:
     str: The full player name if found, otherwise the original abbreviated name
     """
+    if all_players is None or all_players.empty or 'Player' not in all_players.columns:
+        return abbreviated_name
+
+    # Use latest round only for stable identity/position info
+    latest_data = all_players
+    if 'Round' in all_players.columns:
+        try:
+            latest_round = all_players['Round'].max()
+            latest_data = all_players[all_players['Round'] == latest_round]
+        except Exception:
+            latest_data = all_players
+
     # Check if already a full name (not abbreviated)
-    if abbreviated_name in all_players['Player'].values:
+    if abbreviated_name in set(latest_data['Player'].unique()):
         return abbreviated_name
     
     # Parse the abbreviated name
@@ -63,15 +81,66 @@ def match_abbreviated_name_to_full(abbreviated_name: str, all_players: pd.DataFr
     
     initial, surname = parts
     
-    # Try to find a matching player
+    # Try to find matching player(s)
     # Match: surname matches AND first name starts with the initial
-    for player_name in all_players['Player'].unique():
+    candidates: List[str] = []
+    for player_name in latest_data['Player'].unique():
         player_parts = player_name.split(' ', 1)
-        if len(player_parts) == 2:
-            first_name, last_name = player_parts
-            # Check if surname matches and first name starts with initial
-            if last_name == surname and first_name[0].upper() == initial.upper():
-                return player_name
+        if len(player_parts) != 2:
+            continue
+        first_name, last_name = player_parts
+        if last_name == surname and first_name[:1].upper() == initial.upper():
+            candidates.append(player_name)
+
+    if len(candidates) == 1:
+        return candidates[0]
+
+    # Disambiguate duplicates (e.g., Brandon Smith vs Billy Smith; Terrell May vs Taylan May)
+    if len(candidates) > 1:
+        hint_positions = []
+        if positions_hint:
+            hint_positions = [
+                str(p).upper()
+                for p in positions_hint
+                if p and str(p).upper() not in ('INT', 'EMG')
+            ]
+
+        if hint_positions and 'POS1' in latest_data.columns:
+            def candidate_positions(full_name: str) -> List[str]:
+                rows = latest_data[latest_data['Player'] == full_name]
+                if rows.empty:
+                    return []
+                row = rows.iloc[0]
+                pos = []
+                pos1 = row.get('POS1')
+                if pd.notna(pos1) and str(pos1).strip():
+                    pos.append(str(pos1).upper())
+                pos2 = row.get('POS2') if 'POS2' in rows.columns else None
+                if pd.notna(pos2) and str(pos2).strip():
+                    pos.append(str(pos2).upper())
+                return pos
+
+            matching = []
+            for full_name in candidates:
+                pos_list = candidate_positions(full_name)
+                if any(p in pos_list for p in hint_positions):
+                    matching.append(full_name)
+
+            if len(matching) == 1:
+                return matching[0]
+            if len(matching) > 1:
+                print(
+                    f"Warning: Ambiguous abbreviated name '{abbreviated_name}' even with positions_hint={hint_positions}. "
+                    f"Candidates={matching}. Using first."
+                )
+                return matching[0]
+
+        # Fallback: ambiguous without a usable hint
+        print(
+            f"Warning: Ambiguous abbreviated name '{abbreviated_name}'. "
+            f"Candidates={candidates}. Using first."
+        )
+        return candidates[0]
     
     # If no match found, return the original name
     return abbreviated_name
@@ -1016,7 +1085,11 @@ def calculate_trade_options(
         # New format: list of dicts with trade_in_positions
         full_traded_out_players = []
         for player_dict in traded_out_players:
-            full_name = match_abbreviated_name_to_full(player_dict['name'], consolidated_data)
+            full_name = match_abbreviated_name_to_full(
+                player_dict['name'],
+                consolidated_data,
+                player_dict.get('positions')
+            )
             # Create a new dict with the matched full name but preserve other fields
             full_player_dict = {**player_dict, 'name': full_name}
             full_traded_out_players.append(full_player_dict)

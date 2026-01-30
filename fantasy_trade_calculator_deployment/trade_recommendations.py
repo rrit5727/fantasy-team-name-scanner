@@ -32,7 +32,11 @@ def fill_missing_prices(team_players: List[Dict], consolidated_data: pd.DataFram
         if price is None or price == 0:
             # Look up price from database
             player_name = player_copy['name']
-            full_name = match_abbreviated_name_to_full(player_name, consolidated_data)
+            full_name = match_abbreviated_name_to_full(
+                player_name,
+                consolidated_data,
+                player_copy.get('positions')
+            )
             
             # Find player in latest data
             player_data = latest_data[latest_data['Player'] == full_name]
@@ -90,7 +94,11 @@ def identify_injured_players(team_players: List[Dict], consolidated_data: pd.Dat
     for player in team_players:
         player_name = player['name']
         # Match abbreviated name (e.g., "E. Clark") to full name (e.g., "Erin Clark")
-        full_name = match_abbreviated_name_to_full(player_name, consolidated_data)
+        full_name = match_abbreviated_name_to_full(
+            player_name,
+            consolidated_data,
+            player.get('positions')
+        )
         print(f"Matching: '{player_name}' -> '{full_name}'")
         
         if full_name in injured_in_db:
@@ -134,7 +142,11 @@ def identify_low_upside_players(
     reverse_mapping = {}  # full -> abbreviated
     for player in team_players:
         abbrev_name = player['name']
-        full_name = match_abbreviated_name_to_full(abbrev_name, consolidated_data)
+        full_name = match_abbreviated_name_to_full(
+            abbrev_name,
+            consolidated_data,
+            player.get('positions')
+        )
         name_mapping[abbrev_name] = full_name
         reverse_mapping[full_name] = abbrev_name
     
@@ -220,7 +232,11 @@ def identify_overvalued_players_by_threshold(
     reverse_mapping = {}  # full -> abbreviated
     for player in team_players:
         abbrev_name = player['name']
-        full_name = match_abbreviated_name_to_full(abbrev_name, consolidated_data)
+        full_name = match_abbreviated_name_to_full(
+            abbrev_name,
+            consolidated_data,
+            player.get('positions')
+        )
         name_mapping[abbrev_name] = full_name
         reverse_mapping[full_name] = abbrev_name
     
@@ -307,7 +323,11 @@ def identify_junk_cheapies(
     reverse_mapping = {}  # full -> abbreviated
     for player in team_players:
         abbrev_name = player['name']
-        full_name = match_abbreviated_name_to_full(abbrev_name, consolidated_data)
+        full_name = match_abbreviated_name_to_full(
+            abbrev_name,
+            consolidated_data,
+            player.get('positions')
+        )
         name_mapping[abbrev_name] = full_name
         reverse_mapping[full_name] = abbrev_name
 
@@ -408,7 +428,11 @@ def calculate_trade_out_recommendations(
     reverse_mapping = {}  # full -> abbreviated (to get back original name)
     for player in team_players:
         abbrev_name = player['name']
-        full_name = match_abbreviated_name_to_full(abbrev_name, consolidated_data)
+        full_name = match_abbreviated_name_to_full(
+            abbrev_name,
+            consolidated_data,
+            player.get('positions')
+        )
         name_mapping[abbrev_name] = full_name
         reverse_mapping[full_name] = abbrev_name
     
@@ -710,7 +734,11 @@ def calculate_combined_trade_recommendations(
     # Plus any explicitly excluded players passed in
     team_player_full_names = []
     for player in team_players:
-        full_name = match_abbreviated_name_to_full(player['name'], consolidated_data)
+        full_name = match_abbreviated_name_to_full(
+            player['name'],
+            consolidated_data,
+            player.get('positions')
+        )
         team_player_full_names.append(full_name)
     
     # Combine with any other excluded players

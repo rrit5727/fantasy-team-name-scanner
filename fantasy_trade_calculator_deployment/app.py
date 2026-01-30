@@ -673,7 +673,11 @@ def analyze_team_status():
                         from .nrl_trade_calculator import match_abbreviated_name_to_full
                     except ImportError:
                         from nrl_trade_calculator import match_abbreviated_name_to_full
-                    full_name = match_abbreviated_name_to_full(team_player['name'], consolidated_data)
+                    full_name = match_abbreviated_name_to_full(
+                        team_player['name'],
+                        consolidated_data,
+                        team_player.get('positions')
+                    )
                     if full_name != team_player['name']:
                         app.logger.info(f"Expanded '{team_player['name']}' to '{full_name}'")
                         expanded_matches = consolidated_data[
@@ -785,12 +789,20 @@ def calculate_preseason_trade_ins():
         from .nrl_trade_calculator import match_abbreviated_name_to_full
         team_player_full_names = []
         for p in team_players:
-            full_name = match_abbreviated_name_to_full(p['name'], consolidated_data)
+            full_name = match_abbreviated_name_to_full(
+                p['name'],
+                consolidated_data,
+                p.get('positions')
+            )
             team_player_full_names.append(full_name)
 
         trade_out_full_names = []
         for p in trade_out_players:
-            full_name = match_abbreviated_name_to_full(p['name'], consolidated_data)
+            full_name = match_abbreviated_name_to_full(
+                p['name'],
+                consolidated_data,
+                p.get('positions')
+            )
             trade_out_full_names.append(full_name)
 
         excluded_names = team_player_full_names + trade_out_full_names

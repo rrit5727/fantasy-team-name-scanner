@@ -369,12 +369,46 @@ export function validatePlayerName(extractedName, validPlayers, extractedPositio
   const normalizedInitial = initial.toLowerCase().trim();
   const normalizedSurname = surname.toLowerCase().trim();
 
-  // Exact match first
-  const exactMatch = validPlayers.find(p => 
+  // Exact match first (but handle dopplegangers: multiple players can share initial+surname)
+  const exactMatches = validPlayers.filter(p =>
     p.initial === normalizedInitial && p.surname === normalizedSurname
   );
-  if (exactMatch) {
-    return { ...exactMatch, matchType: 'exact' };
+  if (exactMatches.length === 1) {
+    return { ...exactMatches[0], matchType: 'exact' };
+  }
+  if (exactMatches.length > 1) {
+    // Prefer the exact match whose positions fit the extracted slot position
+    if (extractedPositions && extractedPositions.length > 0) {
+      const positionMatches = exactMatches.filter(p => {
+        if (!p.positions || p.positions.length === 0) return false;
+        return extractedPositions.some(pos => p.positions.includes(pos));
+      });
+
+      if (positionMatches.length === 1) {
+        return { ...positionMatches[0], matchType: 'exact-position' };
+      }
+    }
+
+    console.log(
+      `Ambiguous exact match for "${extractedName}" (${exactMatches
+        .map(p => p.abbreviatedName)
+        .join(', ')}) - could not disambiguate via position`
+    );
+    // IMPORTANT:
+    // If we can't disambiguate yet (common in Format 2 where OCR doesn't capture positions),
+    // we still treat this as a VALID player name and keep it.
+    //
+    // Later, once slot positions are assigned (HOK/CTR/etc), we will re-run validation
+    // and disambiguate correctly via extractedPositions.
+    //
+    // Without this, we incorrectly reject real players like "B. Smith" and break
+    // screenshot ordering (HOK-first detection) and slot allocation.
+    return {
+      ...exactMatches[0],
+      abbreviatedName: extractedName,
+      fullName: null,
+      matchType: 'exact-ambiguous'
+    };
   }
 
   // Fuzzy surname match with same initial (handles minor OCR errors)
@@ -397,8 +431,29 @@ export function validatePlayerName(extractedName, validPlayers, extractedPositio
   );
   
   if (surnameOnlyExactMatches.length === 1) {
-    console.log(`OCR initial mismatch corrected: "${extractedName}" -> "${surnameOnlyExactMatches[0].abbreviatedName}" (surname-only match)`);
-    return { ...surnameOnlyExactMatches[0], matchType: 'surname-only' };
+    const only = surnameOnlyExactMatches[0];
+
+    // Only accept surname-only when we have supporting evidence.
+    // Otherwise this can incorrectly map siblings/duplicates (e.g. R. Couchman -> T. Couchman)
+    // if one of them is missing from the DB list.
+    const extractedPos = Array.isArray(extractedPositions) ? extractedPositions : [];
+    const hasPositionSupport =
+      extractedPos.length > 0 &&
+      Array.isArray(only.positions) &&
+      extractedPos.some(pos => only.positions.includes(pos));
+
+    const likelyInitials = OCR_MISREAD_MAP[normalizedInitial] || [];
+    const hasInitialSupport = likelyInitials.includes(only.initial) || only.initial === normalizedInitial;
+
+    if (hasPositionSupport || hasInitialSupport) {
+      console.log(`OCR initial mismatch corrected: "${extractedName}" -> "${only.abbreviatedName}" (surname-only match w/ support)`);
+      return { ...only, matchType: hasPositionSupport ? 'surname-only-position' : 'surname-only-initial' };
+    }
+
+    console.log(
+      `Rejecting surname-only match for "${extractedName}" -> "${only.abbreviatedName}" (no initial/position support)`
+    );
+    return null;
   }
 
   // Multiple surname matches - try to disambiguate using OCR misread heuristics
