@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, AlertTriangle, DollarSign, TrendingDown, Ban, Trash2, Check, X, Loader2, RefreshCw, ChevronDown } from 'lucide-react';
+import FantasyFootyQuantLogo from '../assets/cropped_circle_image-da5d2bce-8349-4550-a835-a30fb068bdf4.png';
+import NRLFantasyAmateursLogo from '../assets/cropped_circle_image__1_-558d1a5b-1a96-412b-83d4-d2fc807ea775.png';
 
 // Helper function to format numbers with comma separators
 const formatNumberWithCommas = (num) => {
@@ -2711,10 +2713,17 @@ function TeamView({
         <div className="team-view-main flex-1">
           {/* Header Section */}
           <div className="section-header mb-4 space-y-2">
-            {/* Row 1: My Team heading + controls */}
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Row 1: My Team heading + logos */}
+            <div className="flex items-center gap-2">
               <h2 className="text-xl sm:text-2xl font-bold text-primary shrink-0">MY TEAM</h2>
-              
+              <div className="flex items-center gap-2 ml-auto">
+                <img src={FantasyFootyQuantLogo} alt="Fantasy Footy Quant Logo" className="h-[50px]" />
+                <img src={NRLFantasyAmateursLogo} alt="NRL Fantasy Amateurs Logo" className="h-[50px]" />
+              </div>
+            </div>
+            
+            {/* Row 2: Cash input, Max Value selector, Bye button */}
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <Input
                 className="cash-input-compact w-20 sm:w-24 h-9 text-sm"
                   type="text"
@@ -2793,7 +2802,7 @@ function TeamView({
               )}
             </div>
             
-            {/* Row 2: Action buttons */}
+            {/* Row 3: Action buttons */}
             <div className="header-buttons flex flex-nowrap gap-2 overflow-visible">
               <Button variant="outline" onClick={onBack} className="shrink-0 h-9" size="sm">
                 ← scanner
