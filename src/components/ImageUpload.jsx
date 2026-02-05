@@ -1477,6 +1477,9 @@ function ImageUpload({
         />
         
         <CardContent className="p-8 w-full">
+          <h2 className="text-2xl font-bold text-primary text-center mb-6">
+            Team Scanner
+          </h2>
           {isProcessing ? (
             <div className="text-center text-foreground">
               <Loader2 className="w-12 h-12 mx-auto mb-4 text-primary animate-spin" />
