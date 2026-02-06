@@ -2720,127 +2720,108 @@ function TeamView({
       >
         <div className="team-view-main flex-1">
           {/* Header Section */}
-          <div className="section-header mb-4 space-y-2">
-            {/* Row 1: Logos only (right-aligned) */}
-            <div className="flex items-center justify-end gap-2">
-              <img src={FantasyFootyQuantLogo} alt="Fantasy Footy Quant Logo" className="h-[63px]" />
-              <img src={NRLFantasyAmateursLogo} alt="NRL Fantasy Amateurs Logo" className="h-[63px]" />
-            </div>
+          <div className="section-header mb-4 overflow-visible">
+            {/* Container with buttons on left, logos on right */}
+            <div className="flex gap-4 overflow-visible">
+              {/* Left side: Button rows */}
+              <div className="flex-1 min-w-0 space-y-2">
+                {/* Row 1: Cash input, Max Value selector, Bye button */}
+                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                  <Input
+                    className="cash-input-compact w-20 sm:w-24 h-9 text-sm"
+                    type="text"
+                    value={cashInBankDisplay}
+                    onChange={handleCashChange}
+                    placeholder="$ Cash"
+                  />
 
-            {/* Row 2: Cash input, Max Value selector, Bye button */}
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              <Input
-                className="cash-input-compact w-20 sm:w-24 h-9 text-sm"
-                  type="text"
-                  value={cashInBankDisplay}
-                  onChange={handleCashChange}
-                  placeholder="$ Cash"
-                />
-              
-                {!isPreseasonMode && (
-                <div className="relative" ref={strategyDropdownRef}>
-                  <Button
-                    variant="outline"
-                    className="strategy-select-compact w-28 sm:w-32 h-9 justify-between"
-                    onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
-                  >
-                    {selectedStrategy === '1' ? 'Max Value' : selectedStrategy === '2' ? 'Max Base' : selectedStrategy === '3' ? 'Hybrid' : selectedStrategy === '4' ? 'Test' : selectedStrategy === '5' ? 'Band' : 'Max Value'}
-                    <ChevronDown className="h-4 w-4 opacity-70" />
-                  </Button>
-                  {showStrategyDropdown && (
-                    <div className="absolute top-full left-0 mt-1 w-28 sm:w-32 bg-card border border-primary/30 rounded-md shadow-md z-50">
-                      <div
-                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
-                        onClick={() => { setSelectedStrategy('1'); setShowStrategyDropdown(false); }}
+                  {!isPreseasonMode && (
+                    <div className="relative" ref={strategyDropdownRef}>
+                      <Button
+                        variant="outline"
+                        className="strategy-select-compact w-28 sm:w-32 h-9 justify-between"
+                        onClick={() => setShowStrategyDropdown(!showStrategyDropdown)}
                       >
-                        Max Value
-                      </div>
-                      <div
-                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
-                        onClick={() => { setSelectedStrategy('2'); setShowStrategyDropdown(false); }}
-                      >
-                        Max Base
-                      </div>
-                      <div
-                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
-                        onClick={() => { setSelectedStrategy('3'); setShowStrategyDropdown(false); }}
-                      >
-                        Hybrid
-                      </div>
-                      <div
-                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
-                        onClick={() => { setSelectedStrategy('4'); setShowStrategyDropdown(false); }}
-                      >
-                        Test
-                      </div>
-                      <div
-                        className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer"
-                        onClick={() => { setSelectedStrategy('5'); setShowStrategyDropdown(false); }}
-                      >
-                        Band
-                      </div>
+                        {selectedStrategy === '1' ? 'Max Value' : selectedStrategy === '2' ? 'Max Base' : selectedStrategy === '3' ? 'Hybrid' : selectedStrategy === '4' ? 'Test' : selectedStrategy === '5' ? 'Band' : 'Max Value'}
+                        <ChevronDown className="h-4 w-4 opacity-70" />
+                      </Button>
+                      {showStrategyDropdown && (
+                        <div className="absolute top-full left-0 mt-1 w-28 sm:w-32 bg-card border border-primary/30 rounded-md shadow-md z-50">
+                          <div className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer" onClick={() => { setSelectedStrategy('1'); setShowStrategyDropdown(false); }}>Max Value</div>
+                          <div className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer" onClick={() => { setSelectedStrategy('2'); setShowStrategyDropdown(false); }}>Max Base</div>
+                          <div className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer" onClick={() => { setSelectedStrategy('3'); setShowStrategyDropdown(false); }}>Hybrid</div>
+                          <div className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer" onClick={() => { setSelectedStrategy('4'); setShowStrategyDropdown(false); }}>Test</div>
+                          <div className="px-3 py-2 text-sm hover:bg-primary/15 cursor-pointer" onClick={() => { setSelectedStrategy('5'); setShowStrategyDropdown(false); }}>Band</div>
+                        </div>
+                      )}
                     </div>
                   )}
+
+                  <Button
+                    variant={targetByeRound ? "default" : "outline"}
+                    size="sm"
+                    className="bye-round-btn-compact h-9 px-3"
+                    onClick={() => setTargetByeRound(!targetByeRound)}
+                    title="Target bye round players"
+                  >
+                    Bye
+                  </Button>
+
+                  {/* Desktop Salary cap display */}
+                  {isPreseasonMode && preseasonPhase !== 'idle' && (
+                    <Badge variant={preseasonSalaryCap > 0 ? "default" : "destructive"} className="hidden lg:flex text-sm px-3 py-1 ml-auto">
+                      {preseasonPhase === 'selecting-out' ? 'Cash in Bank' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
+                    </Badge>
+                  )}
+                  {!isPreseasonMode && salaryCapRemaining !== null && (
+                    <Badge variant="outline" className="hidden lg:flex text-sm px-3 py-1 border-primary/50 text-primary ml-auto">
+                      Salary Cap: ${formatNumberWithCommas(Math.round(salaryCapRemaining / 1000))}k
+                    </Badge>
+                  )}
                 </div>
-              )}
-              
-              <Button
-                variant={targetByeRound ? "default" : "outline"}
-                size="sm"
-                className="bye-round-btn-compact h-9 px-3"
-                  onClick={() => setTargetByeRound(!targetByeRound)}
-                  title="Target bye round players"
-                >
-                  Bye
-              </Button>
-              
-              {/* Desktop Salary cap display */}
-              {isPreseasonMode && preseasonPhase !== 'idle' && (
-                <Badge variant={preseasonSalaryCap > 0 ? "default" : "destructive"} className="hidden lg:flex text-sm px-3 py-1 ml-auto">
-                  {preseasonPhase === 'selecting-out' ? 'Cash in Bank' : 'Remaining'}: ${formatNumberWithCommas(Math.round(preseasonSalaryCap / 1000))}k
-                </Badge>
-              )}
-              {!isPreseasonMode && salaryCapRemaining !== null && (
-                <Badge variant="outline" className="hidden lg:flex text-sm px-3 py-1 border-primary/50 text-primary ml-auto">
-                  Salary Cap: ${formatNumberWithCommas(Math.round(salaryCapRemaining / 1000))}k
-                </Badge>
-              )}
-            </div>
-            
-            {/* Row 3: Action buttons */}
-            <div className="header-buttons flex flex-nowrap gap-2 overflow-visible">
-              <Button variant="outline" onClick={onBack} className="shrink-0 h-9" size="sm">
-                ← scanner
-              </Button>
-              
-              {/* Preseason Mode Button */}
-              <Button
-                variant={isPreseasonMode ? "default" : "outline"}
-                onClick={() => {
-                  const newState = !isPreseasonMode;
-                  setIsPreseasonMode(newState);
-                  if (newState) {
-                    setPreseasonTestApproach(true);
-                  }
-                }}
-                className="h-9"
-                size="sm"
-              >
-                Pre-season
-              </Button>
-              
-              <Button
-                className="btn-make-trade flex-1 sm:flex-none h-9"
-                size="sm"
-                onClick={handleMakeATrade}
-                disabled={(normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0) || (isPreseasonMode && hasHighlightedPreseason && preseasonSelectedTradeOuts.length === 0)}
-              >
-                {isPreseasonMode
-                  ? (hasHighlightedPreseason ? 'Confirm trade-outs' : 'Recommend trade-outs')
-                  : normalModePhase === 'calculate'
-                    ? 'Calc trade recs'
-                    : 'Recommend trade-outs'}
-              </Button>
+
+                {/* Row 2: Action buttons */}
+                <div className="header-buttons flex flex-nowrap gap-2 overflow-visible">
+                  <Button variant="outline" onClick={onBack} className="shrink-0 h-9" size="sm">
+                    ← scanner
+                  </Button>
+
+                  {/* Preseason Mode Button */}
+                  <Button
+                    variant={isPreseasonMode ? "default" : "outline"}
+                    onClick={() => {
+                      const newState = !isPreseasonMode;
+                      setIsPreseasonMode(newState);
+                      if (newState) {
+                        setPreseasonTestApproach(true);
+                      }
+                    }}
+                    className="h-9"
+                    size="sm"
+                  >
+                    Pre-season
+                  </Button>
+
+                  <Button
+                    className="btn-make-trade flex-1 sm:flex-none h-9"
+                    size="sm"
+                    onClick={handleMakeATrade}
+                    disabled={(normalModePhase === 'calculate' && selectedTradeOutPlayers.length === 0) || (isPreseasonMode && hasHighlightedPreseason && preseasonSelectedTradeOuts.length === 0)}
+                  >
+                    {isPreseasonMode
+                      ? (hasHighlightedPreseason ? 'Confirm trade-outs' : 'Recommend trade-outs')
+                      : normalModePhase === 'calculate'
+                        ? 'Calc trade recs'
+                        : 'Recommend trade-outs'}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Right side: Logos stacked vertically */}
+              <div className="shrink-0 flex flex-col gap-2 justify-center">
+                <img src={FantasyFootyQuantLogo} alt="Fantasy Footy Quant Logo" className="h-[47px] w-auto" />
+                <img src={NRLFantasyAmateursLogo} alt="NRL Fantasy Amateurs Logo" className="h-[47px] w-auto" />
+              </div>
             </div>
           </div>
 
