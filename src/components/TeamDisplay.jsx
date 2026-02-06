@@ -390,8 +390,16 @@ function TeamDisplay({
 
   return (
     <div className="team-display space-y-1" onClick={handleContainerClick}>
-      <div className="team-field bg-gradient-field rounded-xl p-3 sm:p-4">
-        {POSITION_ORDER.map(pos => renderPositionRow(pos))}
+      <div className="team-field bg-gradient-field rounded-xl p-3 sm:p-4 relative">
+        {/* MY TEAM heading - absolutely positioned to align with first player row */}
+        <div className="absolute left-3 top-7 z-[100]   p-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-primary whitespace-nowrap">MY TEAM</h2>
+        </div>
+
+        {/* Player positions - centered as before */}
+        <div className="flex flex-col items-center">
+          {POSITION_ORDER.map(pos => renderPositionRow(pos))}
+        </div>
       </div>
 
       {/* Trade Type Selector Slide-up Panel */}
@@ -2713,15 +2721,12 @@ function TeamView({
         <div className="team-view-main flex-1">
           {/* Header Section */}
           <div className="section-header mb-4 space-y-2">
-            {/* Row 1: My Team heading + logos */}
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-primary shrink-0">MY TEAM</h2>
-              <div className="flex items-center gap-2 ml-auto">
-                <img src={FantasyFootyQuantLogo} alt="Fantasy Footy Quant Logo" className="h-[50px]" />
-                <img src={NRLFantasyAmateursLogo} alt="NRL Fantasy Amateurs Logo" className="h-[50px]" />
-              </div>
+            {/* Row 1: Logos only (right-aligned) */}
+            <div className="flex items-center justify-end gap-2">
+              <img src={FantasyFootyQuantLogo} alt="Fantasy Footy Quant Logo" className="h-[63px]" />
+              <img src={NRLFantasyAmateursLogo} alt="NRL Fantasy Amateurs Logo" className="h-[63px]" />
             </div>
-            
+
             {/* Row 2: Cash input, Max Value selector, Bye button */}
             <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
               <Input
