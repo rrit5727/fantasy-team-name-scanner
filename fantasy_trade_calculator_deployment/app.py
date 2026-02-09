@@ -599,7 +599,7 @@ def analyze_team_status():
     
     Overvalued categories (based on Diff value):
     - urgent_overvalued: Diff <= -7 (very overvalued, losing lots of money)
-    - overvalued: -7 < Diff <= -1 (moderately overvalued)
+    - overvalued: -7 < Diff <= -2 (moderately overvalued)
     """
     try:
         try:

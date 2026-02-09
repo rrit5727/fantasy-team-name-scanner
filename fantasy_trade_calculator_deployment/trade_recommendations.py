@@ -196,7 +196,7 @@ def identify_overvalued_players_by_threshold(
     consolidated_data: pd.DataFrame, 
     exclude_names: List[str] = None,
     urgent_threshold: float = -7.0,
-    overvalued_threshold: float = -1.0
+    overvalued_threshold: float = -2.0
 ) -> Dict[str, List[Dict]]:
     """
     Identify overvalued players from the user's team using Diff thresholds.
@@ -215,6 +215,7 @@ def identify_overvalued_players_by_threshold(
     Returns:
     Dict with 'urgent_overvalued' and 'overvalued' lists of player dicts
     """
+    print(f"DEBUG: overvalued_threshold = {overvalued_threshold}, urgent_threshold = {urgent_threshold}")
     result = {
         'urgent_overvalued': [],
         'overvalued': []

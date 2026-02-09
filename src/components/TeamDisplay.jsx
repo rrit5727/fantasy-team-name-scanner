@@ -2819,8 +2819,8 @@ function TeamView({
 
               {/* Right side: Logos stacked vertically */}
               <div className="shrink-0 flex flex-col gap-2 justify-center">
-                <img src={FantasyFootyQuantLogo} alt="Fantasy Footy Quant Logo" className="h-[47px] w-auto" />
-                <img src={NRLFantasyAmateursLogo} alt="NRL Fantasy Amateurs Logo" className="h-[47px] w-auto" />
+                {/* <img src={FantasyFootyQuantLogo} alt="Fantasy Footy Quant Logo" className="h-[47px] w-auto" />
+                <img src={NRLFantasyAmateursLogo} alt="NRL Fantasy Amateurs Logo" className="h-[47px] w-auto" /> */}
               </div>
             </div>
           </div>
